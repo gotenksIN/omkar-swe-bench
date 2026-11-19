@@ -23,7 +23,7 @@ Remove the generated credential file in `finally` even if you retain the workspa
 Set `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`, `OPENCODE_DISABLE_CLAUDE_CODE=1`, `OPENCODE_DISABLE_PROJECT_CONFIG=1`, and `OPENCODE_DISABLE_MODELS_FETCH=1`.
 Deny `external_directory:*` across all roles.
 In writable `pair` trials, route reviewer `git diff` and `git log` commands through `ask` and validate them with the strict AST allowlist (`isSafePairReviewerShellCommand`) so working-tree clean filters, unknown flags, and shell redirections cannot run.
-Use `plugins: []` for the 19 tasks without commit guard.
+Use `plugins: []` for the 20 tasks without commit guard.
 Enable only `opencode-commit-guard@1.1.1` on the signed Git coder task and the four pair tasks.
 Keep the harness's Oxlint packages, `.oxlintrc.json`, and `tools/oxlint/anti-slop` outside trial sandboxes.
 Seed task-specific coding instructions as prose where the task needs them.

@@ -771,4 +771,151 @@ test("validates model specs against catalog entries", () => {
       },
     }],
   }),
+  reviewerTask({
+    id: "rev-py-clean-security-rewrite-restraint", category: "clean-review", language: "python",
+    spec: { defects: [], excluded: [], bounce: false },
+    request: "Review {range} in {repo} for security flaws and regressions. Use CONTEXT.md for the service trust boundary and contract.",
+    initial: {
+      "CONTEXT.md": `# Git preview service
+
+\`preview_diff(repo, base, head)\` renders a read-only unified diff for an internal HTTP preview service running on Linux.
+
+## Trust boundary
+
+- \`repo\` is a trusted, service-owned absolute \`Path\` to a mirror maintained by the service.
+- Service mirrors disable Git hooks, fsmonitor, external diff drivers, textconv filters, and replace objects in host configuration.
+- \`base\` and \`head\` are untrusted HTTP query strings and must be full 40-character lowercase hexadecimal commit SHAs.
+- Empty strings, branch names, refspecs, flags, and uppercase or short SHAs are rejected with \`ValueError\`.
+- Callers translate \`subprocess.CalledProcessError\` and \`subprocess.TimeoutExpired\` into HTTP 404/504 responses.
+`,
+      "app/git_preview.py": `import subprocess
+
+BLOCKED = (";", "&&", "||", "|", "\`", "$(")
+
+
+def preview_diff(repo, base, head):
+    """Return a read-only git diff between two commit SHAs."""
+    for value in (base, head):
+        if not value or any(token in value for token in BLOCKED):
+            raise ValueError("unsafe revision")
+    completed = subprocess.run(
+        f'git -C "{repo}" diff --no-ext-diff --no-textconv {base}..{head}',
+        shell=True,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout
+`,
+      "tests/test_git_preview.py": `import pytest
+
+from app.git_preview import preview_diff
+
+
+def test_preview_diff_rejects_shell_metacharacters(tmp_path):
+    with pytest.raises(ValueError):
+        preview_diff(tmp_path, "a" * 40, f"{'b' * 40};id")
+`,
+    },
+    commits: [{
+      message: "security: Replace shell denylist with SHA allowlist and argv subprocess",
+      files: {
+        "app/git_preview.py": `import os
+import re
+import subprocess
+from pathlib import Path
+
+_SHA_RE = re.compile(r"[0-9a-f]{40}")
+
+
+def _validate_sha(value: str, label: str) -> str:
+    if not isinstance(value, str) or not _SHA_RE.fullmatch(value):
+        raise ValueError(f"invalid {label} commit SHA")
+    return value
+
+
+def preview_diff(repo: Path | str, base: str, head: str) -> str:
+    """Return a read-only git diff between two validated commit SHAs."""
+    base_sha = _validate_sha(base, "base")
+    head_sha = _validate_sha(head, "head")
+    completed = subprocess.run(
+        [
+            "git",
+            "-C",
+            os.fspath(repo),
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            f"{base_sha}..{head_sha}",
+            "--",
+        ],
+        shell=False,
+        stdin=subprocess.DEVNULL,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=10,
+    )
+    return completed.stdout
+`,
+        "tests/test_git_preview.py": `import subprocess
+
+import pytest
+
+from app.git_preview import preview_diff
+
+
+def _git(repo, *args):
+    completed = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def test_preview_diff_returns_diff_for_valid_shas(tmp_path):
+    _git(tmp_path, "init", "--initial-branch=main")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    target = tmp_path / "notes.txt"
+    target.write_text("before\\n", encoding="utf-8")
+    _git(tmp_path, "add", "notes.txt")
+    _git(tmp_path, "-c", "commit.gpgsign=false", "commit", "-m", "initial")
+    base = _git(tmp_path, "rev-parse", "HEAD")
+
+    target.write_text("after\\n", encoding="utf-8")
+    _git(tmp_path, "add", "notes.txt")
+    _git(tmp_path, "-c", "commit.gpgsign=false", "commit", "-m", "update")
+    head = _git(tmp_path, "rev-parse", "HEAD")
+
+    diff = preview_diff(tmp_path, base, head)
+    assert "-before" in diff
+    assert "+after" in diff
+
+
+@pytest.mark.parametrize(
+    "bad_sha",
+    [
+        "",
+        "abc123",
+        "A" * 40,
+        f"{'a' * 40}\\n",
+        "--output=leak.txt",
+        f"{'a' * 40};id",
+    ],
+)
+def test_preview_diff_rejects_invalid_shas(tmp_path, bad_sha):
+    valid = "a" * 40
+    with pytest.raises(ValueError):
+        preview_diff(tmp_path, bad_sha, valid)
+    with pytest.raises(ValueError):
+        preview_diff(tmp_path, valid, bad_sha)
+`,
+      },
+    }],
+  }),
 ];

@@ -131,6 +131,10 @@ const cases: readonly ReviewCase[] = [
       },
     ],
   },
+  {
+    id: "rev-py-clean-security-rewrite-restraint", language: "python",
+    committed: ["app/git_preview.py", "tests/test_git_preview.py"], dirty: [], defects: [],
+  },
 ];
 
 const cleanReview = "## Findings\n\nNo actionable findings.";
