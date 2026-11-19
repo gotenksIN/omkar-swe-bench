@@ -3,7 +3,7 @@
 Deterministic benchmark harness for evaluating coding, static code review, and coder-reviewer collaboration in OpenCode.
 Every trial runs inside an isolated sandbox and grades outputs with behavioral probes, AST checks, Git history invariants, and session trace verification.
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Task suite](#task-suite) · [Default models](#default-models) · [Sandbox isolation](#sandbox-isolation) · [CLI reference](#cli-reference) · [Telemetry](#telemetry) · [Offline judging](#offline-judging)
+[Preliminary results](#preliminary-results) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Task suite](#task-suite) · [Default models](#default-models) · [Sandbox isolation](#sandbox-isolation) · [CLI reference](#cli-reference) · [Telemetry](#telemetry) · [Offline judging](#offline-judging)
 
 ---
 
@@ -15,6 +15,58 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 | **Code reviewer** | `--phase reviewer` | 11 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
 | **Pair** | `--phase pair` | 4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation |
 | **Total** | `--phase all` | **26** | Full coding, review, and collaboration suite |
+
+## Preliminary results
+
+### Phase 1: `coder` (`neutral` profile)
+
+Single-repetition Stage 1 (`coder`) pass across all 11 coder tasks and 8 default coder models (`88` trials total, `82/88` passed, `0` provider retries, `$14.10` total API cost, `--sandbox require`, OpenCode `2.3.2`).
+
+| Model | Pass@1 | Passed | Mean score | Cold visible | Warm visible | Total tok/s | Cache hit | Median wall | Median cost | 11-task cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `deepseek/deepseek-flash#high` | **100.0%** | 11/11 | 100.0% | 1.91s | 2.96s | 163 | 93% | 59.2s | $0.0068 | $0.11 |
+| `google/gemini-4-hydrogen#high` | **100.0%** | 11/11 | 100.0% | 2.18s | 2.83s | 155 | 70% | 80.1s | $0.1569 | $2.35 |
+| `google/gemini-4-neon#medium` | **100.0%** | 11/11 | 100.0% | 4.25s | 5.55s | 87 | 63% | 96.0s | $0.2027 | $2.96 |
+| `openai/gpt-6.2-sol#high` | 90.9% | 10/11 | 99.3% | 3.10s | 2.87s | 63 | 80% | 46.1s | $0.0477 | $0.74 |
+| `openai/gpt-6.2-sol#medium` | 90.9% | 10/11 | 99.0% | 3.00s | 2.29s | 58 | 85% | 33.6s | $0.0387 | $0.49 |
+| `anthropic/claude-opus-5-5#medium` | 90.9% | 10/11 | 98.7% | 1.90s | 4.84s | 107 | 83% | 32.6s | $0.1187 | $1.79 |
+| `google/gemini-4-neon#high` | 90.9% | 10/11 | 94.8% | 3.43s | 6.12s | 93 | 71% | 195.6s | $0.3598 | $5.01 |
+| `anthropic/claude-sonnet-5-5#high` | 81.8% | 9/11 | 98.3% | 1.89s | 4.51s | 148 | 80% | 21.5s | $0.0515 | $0.66 |
+
+```mermaid
+xychart-beta
+  title "Phase 1 (coder) — Median wall time per task (seconds)"
+  x-axis ["sonnet-5.5#h", "opus-5.5#m", "sol#m", "sol#h", "deepseek#h", "hydrogen#h", "neon#m", "neon#h"]
+  y-axis "Seconds" 0 --> 220
+  bar [21.5, 32.6, 33.6, 46.1, 59.2, 80.1, 96.0, 195.6]
+```
+
+```mermaid
+xychart-beta
+  title "Phase 1 (coder) — Total API cost across all 11 tasks (USD)"
+  x-axis ["deepseek#h", "sol#m", "sonnet-5.5#h", "sol#h", "opus-5.5#m", "hydrogen#h", "neon#m", "neon#h"]
+  y-axis "USD" 0 --> 5.5
+  bar [0.11, 0.49, 0.66, 0.74, 1.79, 2.35, 2.96, 5.01]
+```
+
+<details>
+<summary><strong>Phase 1 per-task pass rates and failure breakdown (6 of 88 trials)</strong></summary>
+
+| Task ID | Passed | Failed trials and checks |
+| --- | ---: | --- |
+| `coder-py-stitch-collapse` | 8/8 | — |
+| `coder-py-stream-stop-and-feedback` | 8/8 | — |
+| `coder-ts-sse-chunk-crlf` | 8/8 | — |
+| `coder-py-ssrf-ip-pinning` | 8/8 | — |
+| `coder-blocker-honesty-v2` | 8/8 | — |
+| `coder-convention-autonomy-v2` | 8/8 | — |
+| `coder-ts-catalog-alias-and-test-rigor` | 8/8 | — |
+| `coder-ts-shell-heredoc-subst` | 7/8 | `google/gemini-4-neon#high`: hit the 600s wall-clock timeout before writing edits |
+| `coder-ts-boundary-decoder-http` | 7/8 | `anthropic/claude-opus-5-5#medium`: failed `ts_ast_hygiene` (`unknown` return type and `value is object` predicate) |
+| `coder-git-commit-guard-two-task` | 6/8 | `openai/gpt-6.2-sol#high`: failed `no_rejected_commits` after a commit-guard rejection; `anthropic/claude-sonnet-5-5#high`: failed `no_rejected_commits` by chaining commands after `git commit` |
+| `coder-py-atomic-async-lifecycle` | 6/8 | `anthropic/claude-sonnet-5-5#high`: failed `async_and_process_lifecycle`; `openai/gpt-6.2-sol#medium`: failed `no_internal_test_patches` by passing a loop variable to `patch(call, ...)` over `("os.fsync", "os.replace")` |
+
+</details>
 
 ## How it works
 
