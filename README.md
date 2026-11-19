@@ -77,7 +77,7 @@ For `list` and `run`, `--phase` defaults to `all`.
 | `--reviewer-model <provider/model[#variant]>` | All eight reviewer specs for solo review, and only `openai/gpt-6.2-sol#high` for pairs; repeat to replace both lists. |
 | `--all-pairs` | Off; pair each selected coder model with all default reviewer models unless you provide an explicit reviewer list. |
 | `--trials-per-cell <n>` | `1`; use a positive integer for repetitions per task and model or model pair. |
-| `--workers <n>` | `4`; use a positive integer for the maximum number of concurrent trials. |
+| `--workers <n>` | `4`; use a positive integer for the maximum number of concurrent trials (capped at 2 concurrent trials per provider by default). |
 | `--api-retries <n>` | `3`; use a non-negative integer for the number of outer retries after a transient failure. |
 | `--sandbox <require\|auto\|off>` | Defaults to `require`, which fails if `bwrap` is unavailable. `auto` warns and falls back to an unsandboxed OpenCode process, but refuses live runs that include coder or pair tasks when `bwrap` is unavailable. `off` skips the sandbox probe and runs OpenCode without isolation. |
 | `--providers-file <path>` | Use the OpenCode JSONC path described above; pass this flag to read a different file. |

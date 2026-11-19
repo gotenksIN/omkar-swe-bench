@@ -269,6 +269,50 @@ test("caps active workers and returns results in schedule order after out-of-ord
   expect(results.map(({ repetition }) => repetition)).toEqual([1, 2, 3]);
 });
 
+test("caps concurrent workers per provider at 2 by default while utilizing all 4 total workers", async () => {
+  const jobs = scheduleTrials({
+    tasks: tasksForPhase("coder").slice(0, 1),
+    coderModels: ["google/a", "google/b", "google/c", "google/d", "openai/a", "openai/b"],
+    reviewerModels: ["stub/reviewer"],
+    pairReviewerModels: ["stub/reviewer"],
+    trialsPerCell: 1,
+  });
+
+  const active = new Map<string, number>();
+  const peak = new Map<string, number>();
+  const gates = new Map<string, ReturnType<typeof Promise.withResolvers<void>>>();
+  const started: string[] = [];
+
+  for (const { model } of jobs) gates.set(model, Promise.withResolvers<void>());
+
+  const running = runPool(jobs, async ({ model }) => {
+    const provider = model.split("/")[0] ?? model;
+    const count = (active.get(provider) ?? 0) + 1;
+    active.set(provider, count);
+    peak.set(provider, Math.max(peak.get(provider) ?? 0, count));
+    started.push(model);
+
+    await gates.get(model)?.promise;
+
+    active.set(provider, (active.get(provider) ?? 1) - 1);
+
+    return trial({ model });
+  }, { signal: new AbortController().signal });
+
+  expect(started).toEqual(["google/a", "google/b", "openai/a", "openai/b"]);
+  gates.get("google/a")?.resolve();
+  await Bun.sleep(10);
+  expect(started).toEqual(["google/a", "google/b", "openai/a", "openai/b", "google/c"]);
+
+  for (const gate of gates.values()) gate.resolve();
+
+  const results = await running;
+
+  expect(peak.get("google")).toBe(2);
+  expect(peak.get("openai")).toBe(2);
+  expect(results.map(({ model }) => model)).toEqual(["google/a", "google/b", "google/c", "google/d", "openai/a", "openai/b"]);
+});
+
 test("interrupts active work and never dispatches waiting jobs after abort", async () => {
   const controller = new RunController();
   const starts: number[] = [];

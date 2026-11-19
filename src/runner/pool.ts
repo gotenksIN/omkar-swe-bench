@@ -1,3 +1,4 @@
+import { parseModelSpec } from "../config/models.ts";
 import type { EvalTask } from "../tasks/base.ts";
 import type { TrialJob, TrialResult } from "./types.ts";
 
@@ -31,51 +32,102 @@ export function scheduleTrials(matrix: TrialMatrix): readonly TrialJob[] {
 
 interface PoolOptions {
   readonly workers?: number;
+  readonly maxPerProvider?: number;
   readonly signal: AbortSignal;
   readonly onResult?: (completed: readonly TrialResult[]) => void;
+}
+
+function jobProviders(job: TrialJob): readonly string[] {
+  const providers = new Set([parseModelSpec(job.model).providerID]);
+
+  if (job.reviewerModel !== null) {
+    providers.add(parseModelSpec(job.reviewerModel).providerID);
+  }
+
+  return [...providers];
 }
 
 export async function runPool(
   jobs: readonly TrialJob[],
   execute: (job: TrialJob, signal: AbortSignal) => Promise<TrialResult>,
-  { workers = 4, signal, onResult }: PoolOptions,
+  { workers = 4, maxPerProvider = 2, signal, onResult }: PoolOptions,
 ): Promise<readonly TrialResult[]> {
   if (!Number.isSafeInteger(workers) || workers < 1) {
     throw new RangeError("Set workers to a positive integer.");
   }
 
+  if (!Number.isSafeInteger(maxPerProvider) || maxPerProvider < 1) {
+    throw new RangeError("Set maxPerProvider to a positive integer.");
+  }
+
   const results: (TrialResult | undefined)[] = Array.from({ length: jobs.length });
-  let nextIndex = 0;
-  let failed = false;
+  const pending = jobs.map((job, index) => ({ index, job, providers: jobProviders(job) }));
+  const activeByProvider = new Map<string, number>();
+  const inFlight = new Set<Promise<void>>();
+  const done = Promise.withResolvers<void>();
+  let activeTotal = 0;
+  let hasError = false;
+  let firstError: unknown;
 
   function completedResults(): TrialResult[] {
     return results.flatMap((entry) => entry === undefined ? [] : [entry]);
   }
 
-  async function work(): Promise<void> {
-    while (!signal.aborted && !failed) {
-      const index = nextIndex++;
-      const job = jobs[index];
+  function canRun(providers: readonly string[]): boolean {
+    return providers.every((provider) => (activeByProvider.get(provider) ?? 0) < maxPerProvider);
+  }
 
-      if (job === undefined) return;
+  function dispatch(): void {
+    while (!signal.aborted && !hasError && activeTotal < workers) {
+      const nextPos = pending.findIndex(({ providers }) => canRun(providers));
 
-      try {
-        const result = await execute(job, signal);
-        results[index] = signal.aborted && !result.partial
+      if (nextPos === -1) break;
+
+      const [entry] = pending.splice(nextPos, 1);
+
+      if (entry === undefined) break;
+
+      activeTotal += 1;
+
+      for (const provider of entry.providers) {
+        activeByProvider.set(provider, (activeByProvider.get(provider) ?? 0) + 1);
+      }
+
+      const task = execute(entry.job, signal).then((result) => {
+        results[entry.index] = signal.aborted && !result.partial
           ? { ...result, partial: true, passed: false, exit_code: 130 }
           : result;
         onResult?.(completedResults());
-      } catch (cause) {
-        failed = true;
-        throw cause;
-      }
+      }, (cause: unknown) => {
+        if (!hasError) {
+          hasError = true;
+          firstError = cause;
+        }
+      }).finally(() => {
+        activeTotal -= 1;
+
+        for (const provider of entry.providers) {
+          const remaining = (activeByProvider.get(provider) ?? 1) - 1;
+
+          if (remaining <= 0) activeByProvider.delete(provider);
+          else activeByProvider.set(provider, remaining);
+        }
+
+        inFlight.delete(task);
+        dispatch();
+
+        if (inFlight.size === 0) done.resolve();
+      });
+
+      inFlight.add(task);
     }
   }
 
-  const settled = await Promise.allSettled(Array.from({ length: Math.min(workers, jobs.length) }, work));
-  const failure = settled.find((outcome) => outcome.status === "rejected");
+  dispatch();
 
-  if (failure !== undefined) throw failure.reason;
+  if (inFlight.size > 0) await done.promise;
+
+  if (hasError) throw firstError;
 
   return completedResults();
 }
