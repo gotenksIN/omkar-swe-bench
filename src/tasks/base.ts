@@ -229,7 +229,7 @@ const pytestRun = {
 
 const ruffCheckRun = {
   ...successfulRun,
-  verifiedPassOutput: (output: string): boolean => /\bAll checks passed!\b/u.test(output),
+  verifiedPassOutput: (output: string): boolean => /\bAll checks passed!/u.test(output),
 };
 
 export async function checksPython(
