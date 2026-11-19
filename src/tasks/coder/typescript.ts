@@ -54,8 +54,8 @@ export const sseChunkCrlf = typeScriptTask({
 Fix parseSSE so it frames events across arbitrary byte chunks, including split UTF-8 and CRLF.
 Join multiple data lines with a newline and strip at most one space after the colon.
 Ignore non-data fields and discard events without a final blank line.
-Keep sparse part indices in mergeChunk. In citedText, interpret start and end as UTF-8 byte offsets
-into the selected part. Add tests through the existing exports.
+Keep sparse part indices in mergeChunk, appending incoming text to any existing text at the same index.
+In citedText, interpret start and end as UTF-8 byte offsets into the selected part. Add tests through the existing exports.
 `,
   files: {
     "src/sse.ts": String.raw`export async function* parseSSE(chunks: AsyncIterable<Uint8Array>): AsyncGenerator<string> {
