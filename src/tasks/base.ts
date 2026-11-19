@@ -212,24 +212,24 @@ const successfulRun = { afterLastEdit: true, success: true };
 
 const bunTestRun = {
   ...successfulRun,
-  verifiedPassOutput: (output: string): boolean =>
+  verifiedOutput: (output: string): boolean =>
     /\b[1-9]\d*\s+pass\b/u.test(output) && !/\b[1-9]\d*\s+(?:fail|error)s?\b/iu.test(output),
 };
 
 const unittestRun = {
   ...successfulRun,
-  verifiedPassOutput: (output: string): boolean => /\bRan [1-9]\d* tests?\b[\s\S]*?\nOK\b/u.test(output),
+  verifiedOutput: (output: string): boolean => /\bRan [1-9]\d* tests?\b[\s\S]*?\nOK\b/u.test(output),
 };
 
 const pytestRun = {
   ...successfulRun,
-  verifiedPassOutput: (output: string): boolean =>
+  verifiedOutput: (output: string): boolean =>
     /\b[1-9]\d*\s+passed\b/u.test(output) && !/\b[1-9]\d*\s+(?:failed|errors?)\b/iu.test(output),
 };
 
 const ruffCheckRun = {
   ...successfulRun,
-  verifiedPassOutput: (output: string): boolean => /\bAll checks passed!/u.test(output),
+  verifiedOutput: (output: string): boolean => /\bAll checks passed!/u.test(output),
 };
 
 export async function checksPython(

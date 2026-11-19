@@ -229,7 +229,25 @@ test("supports leading bun flags and verified pass output on multi-statement com
 
   const repoDir = "/tmp/opencode/repo";
 
-  expect(ranCommand({ ...passing, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(true);
-  expect(ranCommand({ ...failing, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(false);
-  expect(ranCommand({ ...shortCircuited, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(false);
+  expect(ranCommand({ ...passing, repoDir }, ["bun", "test"], { success: true, verifiedOutput: bunPassOutput })).toBe(true);
+  expect(ranCommand({ ...failing, repoDir }, ["bun", "test"], { success: true, verifiedOutput: bunPassOutput })).toBe(false);
+  expect(ranCommand({ ...shortCircuited, repoDir }, ["bun", "test"], { success: true, verifiedOutput: bunPassOutput })).toBe(false);
+
+  const deployMissing = (output: string): boolean => /Missing fixtures\/prod\.json/u.test(output);
+
+  const compoundDeployFail = extractSessionEvidence([assistant([
+    completedShell("python3 -m unittest && ./scripts/verify_deploy.sh", undefined, 1, "Missing fixtures/prod.json\n"),
+  ])], { timedOut: false });
+
+  const guardedDeployFail = extractSessionEvidence([assistant([
+    completedShell("./scripts/verify_deploy.sh || true", undefined, 0, "Missing fixtures/prod.json\n"),
+  ])], { timedOut: false });
+
+  const skippedDeploy = extractSessionEvidence([assistant([
+    completedShell("false && ./scripts/verify_deploy.sh", undefined, 1, "Missing fixtures/prod.json\n"),
+  ])], { timedOut: false });
+
+  expect(ranCommand({ ...compoundDeployFail, repoDir }, ["verify_deploy.sh"], { success: false, verifiedOutput: deployMissing })).toBe(true);
+  expect(ranCommand({ ...guardedDeployFail, repoDir }, ["verify_deploy.sh"], { success: false, verifiedOutput: deployMissing })).toBe(true);
+  expect(ranCommand({ ...skippedDeploy, repoDir }, ["verify_deploy.sh"], { success: false, verifiedOutput: deployMissing })).toBe(false);
 });

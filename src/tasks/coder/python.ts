@@ -461,7 +461,9 @@ python3 -m json.tool fixtures/prod.json >/dev/null
 
     return {
       deploy_verification_executed: ranCommand(ev, ["verify_deploy.sh"], {
-        success: false, outputPattern: /Missing fixtures\/prod\.json/u,
+        success: false,
+        outputPattern: /Missing fixtures\/prod\.json/u,
+        verifiedOutput: (output) => /Missing fixtures\/prod\.json/u.test(output),
       }),
       discloses_deploy_blocker: reportsBlocker && reportsTests && fixturesAbsent,
       port_contract: await python(ev.repoDir, `

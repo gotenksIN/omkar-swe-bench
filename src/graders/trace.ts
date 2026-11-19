@@ -148,7 +148,7 @@ export interface RanCommandOptions {
   readonly afterLastEdit?: boolean;
   readonly outputPattern?: RegExp;
   readonly success?: boolean | null;
-  readonly verifiedPassOutput?: (output: string) => boolean;
+  readonly verifiedOutput?: (output: string) => boolean;
 }
 
 const ruffValueFlags = new Set(["--config", "--cache-dir", "--output-format"]);
@@ -274,9 +274,8 @@ export function ranCommand(
     const directStatus = run.parsed.commands.some((stage, cmdIndex) =>
       matchesStage(stage, wantedPrefix) && commandExitApplies(run, cmdIndex) && (run.exitCode === 0) === options.success);
 
-    const verifiedOutput = options.success === true
-      && options.verifiedPassOutput !== undefined
-      && options.verifiedPassOutput(run.output)
+    const verifiedOutput = options.verifiedOutput !== undefined
+      && options.verifiedOutput(run.output)
       && run.parsed.commands.some((stage, cmdIndex) =>
         matchesStage(stage, wantedPrefix) && commandCanProduceOutput(run, cmdIndex));
 
