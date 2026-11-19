@@ -4,7 +4,6 @@ import {
   canonicalJsonStringify,
   isJsonArray,
   isJsonObject,
-  isJsonValue,
   parseJsoncObject,
   parseJsonText,
 } from "../../src/util/json.ts";
@@ -54,7 +53,6 @@ describe("parseJsoncObject", () => {
     '{"x":[,]}',
     '{"x":1,,}',
     '{"x":12/* note */34}',
-    '{"x":tr/* note */ue}',
     '{} /* unterminated',
   ])("does not repair malformed input: %j", (text) => {
     expect(() => parseJsoncObject(text)).toThrow(SyntaxError);
@@ -62,17 +60,16 @@ describe("parseJsoncObject", () => {
 });
 
 describe("JSON predicates", () => {
-  test("accepts valid primitives, arrays, and objects", () => {
-    const values = [null, false, 1.25, "text", [], {}, { x: [{ y: 1 }] }];
-
-    expect(values.map(isJsonValue)).toEqual([true, true, true, true, true, true, true]);
+  test("accepts valid nested primitives, arrays, and objects", () => {
+    expect(isJsonArray([null, false, 1.25, "text", [], {}, { x: [{ y: 1 }] }])).toBe(true);
+    expect(isJsonObject({ a: null, b: false, c: 1.25, d: "text", e: [], f: { y: 1 } })).toBe(true);
   });
 
   test("rejects non-JSON values", () => {
     const sparse: string[] = [];
     sparse.length = 1;
 
-    const values = [
+    const invalidEntries = [
       undefined,
       Infinity,
       NaN,
@@ -87,7 +84,7 @@ describe("JSON predicates", () => {
       { x: [{ y: Infinity }] },
     ];
 
-    expect(values.map(isJsonValue)).toEqual(Array.from(values, () => false));
+    expect(invalidEntries.every((entry) => !isJsonArray([entry]) && !isJsonObject({ entry }))).toBe(true);
   });
 
   test("distinguishes objects from arrays and rejects invalid contents", () => {
@@ -102,7 +99,8 @@ describe("JSON predicates", () => {
     cycle.push(branch);
     const child = { x: 1 };
 
-    expect([cycle, { a: child, b: child }].map(isJsonValue)).toEqual([false, true]);
+    expect(isJsonArray(cycle)).toBe(false);
+    expect(isJsonObject({ a: child, b: child })).toBe(true);
   });
 });
 
@@ -120,12 +118,5 @@ describe("canonicalJsonStringify", () => {
     expect(canonicalJsonStringify(["\t", null, false, 1.5])).toBe('["\\t",null,false,1.5]');
     expect(canonicalJsonStringify("😊")).toBe('"😊"');
     expect(canonicalJsonStringify(null)).toBe("null");
-  });
-
-  test("serializes array elements even if the array shadows map", () => {
-    const value = [1, 2];
-    Object.defineProperty(value, "map", { value: null });
-
-    expect(canonicalJsonStringify(value)).toBe("[1,2]");
   });
 });

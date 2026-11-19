@@ -4,7 +4,7 @@ import { computeGradeResult, type Defect, type Evidence, type Finding, type Find
 const noFindings = /no actionable findings/iu;
 const mutatingTools = new Set(["edit", "write", "patch", "execute"]);
 
-export function normalizeReviewPath(rawPath: string, repoDir?: string): string {
+function normalizeReviewPath(rawPath: string, repoDir?: string): string {
   const path = rawPath.replace(/^(?:\.\/)+/u, "");
 
   if (repoDir) {
@@ -118,7 +118,7 @@ export function defectMatchesFinding(defect: Defect, finding: Finding, repoDir?:
     Iterator.from(citations(finding.body, repoDir)).some(({ path, line }) => path === defect.file && line >= start - 5 && line <= end + 5);
 }
 
-export function matchDefects(
+function matchDefects(
   findings: readonly Finding[], defects: readonly Defect[], repoDir?: string,
 ): ReadonlyMap<string, number> {
   const candidates = new Map<Defect, number[]>();

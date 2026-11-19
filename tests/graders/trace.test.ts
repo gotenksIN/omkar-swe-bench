@@ -26,15 +26,14 @@ function completedShell(command: string, workdir?: string, exit = 0, output = ""
 }
 
 test("joins REST text content, records shell errors, and places nested calls in sequence", () => {
-  const legacyOutput = {
+  const shellContent = {
     status: "completed",
     input: { command: "uvx ruff check ." },
     content: [
       { type: "text", text: "All " }, { type: "file", uri: "file:///tmp/opencode/report.txt", mime: "text/plain" },
       { type: "text", text: "checks passed." },
     ],
-    output: "Do not use legacy output.",
-  } satisfies SessionMessageAssistantTool["state"] & { output: string };
+  } satisfies SessionMessageAssistantTool["state"];
 
   const trace = extractSessionEvidence([
     assistant([
@@ -52,7 +51,7 @@ test("joins REST text content, records shell errors, and places nested calls in 
           ],
         },
       }),
-      tool("shell", legacyOutput),
+      tool("shell", shellContent),
       tool("shell", {
         status: "error", input: { command: "./scripts/verify_deploy.sh", workdir: "/tmp/opencode/repo" },
         metadata: { exit: 8 }, error: { type: "ToolError", message: "Missing fixtures/prod.json" },

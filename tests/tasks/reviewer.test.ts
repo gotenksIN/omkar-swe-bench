@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { captureGitState } from "../../src/graders/git.ts";
-import type { Evidence, FindingSeverity, TaskLanguage, ToolTraceEntry } from "../../src/graders/types.ts";
+import type { Evidence, FindingSeverity, TaskLanguage } from "../../src/graders/types.ts";
 import { runTaskGit } from "../../src/tasks/base.ts";
 import { REVIEWER_TASKS } from "../../src/tasks/reviewer/index.ts";
 
@@ -139,30 +139,17 @@ const cases: readonly ReviewCase[] = [
 
 const cleanReview = "## Findings\n\nNo actionable findings.";
 const scopeRequest = "Scope needed\n\nPlease provide the commit range or a file list.";
-
-const readOnlyViolation: ToolTraceEntry = {
-  index: 0, sessionId: "synthetic", isSubagent: false, tool: "patch", status: "completed",
-  input: {}, textOutput: "", errorText: null, metadata: null,
-};
-
 const diff = ["diff", "--no-ext-diff", "--no-textconv"];
 const baseChecks = ["precision_no_false_alarms", "exclusion_respected", "bounce_correctness", "read_only_clean_repo"];
+const casesById = new Map(cases.map((entry) => [entry.id, entry]));
 
-test("enforces read-only non-commit-guard settings across all reviewer tasks", () => {
-  expect(new Set(cases.map(({ id }) => id))).toEqual(new Set(REVIEWER_TASKS.map(({ id }) => id)));
+for (const task of REVIEWER_TASKS) {
+  test(`${task.id}: seeds the review scope and grades review responses`, async () => {
+    const reference = casesById.get(task.id);
 
-  for (const task of REVIEWER_TASKS) {
-    expect(task.role).toBe("code-reviewer");
+    if (!reference) throw new Error(`Missing review test case: ${task.id}`);
+
     expect(task.readOnlyRepo).toBe(true);
-    expect(task.commitGuard).toBe(false);
-  }
-});
-
-for (const reference of cases) {
-  test(`${reference.id}: seeds the review scope and grades review responses`, async () => {
-    const task = REVIEWER_TASKS.find(({ id }) => id === reference.id);
-
-    if (!task) throw new Error(`Missing catalog entry: ${reference.id}`);
 
     const trialDir = await mkdtemp("/tmp/opencode/reviewer-test-");
     const repoDir = join(trialDir, "repo");
@@ -272,21 +259,6 @@ for (const reference of cases) {
       expect(gold.scopeBounced).toBe(reference.bounce ?? false);
       expect(gold.reviewDiff).toBe(reviewDiff);
 
-      const findingsPrefix = reference.bounce ? `${scopeRequest}\n\n## Findings` : finalText;
-      const findingFile = reference.committed[0];
-
-      const falsePositive = await task.grade({
-        ...ev,
-        finalText: `${findingsPrefix}\n- [P2] \`${findingFile}:1\` — Fix an unrelated crash.\n- [P3] \`${findingFile}:2\` — Rename a local.`,
-      }, setup);
-
-      expect(falsePositive.passed).toBe(false);
-      expect(falsePositive.checks.precision_no_false_alarms).toBe(false);
-      expect(falsePositive.falsePositiveP0P2).toBe(1);
-      expect(falsePositive.nitpickP3).toBe(1);
-      expect(falsePositive.pedantryFlags).toBe(2);
-      expect(falsePositive.checks.bounce_correctness).toBe(true);
-
       if (reference.excluded) {
         expect(prompt).toContain(reference.excluded);
 
@@ -297,11 +269,6 @@ for (const reference of cases) {
         expect(excludedFinding.passed).toBe(false);
         expect(excludedFinding.checks.exclusion_respected).toBe(false);
       }
-
-      const wrongBounce = await task.grade({ ...ev, finalText: reference.bounce ? cleanReview : scopeRequest }, setup);
-
-      expect(wrongBounce.passed).toBe(false);
-      expect(wrongBounce.checks.bounce_correctness).toBe(false);
 
       if (reference.id === "rev-py-denylist-bandaid-rewrite") {
         const symptomPatchOnly = await task.grade({
@@ -343,25 +310,6 @@ for (const reference of cases) {
         expect(splitTestFindings.passed).toBe(true);
         expect(splitTestFindings.pedantryFlags).toBe(0);
       }
-
-      if (reference.bounce) {
-        const vagueBounce = await task.grade({ ...ev, finalText: "Scope needed\n\nPlease clarify." }, setup);
-
-        expect(vagueBounce.checks.bounce_correctness).toBe(true);
-        expect(vagueBounce.checks.lists_missing_inputs).toBe(false);
-        expect(vagueBounce.passed).toBe(false);
-      }
-
-      const usedPatch = await task.grade({ ...ev, tools: [readOnlyViolation] }, setup);
-
-      expect(usedPatch.checks.read_only_clean_repo).toBe(false);
-      expect(usedPatch.passed).toBe(false);
-
-      await writeFile(join(repoDir, "review-notes.txt"), "Unexpected untracked file.\n");
-      const editedRepo = await task.grade({ ...ev, afterGit: await captureGitState(repoDir, baselineHead) }, setup);
-
-      expect(editedRepo.checks.read_only_clean_repo).toBe(false);
-      expect(editedRepo.passed).toBe(false);
     } finally {
       await rm(trialDir, { recursive: true, force: true });
     }

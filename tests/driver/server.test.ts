@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { buildTrialConfig, writeTrialConfig } from "../../src/config/prompts.ts";
 import { writeProviderConfig } from "../../src/config/providers.ts";
-import { generateServerPassword, startOpenCodeServer } from "../../src/driver/server.ts";
+import { startOpenCodeServer } from "../../src/driver/server.ts";
 import { buildTrialEnv } from "../../src/sandbox/env.ts";
 import { compileMountPlan } from "../../src/sandbox/mount-plan.ts";
 import { probeSandbox } from "../../src/sandbox/process.ts";
@@ -17,10 +17,6 @@ const sandbox = await probeSandbox();
 const executable = Bun.which("opencode");
 
 test.skipIf(!sandbox.available || executable === null)("starts and closes real sandboxed OpenCode with Basic auth", async () => {
-  if (executable === null) {
-    throw new Error("OpenCode is not installed.");
-  }
-
   const trialDir = mkdtempSync("/tmp/opencode/driver-server-");
   const repoDir = join(trialDir, "repo");
   const hostToolFiles = discoverHostToolFiles();
@@ -37,19 +33,16 @@ test.skipIf(!sandbox.available || executable === null)("starts and closes real s
       commitGuardCacheDir: null, opencodeBinCacheDir: null, tsCompilerDirs: [], hostToolFiles, extraRoFiles: [],
     });
 
-    const envVars = new Map(buildTrialEnv({
+    const envVars = buildTrialEnv({
       trialDir, tsCompilerDirs: [], resolvedHostToolDirs,
       keepWorkspaces: false, extraEnvNames: [],
-    }));
-
-    envVars.set("OPENCODE_PASSWORD", generateServerPassword());
+    });
 
     const server = await startOpenCodeServer({
       trialDir, repoDir, mountPlan, envVars, sandboxed: true, startupTimeoutMs: 5_000, signal: new AbortController().signal,
     });
 
     try {
-      expect(Buffer.from(envVars.get("OPENCODE_PASSWORD") ?? "", "base64url")).toHaveLength(32);
       expect((await server.client.server.info()).version).toMatch(/^\d+\.\d+\.\d+/u);
       const unauthorized = await fetch(`${server.baseUrl}/api/info`);
       expect(unauthorized.status).toBe(401);
@@ -78,7 +71,7 @@ test.each([
     writeFileSync(join(trialDir, "opencode"), `#!/bin/sh\nprintf '%s' "$$" > "$PID_FILE"\n${script}\n`, { mode: 0o700 });
 
     const envVars = new Map([
-      ["PATH", trialDir], ["OPENCODE_PASSWORD", generateServerPassword()], ["PID_FILE", pidFile], ["HOME", trialDir],
+      ["PATH", trialDir], ["OPENCODE_PASSWORD", "test-password"], ["PID_FILE", pidFile], ["HOME", trialDir],
     ]);
 
     await expect(startOpenCodeServer({
@@ -109,7 +102,7 @@ wait
     await expect(startOpenCodeServer({
       trialDir, repoDir: trialDir, sandboxed: false, mountPlan: null,
       envVars: new Map([
-        ["PATH", trialDir], ["OPENCODE_PASSWORD", generateServerPassword()], ["HOME", trialDir],
+        ["PATH", trialDir], ["OPENCODE_PASSWORD", "test-password"], ["HOME", trialDir],
         ["MARKER", marker], ["CHILD_FILE", childFile],
       ]),
       startupTimeoutMs: 150, signal: new AbortController().signal,
@@ -141,7 +134,7 @@ test("drains stderr before classifying deterministic launch failures as SandboxL
   try {
     writeFileSync(join(trialDir, "opencode"), "#!/bin/sh\nprintf \"%s\\n\" \"bwrap: Can't bind mount /missing\" >&2\nexit 1\n", { mode: 0o700 });
 
-    const envVars = new Map([["PATH", trialDir], ["OPENCODE_PASSWORD", generateServerPassword()], ["HOME", trialDir]]);
+    const envVars = new Map([["PATH", trialDir], ["OPENCODE_PASSWORD", "test-password"], ["HOME", trialDir]]);
 
     try {
       await startOpenCodeServer({
@@ -169,7 +162,7 @@ test("preserves SandboxLaunchError when server exits right after printing a star
       { mode: 0o700 },
     );
 
-    const envVars = new Map([["PATH", trialDir], ["OPENCODE_PASSWORD", generateServerPassword()], ["HOME", trialDir]]);
+    const envVars = new Map([["PATH", trialDir], ["OPENCODE_PASSWORD", "test-password"], ["HOME", trialDir]]);
 
     try {
       await startOpenCodeServer({

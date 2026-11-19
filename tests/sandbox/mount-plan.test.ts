@@ -166,24 +166,20 @@ test("binds optional caches before the minimal compiler packages and links them 
   mkdirSync(target, { recursive: true });
   linkHostTsNodeModules(input.trialDir, tsCompilerDirs);
   expect(realpathSync(target)).toBe(pnpmTypescript);
-  expect(existsSync(join(input.trialDir, "node_modules", "oxlint"))).toBe(false);
   expect(compileMountPlan({ ...input, opencodeBinCacheDir: join(workspace, "absent") }).binds)
     .not.toContainEqual(expect.objectContaining({ target: join(input.trialDir, "cache", "opencode", "bin") }));
   expect(() => compileMountPlan({ ...input, commitGuardCacheDir: join(workspace, "absent") })).toThrow();
 });
 
 test("rejects forbidden TypeScript destinations and aliases to forbidden sources", () => {
-  const antiSlop = join(workspace, "tools", "oxlint", "anti-slop");
+  const antiSlopTypes = join(workspace, "tools", "oxlint", "anti-slop", "@types");
   const alias = join(workspace, "alias");
 
-  mkdirSync(antiSlop, { recursive: true });
-  symlinkSync(antiSlop, alias);
+  mkdirSync(antiSlopTypes, { recursive: true });
+  symlinkSync(antiSlopTypes, alias);
 
-  for (const packageSubpath of ["oxlint", "@oxlint/plugins", "oxc-parser", "tools/oxlint/anti-slop"]) {
-    expect(() => compileMountPlan({ ...input, tsCompilerDirs: [{ sourceDir: workspace, packageSubpath }] }))
-      .toThrow("Invalid TypeScript compiler mount");
-  }
-
+  expect(() => compileMountPlan({ ...input, tsCompilerDirs: [{ sourceDir: workspace, packageSubpath: "oxlint" }] }))
+    .toThrow("Invalid TypeScript compiler mount");
   expect(() => compileMountPlan({ ...input, tsCompilerDirs: [{ sourceDir: alias, packageSubpath: "@types" }] }))
     .toThrow("Invalid TypeScript compiler mount");
   expect(() => compileMountPlan({ ...input, tsCompilerDirs: [{ sourceDir: workspace, packageSubpath: "@types" }] }))

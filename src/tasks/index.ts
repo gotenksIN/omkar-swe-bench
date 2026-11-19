@@ -3,7 +3,7 @@ import { CODER_TASKS } from "./coder/index.ts";
 import { PAIR_TASKS } from "./pair/index.ts";
 import { REVIEWER_TASKS } from "./reviewer/index.ts";
 
-export const TASKS: readonly EvalTask[] = [...CODER_TASKS, ...REVIEWER_TASKS, ...PAIR_TASKS];
+const TASKS: readonly EvalTask[] = [...CODER_TASKS, ...REVIEWER_TASKS, ...PAIR_TASKS];
 
 export const TASKS_BY_ID: ReadonlyMap<string, EvalTask> = new Map(TASKS.map((task) => [task.id, task]));
 

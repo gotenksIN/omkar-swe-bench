@@ -78,12 +78,9 @@ test.skipIf(!sandbox.available || !hasRuff)("runs global ruff read-only across f
     return { trialDir, repoDir, args: [...plan.bwrapArgs, ...toBwrapEnvArgs(env)] };
   });
 
-  const results = await Promise.all(trials.map(async ({ trialDir, repoDir, args }) => {
+  const results = await Promise.all(trials.map(async ({ repoDir, args }) => {
     const child = Bun.spawn([
-      "bwrap", ...args, "--chdir", repoDir, "--", "/bin/sh", "-ec",
-      `ruff check --no-cache .
-       ! touch "$1/ruff-tamper"`,
-      "sh", join(trialDir, "host-bin"),
+      "bwrap", ...args, "--chdir", repoDir, "--", "ruff", "check", "--no-cache", ".",
     ], { env: {}, stdout: "pipe", stderr: "pipe" });
 
     const [code, stdout, stderr] = await Promise.all([

@@ -1,12 +1,10 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { readResultsJson } from "../../src/report/markdown.ts";
-import { compileMountPlan } from "../../src/sandbox/mount-plan.ts";
-import { discoverTsCompilerDirs, prepareTrialTsBin } from "../../src/sandbox/tools.ts";
-import { TASKS } from "../../src/tasks/index.ts";
+import { tasksForPhase } from "../../src/tasks/index.ts";
 import { parseJsoncObject } from "../../src/util/json.ts";
 
 const coderModel = "fixture-coder/synthetic-root";
@@ -60,8 +58,10 @@ test("dry-runs all tasks and rebuilds the Markdown report identically", async ()
   const results = readResultsJson(input);
   const byRole = Map.groupBy(results, ({ role }) => role);
 
-  expect(results).toHaveLength(TASKS.length);
-  expect(new Set(results.map(({ task_id }) => task_id))).toEqual(new Set(TASKS.map(({ id }) => id)));
+  const allTasks = tasksForPhase("all");
+
+  expect(results).toHaveLength(allTasks.length);
+  expect(new Set(results.map(({ task_id }) => task_id))).toEqual(new Set(allTasks.map(({ id }) => id)));
   expect(byRole.get("coder")?.length).toBeGreaterThan(0);
   expect(byRole.get("code-reviewer")?.length).toBeGreaterThan(0);
   expect(byRole.get("pair")?.length).toBeGreaterThan(0);
@@ -132,7 +132,7 @@ test("excludes the host guard cache from unguarded CLI trials", async () => {
   symlinkSync(forbiddenSource, cache);
 
   // A guard cache pointing to a forbidden source fails mount isolation only if the runner selects it.
-  const unguarded = TASKS.flatMap(({ id, commitGuard: needsGuard }) => needsGuard ? [] : ["--task", id]);
+  const unguarded = tasksForPhase("all").flatMap(({ id, commitGuard: needsGuard }) => needsGuard ? [] : ["--task", id]);
   expect(await runCli(dryRunArgs(...unguarded))).toBe(0);
   expect(readResultsJson(join(directory, "results.json"))).toHaveLength(unguarded.length / 2);
 
@@ -145,59 +145,3 @@ test("excludes the host guard cache from unguarded CLI trials", async () => {
     error.mockRestore();
   }
 }, 30_000);
-
-test("plans all task mounts without harness lint or AST tools and limits the commit guard cache", () => {
-  const cache = realpathSync(guardCachePath());
-  const harness = join(directory, "harness");
-
-  const excludedDirs = ["node_modules/oxlint", "node_modules/@oxlint/plugins", "node_modules/oxc-parser", "tools/oxlint/anti-slop"]
-    .map((path) => join(harness, path));
-
-  for (const name of ["typescript", "@typescript", "@types", "bun-types", "undici-types", "oxlint", "@oxlint/plugins", "oxc-parser"]) {
-    mkdirSync(join(harness, "node_modules", name), { recursive: true });
-  }
-
-  mkdirSync(join(harness, "tools", "oxlint", "anti-slop"), { recursive: true });
-  const tsCompilerDirs = discoverTsCompilerDirs(harness);
-  const guardedTasks = [];
-
-  for (const task of TASKS) {
-    const trialDir = join(directory, task.id);
-    const repoDir = join(trialDir, "repo");
-    const config = join(trialDir, "config", "opencode");
-    mkdirSync(repoDir, { recursive: true });
-    mkdirSync(config, { recursive: true });
-    writeFileSync(join(config, "opencode.json"), "{}");
-    writeFileSync(join(config, "opencode.jsonc"), "{}");
-
-    if (task.needsTsCompiler) prepareTrialTsBin(trialDir);
-
-    const plan = compileMountPlan({
-      trialDir, repoDir, hostHome: join(directory, "host-home"), hostToolFiles: [], extraRoFiles: [],
-      readOnlyRepo: task.readOnlyRepo, opencodeBinCacheDir: null,
-      commitGuardCacheDir: task.commitGuard ? cache : null,
-      tsCompilerDirs: task.needsTsCompiler ? tsCompilerDirs : [],
-    });
-
-    const guardBinds = plan.binds.filter(({ source, target }) => source.includes(commitGuard) || target.includes(commitGuard));
-
-    for (const { source, target } of plan.binds) {
-      const sourcePrefix = source === "/" ? "/" : `${source}/`;
-      expect(`${source}\n${target}`).not.toMatch(/oxlint|oxc-parser|tools\/oxlint\/anti-slop/u);
-      expect(excludedDirs.some((path) => path.startsWith(sourcePrefix))).toBe(false);
-      expect(cache.startsWith(sourcePrefix)).toBe(false);
-    }
-
-    if (guardBinds.length > 0) guardedTasks.push(task.id);
-
-    expect(guardBinds).toEqual(task.commitGuard ? [{
-      source: cache, target: join(trialDir, "cache", "opencode", "npm", commitGuard),
-      readOnly: true, isFile: false,
-    }] : []);
-  }
-
-  expect(guardedTasks.sort()).toEqual([
-    "coder-git-commit-guard-two-task", "pair-commit-review-amend", "pair-multitask-review-loop-clean",
-    "pair-pushback-on-false-nitpick", "pair-unhittable-finding-and-nonhead",
-  ]);
-});

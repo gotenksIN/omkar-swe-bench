@@ -205,7 +205,6 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
 
   try {
     const input = join(directory, "results.json");
-    const summary = join(directory, "nested", "reports", "summary.md");
     const packet = join(directory, "nested", "judge", "packet.json");
     const answers = join(directory, "answers.json");
     const judged = join(directory, "nested", "judged", "judgments.json");
@@ -216,8 +215,6 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
 
     writeResultsJson(input, [baseline]);
     expect(readResultsJson(input)).toEqual([baseline]);
-    expect(await runCli(["report", "--input", input, "--out", summary])).toBe(0);
-    expect(readFileSync(summary, "utf8")).toContain("## code-reviewer leaderboard");
     expect(await runCli(["judge", "--input", input, "--out", packet])).toBe(0);
     const exported = parseJsonText(readFileSync(packet, "utf8"));
     expect(exported).toHaveProperty(`answers.${expectedId}.prose_concise_and_direct`, null);

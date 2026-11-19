@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
-  defectMatchesFinding, matchDefects, normalizeReviewPath, parseFindings, reviewGrade, scopeNeeded,
+  defectMatchesFinding, parseFindings, reviewGrade, scopeNeeded,
 } from "../../src/graders/findings.ts";
 import { computeGradeResult, type Defect, type Evidence, type GitState, type ToolTraceEntry } from "../../src/graders/types.ts";
 
@@ -22,16 +22,6 @@ function review(finalText: string): Evidence {
     timedOut: false,
   };
 }
-
-test("normalizes trial paths without rewriting other absolute or relative paths", () => {
-  expect(normalizeReviewPath("././src/job.ts")).toBe("src/job.ts");
-  expect(normalizeReviewPath("/tmp/opencode/trial/repo/src/job.ts")).toBe("src/job.ts");
-  expect(normalizeReviewPath("./tmp/trial/repo/lib/repo/job.ts")).toBe("lib/repo/job.ts");
-  expect(normalizeReviewPath("/home/trial/repo/job.ts")).toBe("/home/trial/repo/job.ts");
-  expect(normalizeReviewPath("/home/work/run1/trial_a1b2c3/repo/src/job.ts")).toBe("src/job.ts");
-  expect(normalizeReviewPath("/custom/workspace/repo/src/job.ts", "/custom/workspace/repo")).toBe("src/job.ts");
-  expect(normalizeReviewPath("/tmp/opencode/repository/job.ts")).toBe("/tmp/opencode/repository/job.ts");
-});
 
 test("parses findings sections and continuation lines, not fenced examples or summary bullets", () => {
   const markdown = [
@@ -76,15 +66,36 @@ test("requires sufficient severity, one in-range citation, and a match in each c
   expect(defectMatchesFinding({ ...defect, file: "src/my job.ts" }, {
     severity: 1, body: "Worker timeout on `./src/my job.ts:10`",
   })).toBe(true);
+  expect(defectMatchesFinding({ ...defect, file: "lib/repo/job.ts" }, {
+    severity: 1, body: "Worker timeout at `./tmp/trial/repo/lib/repo/job.ts:10`",
+  })).toBe(true);
+  expect(defectMatchesFinding(defect, {
+    severity: 1, body: "Worker timeout at `/home/work/run1/trial_a1b2c3/repo/src/job.ts:10`",
+  })).toBe(true);
+  expect(defectMatchesFinding(defect, {
+    severity: 1, body: "Worker timeout at `/custom/workspace/repo/src/job.ts:10`",
+  }, "/custom/workspace/repo")).toBe(true);
+  expect(defectMatchesFinding({ ...defect, file: "job.ts" }, {
+    severity: 1, body: "Worker timeout at `/home/trial/repo/job.ts:10`",
+  })).toBe(false);
+  expect(defectMatchesFinding({ ...defect, file: "job.ts" }, {
+    severity: 1, body: "Worker timeout at `/tmp/opencode/repository/job.ts:10`",
+  })).toBe(false);
 });
 
 test("moves an existing assignment to maximize the number of distinct matched defects", () => {
   const specific = { ...defect, id: "specific", conceptGroups: [["thread"]] };
-  const findings = parseFindings("## Findings\n- [P1] Thread timeout at src/job.ts:10\n- [P1] Worker timeout at src/job.ts:10");
+  const spec = { defects: [defect, specific], excluded: [], bounce: false };
 
-  expect(matchDefects(findings, [defect, specific])).toEqual(new Map([["timeout", 1], ["specific", 0]]));
-  expect(matchDefects(findings.slice(0, 1), [defect, specific]).size).toBe(1);
-  expect(matchDefects([], [defect, specific]).size).toBe(0);
+  expect(reviewGrade(
+    review("## Findings\n- [P1] Thread timeout at src/job.ts:10\n- [P1] Worker timeout at src/job.ts:10"),
+    spec,
+  )).toMatchObject({
+    passed: true, defectRecall: 1, checks: { caught_timeout: true, caught_specific: true },
+  });
+  expect(reviewGrade(review("## Findings\n- [P1] Thread timeout at src/job.ts:10"), spec)).toMatchObject({
+    passed: false, defectRecall: 0.5,
+  });
 });
 
 test("identifies a scope request only at the first non-empty line", () => {
@@ -130,6 +141,9 @@ test("requires a clean report or a scope request with a missing input, and rejec
   const evidence = review("## Findings\nNo actionable findings.");
 
   expect(reviewGrade(evidence, cleanSpec)).toMatchObject({ passed: true, score: 1, defectRecall: null, precision: null });
+  expect(reviewGrade(evidence, bounceSpec)).toMatchObject({ passed: false, checks: { bounce_correctness: false } });
+  expect(reviewGrade(review("Scope needed\nPlease provide a commit range or file list."), cleanSpec))
+    .toMatchObject({ passed: false, checks: { bounce_correctness: false } });
   expect(reviewGrade(review("```\nNo actionable findings\n```"), cleanSpec).checks.states_no_findings).toBe(false);
   expect(reviewGrade({ ...evidence, timedOut: true }, cleanSpec)).toMatchObject({ passed: false, score: 1 });
   expect(reviewGrade(review("Scope needed\nPlease provide a commit range or file list."), bounceSpec))

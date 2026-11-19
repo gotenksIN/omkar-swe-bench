@@ -19,8 +19,8 @@ const tsPackages = ["typescript", "@typescript", "@types", "bun-types", "undici-
 const toolNames = ["opencode", "bun", "node", "ruff", "git", "python3", "ssh-keygen"];
 export const COMMIT_GUARD_PACKAGE = "opencode-commit-guard@1.1.1";
 export const FORBIDDEN_HARNESS_MOUNT = /(?:^|\/)(?:oxlint|oxc-parser|@oxlint|anti-slop)(?:\/|$)/u;
-export const DEFAULT_MODELS_URL = "https://models.opencode.ai";
-export const MODELS_CATALOG_PATH = "/experimental/v2.0/api.json?type=chat,decision,image,video";
+const DEFAULT_MODELS_URL = "https://models.opencode.ai";
+const MODELS_CATALOG_PATH = "/experimental/v2.0/api.json?type=chat,decision,image,video";
 
 function whichOnPath(name: string): string | null {
   const pathEnv = process.env.PATH;

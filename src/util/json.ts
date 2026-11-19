@@ -78,7 +78,7 @@ export function isJsonRecord(value: JsonValue): value is JsonObject {
   return value !== null && !Array.isArray(value) && Object(value) === value;
 }
 
-export function isJsonValue(value: unknown): value is JsonValue {
+function isJsonValue(value: unknown): value is JsonValue {
   return checkJsonValue(value, new Set());
 }
 

@@ -10,7 +10,7 @@ const DIRECT_SHELL = "Run project checks such as unittest, bun test, ruff, tsc, 
 const STANDALONE_CODER = "Run this assignment without delegation. Follow the task's commit instructions and report directly after verification.";
 const PAIR_CODER = 'When the task requires code review, delegate static review to code-reviewer without passing a model override, and supply the repository path, diff range, changed files, and requirements. If the reviewer runs in the background, end the turn with "Review pending" while waiting. Fix substantiated defects on HEAD, rerun tests, and fold fixes into HEAD with git commit --amend --no-edit while leaving non-HEAD commits untouched. Decline false alarms or unreachable findings with a concise technical reason.';
 
-export const NEUTRAL_CODER_PROMPT = [
+const NEUTRAL_CODER_PROMPT = [
   "Before editing, inspect relevant files, repository AGENTS.md, and Git state.",
   "Preserve unrelated working-tree changes.",
   "Implement only the requested behavior within scope. Make reasonable, reversible choices when minor details are unspecified.",
@@ -21,7 +21,7 @@ export const NEUTRAL_CODER_PROMPT = [
 
 const REVIEWER_GIT_RULE = "When inspecting diffs or history with shell, always pass --no-ext-diff --no-textconv (for example: git diff --no-ext-diff --no-textconv <range> and git log --no-ext-diff --no-textconv <range>).";
 
-export const NEUTRAL_REVIEWER_PROMPT = [
+const NEUTRAL_REVIEWER_PROMPT = [
   "Perform a read-only static review of the requested commit range, working-tree diff, and in-scope files against the task prompt and repository AGENTS.md.",
   "Do not edit files, mutate Git state, run tests, or delegate.",
   "If you have a commit range but no explicit file list, derive the changed files from git diff and git log.",
@@ -32,7 +32,7 @@ export const NEUTRAL_REVIEWER_PROMPT = [
   'Open with "Scope needed" and list the missing inputs only when the target repository or diff scope is genuinely missing.',
 ].join("\n");
 
-export const FINDINGS_FORMAT = 'Report actionable items under "## Findings" as "- **[P1]** `path:line` — Explanation", with the appropriate severity (P0–P3). If none are actionable, say "No actionable findings." If scope is missing, open with "Scope needed".';
+const FINDINGS_FORMAT = 'Report actionable items under "## Findings" as "- **[P1]** `path:line` — Explanation", with the appropriate severity (P0–P3). If none are actionable, say "No actionable findings." If scope is missing, open with "Scope needed".';
 
 interface AgentConfig {
   readonly description: string;

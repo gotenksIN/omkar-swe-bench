@@ -1,5 +1,4 @@
 import { OpenCode, type OpenCodeClient } from "@opencode/client";
-import { randomBytes } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { toBwrapEnvArgs } from "../sandbox/env.ts";
@@ -24,10 +23,6 @@ export interface ServerHandle {
   readonly stderrTail: () => string;
   readonly exitPromise: Promise<number | null>;
   readonly close: () => Promise<void>;
-}
-
-export function generateServerPassword(): string {
-  return randomBytes(32).toString("base64url");
 }
 
 function startupUrl(line: string): string {

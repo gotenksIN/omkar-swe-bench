@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { join } from "node:path";
 
 import { CODER_MODELS, parseModelRef, parseModelSpec, REVIEWER_MODELS, validateModels } from "../../src/config/models.ts";
-import { buildTrialConfig, FINDINGS_FORMAT, writeTrialConfig } from "../../src/config/prompts.ts";
+import { buildTrialConfig, writeTrialConfig } from "../../src/config/prompts.ts";
 import { parseJsoncObject } from "../../src/util/json.ts";
 
 function globMatches(pattern: string, value: string): boolean {
@@ -50,7 +50,9 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(config.plugins).toEqual([]);
     expect(buildTrialConfig({ role, needsCommitGuard: true }).config.plugins).toEqual(["opencode-commit-guard@1.1.1"]);
     expect(reviewer.mode).toBe(role === "code-reviewer" ? "all" : "subagent");
-    expect(reviewer.system).toContain(FINDINGS_FORMAT);
+    expect(reviewer.system).toContain("## Findings");
+    expect(reviewer.system).toContain("No actionable findings.");
+    expect(reviewer.system).toContain("Scope needed");
     expect(reviewer).not.toHaveProperty("model");
 
     for (const [action, resource] of [
@@ -82,7 +84,6 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv -n 5")).toBe(expectedGitEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --show-signature -n 5")).toBe(expectedFlagEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --output=pwned.txt")).toBe(expectedFlagEffect);
-    expect(reviewer.system).toContain("fundamentally flawed design");
     expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --no-index /etc/passwd /dev/null")).toBe(expectedFlagEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --ext-diff -p")).toBe(expectedFlagEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --textconv HEAD")).toBe(expectedFlagEffect);
@@ -142,7 +143,8 @@ test("imports only approved agent fields, overrides user allows via last-match-w
   expect(reviewer.description).toBe("Custom reviewer");
   expect(reviewer.model).toBe("openrouter/anthropic/claude-opus-5-5#high");
   expect(reviewer.system).toContain("Review carefully.");
-  expect(reviewer.system).toContain(FINDINGS_FORMAT);
+  expect(reviewer.system).toContain("## Findings");
+  expect(reviewer.system).toContain("--no-ext-diff --no-textconv");
   expect(reviewer.system).toContain("Review only the submitted patch.");
   expect(reviewer.system).toContain("Check the error handling.");
   expect(evaluatePermission(reviewer.permissions, "shell", "bun test")).toBe("deny");

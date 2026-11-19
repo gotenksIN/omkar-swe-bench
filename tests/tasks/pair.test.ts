@@ -7,7 +7,7 @@ import { captureGitState } from "../../src/graders/git.ts";
 import { extractSessionEvidence } from "../../src/graders/trace.ts";
 import type { Evidence } from "../../src/graders/types.ts";
 import { commitTaskFiles, initGitRepo, runFixtureCheck, runTaskGit } from "../../src/tasks/base.ts";
-import { TASKS, TASKS_BY_ID, tasksForPhase } from "../../src/tasks/index.ts";
+import { TASKS_BY_ID, tasksForPhase } from "../../src/tasks/index.ts";
 import { actualReviewerModels, reviewHandoffs } from "../../src/tasks/pair/handoffs.ts";
 
 const reportId = "pair-commit-review-amend";
@@ -51,7 +51,7 @@ test("partitions the task catalog cleanly across phases with unique IDs", () => 
   const pair = tasksForPhase("pair");
 
   expect(tasksForPhase("all")).toEqual([...coder, ...reviewer, ...pair]);
-  expect(TASKS_BY_ID.size).toBe(TASKS.length);
+  expect(TASKS_BY_ID.size).toBe(tasksForPhase("all").length);
   expect(coder.every(({ role }) => role === "coder")).toBe(true);
   expect(reviewer.every(({ role }) => role === "code-reviewer")).toBe(true);
   expect(pair.every(({ role }) => role === "pair")).toBe(true);
