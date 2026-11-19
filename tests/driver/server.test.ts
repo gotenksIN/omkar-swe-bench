@@ -158,3 +158,31 @@ test("drains stderr before classifying deterministic launch failures as SandboxL
     rmSync(trialDir, { recursive: true, force: true });
   }
 });
+
+test("preserves SandboxLaunchError when server exits right after printing a startup URL", async () => {
+  const trialDir = mkdtempSync("/tmp/opencode/driver-url-crash-");
+
+  try {
+    writeFileSync(
+      join(trialDir, "opencode"),
+      "#!/bin/sh\nprintf '{\"url\":\"http://127.0.0.1:1\"}\\n'\nprintf 'ConfigInvalid: broken config\\n' >&2\nexit 1\n",
+      { mode: 0o700 },
+    );
+
+    const envVars = new Map([["PATH", trialDir], ["OPENCODE_PASSWORD", generateServerPassword()], ["HOME", trialDir]]);
+
+    try {
+      await startOpenCodeServer({
+        trialDir, repoDir: trialDir, sandboxed: false, mountPlan: null, envVars,
+        startupTimeoutMs: 1_000, signal: new AbortController().signal,
+      });
+      throw new Error("Expected startOpenCodeServer to reject.");
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(Error);
+      expect(cause instanceof Error ? cause.name : "").toBe("SandboxLaunchError");
+      expect(cause instanceof Error ? cause.message : "").toContain("ConfigInvalid");
+    }
+  } finally {
+    rmSync(trialDir, { recursive: true, force: true });
+  }
+});

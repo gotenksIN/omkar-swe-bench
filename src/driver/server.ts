@@ -207,8 +207,19 @@ export async function startOpenCodeServer(options: StartServerOptions): Promise<
 
     return { baseUrl, pid: proc.pid, client, stderrTail: () => tail, exitPromise, close };
   } catch (cause) {
+    const crashed = !startupSignal.aborted
+      && await Promise.race([exitPromise.then(() => true), delay(50, false)]);
+
     startup.abort();
-    await close();
+
+    try {
+      if (crashed) {
+        await exited;
+      }
+    } finally {
+      await close();
+    }
+
     throw cause;
   } finally {
     clearTimeout(deadline);
