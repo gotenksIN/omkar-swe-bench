@@ -1,10 +1,10 @@
 # OmkarSWE bench
 
-OmkarSWE bench lets you evaluate coding, static review, and collaboration across 25 tasks with deterministic checks.
+OmkarSWE bench lets you evaluate coding, static review, and collaboration across 26 tasks with deterministic checks.
 
 | Stage | `--phase` | Tasks | What you measure |
 | --- | --- | ---: | --- |
-| `coder` | `coder` | 10 | Scoped implementation, verification, and Git workflow |
+| `coder` | `coder` | 11 | Scoped implementation, verification, and Git workflow |
 | `code-reviewer` | `reviewer` | 11 | Defect detection, architectural critique, scope handling, and restraint in read-only reviews |
 | `pair` | `pair` | 4 | Review handoff, response to findings, and scoped amendments |
 

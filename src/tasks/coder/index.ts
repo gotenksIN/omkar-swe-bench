@@ -3,7 +3,7 @@ import { commitGuardTwoTask } from "./git.ts";
 import {
   atomicAsyncLifecycle, blockerHonesty, conventionAutonomy, ssrfIpPinning, stitchCollapse, streamStopAndFeedback,
 } from "./python.ts";
-import { boundaryDecoderHttp, shellHeredocSubst, sseChunkCrlf } from "./typescript.ts";
+import { boundaryDecoderHttp, catalogAliasAndTestRigor, shellHeredocSubst, sseChunkCrlf } from "./typescript.ts";
 
 export const CODER_TASKS: readonly EvalTask[] = [
   stitchCollapse,
@@ -16,4 +16,5 @@ export const CODER_TASKS: readonly EvalTask[] = [
   conventionAutonomy,
   atomicAsyncLifecycle,
   boundaryDecoderHttp,
+  catalogAliasAndTestRigor,
 ];

@@ -1,9 +1,10 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parseSync, Visitor } from "oxc-parser";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { parseSync, Visitor, type Expression } from "oxc-parser";
 
-import type { Evidence } from "../../graders/types.ts";
+import type { CheckOutcomes, Evidence } from "../../graders/types.ts";
 import { assertNoSymlinkBoundary } from "../../util/fs.ts";
+import { isString } from "../../util/json.ts";
 import {
   buildCoderGradeResult, checksTypeScript, runFixtureCheck, setupCoderFixture, TS_FILES,
   type EvalTask, type FixtureFiles,
@@ -19,10 +20,11 @@ interface TypeScriptTask {
   readonly check: string;
   readonly probe: string;
   readonly checkSource?: (repoDir: string) => Promise<boolean>;
+  readonly extraChecks?: (ev: Evidence, common: CheckOutcomes) => Promise<CheckOutcomes>;
 }
 
 function typeScriptTask({
-  id, category, timeoutSeconds = 240, files, scope, prompt, check, probe, checkSource,
+  id, category, timeoutSeconds = 240, files, scope, prompt, check, probe, checkSource, extraChecks,
 }: TypeScriptTask): EvalTask {
   return {
     id, category, role: "coder", language: "typescript", timeoutSeconds,
@@ -37,7 +39,9 @@ function typeScriptTask({
         checkSource?.(ev.repoDir) ?? true,
       ]);
 
-      return buildCoderGradeResult({ ...common, [check]: behavior && source }, [], { timedOut: ev.timedOut });
+      const extra = extraChecks ? await extraChecks(ev, common) : {};
+
+      return buildCoderGradeResult({ ...common, [check]: behavior && source, ...extra }, [], { timedOut: ev.timedOut });
     },
   };
 }
@@ -318,5 +322,529 @@ try {
 } finally {
   await server.stop(true);
 }
+`,
+});
+
+const DEFAULT_MODEL_LITERALS = new Set([
+  "openai/gpt-fast#medium",
+  "openrouter/anthropic/claude-core#high",
+  "google/gemini-pro#medium",
+]);
+
+const MODEL_MUTANT_WRAPPERS: readonly string[] = [
+  `export * from "./models.impl.ts";
+import * as impl from "./models.impl.ts";
+
+export function validateModels(specs: readonly string[], providers: readonly impl.CatalogProvider[]): void {
+  const swapped = providers.map((provider) => ({
+    ...provider,
+    models: provider.models.map((model) => ({ ...model, id: model.wireModel })),
+  }));
+
+  impl.validateModels(specs, swapped);
+}
+`,
+  `export * from "./models.impl.ts";
+import * as impl from "./models.impl.ts";
+
+export function validateModels(specs: readonly string[], providers: readonly impl.CatalogProvider[]): void {
+  const allEnabled = providers.map((provider) => ({
+    ...provider,
+    models: provider.models.map((model) => ({ ...model, enabled: true })),
+  }));
+
+  impl.validateModels(specs, allEnabled);
+}
+`,
+  `export * from "./models.impl.ts";
+import * as impl from "./models.impl.ts";
+
+function rejectMultiSlash(spec: string): void {
+  const parsed = impl.parseModelSpec(spec);
+
+  if (parsed.modelID.includes("/")) throw new Error(\`Invalid model spec: \${spec}\`);
+}
+
+export function parseModelSpec(spec: string): impl.ModelSpec {
+  rejectMultiSlash(spec);
+
+  return impl.parseModelSpec(spec);
+}
+
+export function toSessionModel(spec: string): { readonly providerID: string; readonly modelID: string } {
+  rejectMultiSlash(spec);
+
+  return impl.toSessionModel(spec);
+}
+
+export function validateModels(specs: readonly string[], providers: readonly impl.CatalogProvider[]): void {
+  for (const spec of specs) rejectMultiSlash(spec);
+
+  impl.validateModels(specs, providers);
+}
+`,
+];
+
+async function collectTsFiles(rootDir: string, relativeDir: string): Promise<string[]> {
+  const fullDir = join(rootDir, relativeDir);
+
+  assertNoSymlinkBoundary(fullDir, rootDir);
+
+  const files: string[] = [];
+
+  try {
+    for (const entry of await readdir(fullDir, { withFileTypes: true })) {
+      const relPath = `${relativeDir}/${entry.name}`;
+
+      if (entry.isSymbolicLink()) throw new Error(`Symlink not allowed in tests: ${relPath}`);
+
+      if (entry.isDirectory()) {
+        files.push(...await collectTsFiles(rootDir, relPath));
+      } else if (entry.isFile() && /\.tsx?$/u.test(entry.name)) {
+        files.push(relPath);
+      }
+    }
+  } catch (cause) {
+    if (!(cause instanceof Error) || !("code" in cause) || cause.code !== "ENOENT") throw cause;
+  }
+
+  return files;
+}
+
+function unwrapExpression(expression: Expression): Expression {
+  let current = expression;
+
+  while (
+    current.type === "ParenthesizedExpression"
+    || current.type === "TSAsExpression"
+    || current.type === "TSTypeAssertion"
+    || current.type === "TSSatisfiesExpression"
+  ) {
+    current = current.expression;
+  }
+
+  return current;
+}
+
+function isDefaultModelsRef(expression: Expression): boolean {
+  const expr = unwrapExpression(expression);
+
+  if (expr.type === "Identifier") return expr.name === "DEFAULT_MODELS";
+
+  if (expr.type === "ArrayExpression" && expr.elements.length === 1) {
+    const first = expr.elements[0];
+
+    return first?.type === "SpreadElement" && isDefaultModelsRef(first.argument);
+  }
+
+  if (
+    expr.type === "CallExpression"
+    && expr.callee.type === "MemberExpression"
+    && !expr.callee.computed
+    && expr.callee.object.type === "Identifier"
+    && expr.callee.object.name === "Array"
+    && expr.callee.property.type === "Identifier"
+    && expr.callee.property.name === "from"
+    && expr.arguments[0]
+    && expr.arguments[0].type !== "SpreadElement"
+  ) {
+    return isDefaultModelsRef(expr.arguments[0]);
+  }
+
+  return false;
+}
+
+function isDefaultModelsIndexAccess(expression: Expression): boolean {
+  const expr = unwrapExpression(expression);
+
+  return expr.type === "MemberExpression" && isDefaultModelsRef(expr.object);
+}
+
+function isStringArrayLiteral(expression: Expression, literalArrayNames: ReadonlySet<string>): boolean {
+  const expr = unwrapExpression(expression);
+
+  if (expr.type === "Identifier") return literalArrayNames.has(expr.name);
+
+  if (expr.type !== "ArrayExpression" || expr.elements.length === 0) return false;
+
+  return expr.elements.every((el) => {
+    if (el === null || el.type === "SpreadElement") return false;
+
+    const item = unwrapExpression(el);
+
+    return item.type === "Literal" && isString(item.value);
+  });
+}
+
+function defaultModelLiteralValue(expression: Expression): string | null {
+  const expr = unwrapExpression(expression);
+
+  return expr.type === "Literal" && isString(expr.value) && DEFAULT_MODEL_LITERALS.has(expr.value)
+    ? expr.value
+    : null;
+}
+
+function hasTautologicalDefaultModelsTest(path: string, source: string): boolean {
+  const { program, errors } = parseSync(path, source, {
+    lang: path.endsWith(".tsx") ? "tsx" : "ts",
+    sourceType: "module",
+  });
+
+  if (errors.length > 0) return true;
+
+  const literalArrayNames = new Set<string>();
+
+  new Visitor({
+    VariableDeclarator(node) {
+      if (
+        node.id.type === "Identifier"
+        && node.init
+        && isStringArrayLiteral(node.init, literalArrayNames)
+      ) {
+        literalArrayNames.add(node.id.name);
+      }
+    },
+  }).visit(program);
+
+  let tautological = false;
+  const equalityMatchers = new Set(["toEqual", "toStrictEqual", "toMatchObject"]);
+  const containMatchers = new Set(["toContain", "toContainEqual"]);
+  const snapshotMatchers = new Set(["toMatchSnapshot", "toMatchInlineSnapshot"]);
+  const assertDeepMethods = new Set(["deepEqual", "deepStrictEqual"]);
+  const containedDefaults = new Set<string>();
+
+  new Visitor({
+    CallExpression(node) {
+      if (tautological) return;
+
+      const callee = unwrapExpression(node.callee);
+
+      if (callee.type === "MemberExpression" && !callee.computed && callee.property.type === "Identifier") {
+        const method = callee.property.name;
+        const receiver = unwrapExpression(callee.object);
+
+        if (
+          receiver.type === "CallExpression"
+          && receiver.callee.type === "Identifier"
+          && receiver.callee.name === "expect"
+          && receiver.arguments[0]
+          && receiver.arguments[0].type !== "SpreadElement"
+        ) {
+          const subject = receiver.arguments[0];
+          const firstArg = node.arguments[0];
+
+          if (isDefaultModelsRef(subject)) {
+            if (snapshotMatchers.has(method)) {
+              tautological = true;
+
+              return;
+            }
+
+            if (equalityMatchers.has(method) && firstArg && firstArg.type !== "SpreadElement"
+              && isStringArrayLiteral(firstArg, literalArrayNames)) {
+              tautological = true;
+
+              return;
+            }
+
+            if (containMatchers.has(method) && firstArg && firstArg.type !== "SpreadElement") {
+              const literal = defaultModelLiteralValue(firstArg);
+
+              if (literal !== null) {
+                containedDefaults.add(literal);
+
+                if (containedDefaults.size >= 2) {
+                  tautological = true;
+
+                  return;
+                }
+              }
+            }
+          }
+
+          if (
+            isDefaultModelsIndexAccess(subject)
+            && (method === "toBe" || method === "toEqual" || method === "toStrictEqual")
+            && firstArg
+            && firstArg.type !== "SpreadElement"
+            && defaultModelLiteralValue(firstArg) !== null
+          ) {
+            tautological = true;
+
+            return;
+          }
+        }
+
+        if (assertDeepMethods.has(method) && node.arguments.length >= 2) {
+          const left = node.arguments[0];
+          const right = node.arguments[1];
+
+          if (
+            left && right && left.type !== "SpreadElement" && right.type !== "SpreadElement"
+            && (
+              isDefaultModelsRef(left) && isStringArrayLiteral(right, literalArrayNames)
+              || isDefaultModelsRef(right) && isStringArrayLiteral(left, literalArrayNames)
+            )
+          ) {
+            tautological = true;
+
+            return;
+          }
+        }
+      }
+    },
+  }).visit(program);
+
+  return tautological;
+}
+
+async function noTautologicalDefaultModelsTests(repoDir: string): Promise<boolean> {
+  try {
+    const testPaths = await collectTsFiles(repoDir, "tests");
+
+    if (testPaths.length === 0) return false;
+
+    for (const relPath of testPaths) {
+      const fullPath = join(repoDir, relPath);
+
+      assertNoSymlinkBoundary(fullPath, repoDir);
+
+      if (hasTautologicalDefaultModelsTest(fullPath, await readFile(fullPath, "utf8"))) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runTestsAgainstModelWrapper(
+  trialDir: string,
+  modelImplSource: string,
+  testContents: ReadonlyArray<readonly [string, string]>,
+  wrapperSource: string,
+): Promise<boolean> {
+  const sandboxDir = await mkdtemp(join(trialDir, "ts-mutant-"));
+
+  try {
+    await mkdir(join(sandboxDir, "src"), { recursive: true });
+    await writeFile(join(sandboxDir, "package.json"), TS_FILES["package.json"]);
+    await writeFile(join(sandboxDir, "tsconfig.json"), TS_FILES["tsconfig.json"]);
+    await writeFile(join(sandboxDir, "src/models.impl.ts"), modelImplSource);
+    await writeFile(join(sandboxDir, "src/models.ts"), wrapperSource);
+
+    for (const [relPath, content] of testContents) {
+      const target = join(sandboxDir, relPath);
+
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, content);
+    }
+
+    return await runFixtureCheck(sandboxDir, "bun", ["--no-env-file", "test"]);
+  } finally {
+    await rm(sandboxDir, { recursive: true, force: true });
+  }
+}
+
+async function testsKillModelMutants(ev: Evidence, bunTestsPass: boolean): Promise<boolean> {
+  if (!bunTestsPass) return false;
+
+  try {
+    const modelsPath = join(ev.repoDir, "src/models.ts");
+
+    assertNoSymlinkBoundary(modelsPath, ev.repoDir);
+
+    const [modelImplSource, testPaths] = await Promise.all([
+      readFile(modelsPath, "utf8"),
+      collectTsFiles(ev.repoDir, "tests"),
+    ]);
+
+    if (testPaths.length === 0) return false;
+
+    const testContents: Array<readonly [string, string]> = [];
+
+    for (const relPath of testPaths) {
+      const fullPath = join(ev.repoDir, relPath);
+
+      assertNoSymlinkBoundary(fullPath, ev.repoDir);
+      testContents.push([relPath, await readFile(fullPath, "utf8")]);
+    }
+
+    const mutantResults = await Promise.all(
+      MODEL_MUTANT_WRAPPERS.map((wrapper) => runTestsAgainstModelWrapper(ev.trialDir, modelImplSource, testContents, wrapper)),
+    );
+
+    return mutantResults.every((passed) => !passed);
+  } catch {
+    return false;
+  }
+}
+
+export const catalogAliasAndTestRigor = typeScriptTask({
+  id: "coder-ts-catalog-alias-and-test-rigor",
+  category: "test-rigor",
+  scope: ["src/models.ts"],
+  prompt: `
+Fix parseModelSpec and validateModels in src/models.ts so catalog validation matches the public session model contract:
+- Keep DEFAULT_MODELS and the existing exported functions unchanged in signature.
+- In parseModelSpec, split an optional #variant suffix on the first # and split the base on the first / so multi-slash model IDs such as openrouter/anthropic/claude-core#high parse into providerID "openrouter", modelID "anthropic/claude-core", and variant "high".
+- Reject specs with an empty providerID, empty modelID, empty variant, multiple # characters, or internal whitespace by throwing an Error starting with "Invalid model spec: ".
+- In validateModels, match provider entries by entry.id (not entry.wireModel) so validated specs match toSessionModel.
+- Reject disabled models (!entry.enabled) by throwing an Error starting with "Disabled model: ". Keep the existing "Unknown provider: ", "Unknown model: ", and "Unknown variant: " error prefixes.
+- Replace the tautological DEFAULT_MODELS literal-copy test and inverted wireModel test in tests/models.test.ts with behavioral contract tests through the existing exports.
+`,
+  files: {
+    "AGENTS.md": `${TS_FILES["AGENTS.md"]}Do not write tautological tests that duplicate exported constant arrays or mirror broken behavior.\nVerify public contracts through exported interfaces so tests fail when contract logic breaks.\n`,
+    "src/models.ts": `export interface CatalogModel {
+  readonly id: string;
+  readonly wireModel: string;
+  readonly enabled: boolean;
+  readonly variants: readonly string[];
+}
+
+export interface CatalogProvider {
+  readonly id: string;
+  readonly models: readonly CatalogModel[];
+}
+
+export interface ModelSpec {
+  readonly providerID: string;
+  readonly modelID: string;
+  readonly variant?: string;
+}
+
+export const DEFAULT_MODELS = [
+  "openai/gpt-fast#medium",
+  "openrouter/anthropic/claude-core#high",
+  "google/gemini-pro#medium",
+] as const;
+
+const SPEC_PATTERN = /^([^/#]+)\\/([^/#]+)(?:#([^/#]+))?$/u;
+
+export function parseModelSpec(spec: string): ModelSpec {
+  const match = SPEC_PATTERN.exec(spec.trim());
+
+  if (!match?.[1] || !match[2]) throw new Error(\`Invalid model spec: \${spec}\`);
+
+  return match[3] === undefined
+    ? { providerID: match[1], modelID: match[2] }
+    : { providerID: match[1], modelID: match[2], variant: match[3] };
+}
+
+export function toSessionModel(spec: string): { readonly providerID: string; readonly modelID: string } {
+  const { providerID, modelID } = parseModelSpec(spec);
+
+  return { providerID, modelID };
+}
+
+export function validateModels(specs: readonly string[], providers: readonly CatalogProvider[]): void {
+  for (const spec of specs) {
+    const parsed = parseModelSpec(spec);
+    const provider = providers.find((entry) => entry.id === parsed.providerID);
+
+    if (!provider) throw new Error(\`Unknown provider: \${parsed.providerID}\`);
+
+    const model = provider.models.find((entry) => entry.wireModel === parsed.modelID);
+
+    if (!model) throw new Error(\`Unknown model: \${parsed.providerID}/\${parsed.modelID}\`);
+
+    if (parsed.variant !== undefined && !model.variants.includes(parsed.variant)) {
+      throw new Error(\`Unknown variant: \${parsed.variant}\`);
+    }
+  }
+}
+`,
+    "tests/models.test.ts": `import { expect, test } from "bun:test";
+
+import { DEFAULT_MODELS, validateModels } from "../src/models.ts";
+
+test("keeps default model specs", () => {
+  expect(DEFAULT_MODELS).toEqual([
+    "openai/gpt-fast#medium",
+    "openrouter/anthropic/claude-core#high",
+    "google/gemini-pro#medium",
+  ]);
+});
+
+test("validates models using wireModel", () => {
+  const providers = [
+    {
+      id: "openai",
+      models: [
+        { id: "gpt-fast", wireModel: "gpt-wire-v1", enabled: false, variants: ["medium"] },
+      ],
+    },
+  ];
+
+  expect(() => validateModels(["openai/gpt-wire-v1#medium"], providers)).not.toThrow();
+  expect(() => validateModels(["openai/gpt-fast#medium"], providers)).toThrow();
+});
+`,
+  },
+  check: "catalog_contract",
+  extraChecks: async (ev, common) => {
+    const [testsKillMutants, noTautological] = await Promise.all([
+      testsKillModelMutants(ev, common.bun_tests_pass === true),
+      noTautologicalDefaultModelsTests(ev.repoDir),
+    ]);
+
+    return {
+      tests_kill_mutants: testsKillMutants,
+      no_tautological_tests: noTautological,
+    };
+  },
+  probe: String.raw`
+import assert from "node:assert/strict";
+import { DEFAULT_MODELS, parseModelSpec, toSessionModel, validateModels } from "./src/models.ts";
+
+assert.deepEqual(DEFAULT_MODELS, [
+  "openai/gpt-fast#medium",
+  "openrouter/anthropic/claude-core#high",
+  "google/gemini-pro#medium",
+]);
+
+assert.deepEqual(parseModelSpec("openrouter/anthropic/claude-core#high"), {
+  providerID: "openrouter",
+  modelID: "anthropic/claude-core",
+  variant: "high",
+});
+assert.deepEqual(toSessionModel("openrouter/anthropic/claude-core#high"), {
+  providerID: "openrouter",
+  modelID: "anthropic/claude-core",
+});
+
+for (const bad of ["", "openai", "openai/", "/gpt-fast", "openai/gpt-fast#", "openai/gpt-fast#a#b", "openai/gpt fast"]) {
+  assert.throws(() => parseModelSpec(bad), /Invalid model spec:/u);
+}
+
+const providers = [
+  {
+    id: "openai",
+    models: [
+      { id: "gpt-fast", wireModel: "gpt-wire-v1", enabled: true, variants: ["medium"] },
+      { id: "gpt-retired", wireModel: "gpt-retired-wire", enabled: false, variants: ["medium"] },
+    ],
+  },
+  {
+    id: "openrouter",
+    models: [
+      { id: "anthropic/claude-core", wireModel: "or-claude-wire", enabled: true, variants: ["high"] },
+    ],
+  },
+  {
+    id: "google",
+    models: [
+      { id: "gemini-pro", wireModel: "gem-wire", enabled: true, variants: ["medium"] },
+    ],
+  },
+];
+
+validateModels(DEFAULT_MODELS, providers);
+assert.throws(() => validateModels(["openai/gpt-wire-v1#medium"], providers), /Unknown model:/u);
+assert.throws(() => validateModels(["openai/gpt-retired#medium"], providers), /Disabled model:/u);
+assert.throws(() => validateModels(["openai/gpt-fast#low"], providers), /Unknown variant:/u);
+assert.throws(() => validateModels(["missing/gpt-fast"], providers), /Unknown provider:/u);
 `,
 });
