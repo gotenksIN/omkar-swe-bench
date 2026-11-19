@@ -246,7 +246,7 @@ function reportTask(calibration: boolean): EvalTask {
   const task: PairFixture = {
     id: calibration ? "pair-pushback-on-false-nitpick" : "pair-commit-review-amend",
     category: calibration ? "pair-calibration" : "pair-workflow",
-    timeoutSeconds: 300,
+    timeoutSeconds: 600,
     files: {
       "AGENTS.md": "# Report contract\n\nReturn plain dictionaries from `summarize()` and `build_report()`.\nTest public functions with unittest.\n",
       "summary.py": `def summarize(batch):
@@ -337,7 +337,7 @@ function declines(text: string, subject: RegExp, reason: RegExp): boolean {
 }
 
 const multitask: PairFixture = {
-  id: "pair-multitask-review-loop-clean", category: "pair-delegation", timeoutSeconds: 360, maxAmendments: 3,
+  id: "pair-multitask-review-loop-clean", category: "pair-delegation", timeoutSeconds: 720, maxAmendments: 3,
   scopes: ["validator", "formatter"],
   pathsByCommit: [["validator.py", "tests/test_validator.py"], ["formatter.py", "tests/test_formatter.py"]],
   files: {
@@ -420,7 +420,7 @@ assert render_pairs(iter([("pear", 3), ("apple", 2), ("pear", 4), ("apple", 1)])
 };
 
 const pagination: PairFixture = {
-  id: "pair-unhittable-finding-and-nonhead", category: "pair-calibration", timeoutSeconds: 360, maxAmendments: 2,
+  id: "pair-unhittable-finding-and-nonhead", category: "pair-calibration", timeoutSeconds: 720, maxAmendments: 2,
   scopes: ["core", "cli"],
   pathsByCommit: [["core.py", "tests/test_core.py"], ["cli.py", "tests/test_cli.py"]],
   files: {

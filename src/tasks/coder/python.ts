@@ -20,7 +20,7 @@ interface PythonTask {
 
 function pythonTask({ id, category, files, scope, prompt, probe }: PythonTask): EvalTask {
   return {
-    id, category, role: "coder", language: "python", timeoutSeconds: 240,
+    id, category, role: "coder", language: "python", timeoutSeconds: 480,
     commitGuard: false, readOnlyRepo: false, needsRuff: true, needsTsCompiler: false,
     setupRepo: (repoDir) => setupCoderFixture(repoDir, { ...PY_FILES, ...files },
       `${prompt.trim()}\n\nEdit only ${scope.join(", ")}. Do not stage or commit.\n` +

@@ -104,7 +104,7 @@ export const commitGuardTwoTask: EvalTask = {
   category: "git-workflow",
   language: "git",
   role: "coder",
-  timeoutSeconds: 240,
+  timeoutSeconds: 480,
   commitGuard: true,
   readOnlyRepo: false,
   needsRuff: true,

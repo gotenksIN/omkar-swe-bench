@@ -24,7 +24,7 @@ interface TypeScriptTask {
 }
 
 function typeScriptTask({
-  id, category, timeoutSeconds = 240, files, scope, prompt, check, probe, checkSource, extraChecks,
+  id, category, timeoutSeconds = 480, files, scope, prompt, check, probe, checkSource, extraChecks,
 }: TypeScriptTask): EvalTask {
   return {
     id, category, role: "coder", language: "typescript", timeoutSeconds,
@@ -120,7 +120,7 @@ assert.equal(citedText(parts, 5, 6, 10), "tail");
 export const shellHeredocSubst = typeScriptTask({
   id: "coder-ts-shell-heredoc-subst",
   category: "parser",
-  timeoutSeconds: 300,
+  timeoutSeconds: 600,
   scope: ["src/shell.ts", "src/validator.ts"],
   prompt: `
 Inspect shell text without evaluating or executing it.

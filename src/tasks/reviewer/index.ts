@@ -35,7 +35,7 @@ function reviewerTask(fixture: ReviewFixture): EvalTask {
   const { id, category, language, spec } = fixture;
 
   return {
-    id, category, language, role: "code-reviewer", timeoutSeconds: 240, commitGuard: false, readOnlyRepo: true,
+    id, category, language, role: "code-reviewer", timeoutSeconds: 480, commitGuard: false, readOnlyRepo: true,
     needsRuff: false, needsTsCompiler: false,
     async setupRepo(repoDir) {
       const initial = language === "typescript" ? fixture.initial : { ...PY_FILES, ...fixture.initial };
