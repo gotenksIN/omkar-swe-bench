@@ -51,7 +51,7 @@ const terminalErrors = new Set([
   "ModelNotFoundError", "UnsupportedModelError", "AgentNotFoundError", "ConfigInvalidError",
   "SchemaError", "SchemaValidationError", "ValidationError", "ParseError", "MalformedResponse",
   "UnsupportedContentType", "SseEventTooLarge", "ExternalFormError", "WallClockTimeoutError", "AbortError",
-  "InvalidRequestError", "UnauthorizedError", "ForbiddenError", "SandboxLaunchError",
+  "InvalidCursorError", "InvalidRequestError", "UnauthorizedError", "ForbiddenError", "SandboxLaunchError",
 ]);
 
 const transientErrors = new Set([
@@ -62,9 +62,12 @@ const transientErrors = new Set([
 
 // The client preserves the declared error tag, but not its HTTP status.
 const declaredStatuses = new Map([
-  ["InvalidRequestError", 400], ["UnauthorizedError", 401], ["ForbiddenError", 403],
-  ["InternalServerError", 500], ["ServiceUnavailableError", 503],
+  ["InvalidCursorError", 400], ["InvalidRequestError", 400], ["UnauthorizedError", 401], ["ForbiddenError", 403],
+  ["InternalServerError", 500], ["UnknownError", 500], ["ServiceUnavailableError", 503],
 ]);
+
+const transientReadinessErrors = new Set(["LocationNotFoundError", "ServiceUnavailableError"]);
+const settledReplyErrors = new Set(["PermissionNotFoundError", "FormNotFoundError", "FormAlreadySettledError"]);
 
 export function isRetryableApiFailure({ status, errorType, message }: Omit<ErrorDiagnostic, "retryable" | "retryAfterMs">): boolean {
   if (terminalErrors.has(errorType) || (status !== null && [400, 401, 403, 404, 422].includes(status))) {
@@ -188,16 +191,22 @@ export async function waitForLocationReady(
 
       const nextUpdate = wakeup?.();
 
-      const [agents, configuredProviders] = await Promise.all([
-        client.agent.list({ location }, { signal: bounded }),
-        client.provider.list({ location }, { signal: bounded }),
-      ]);
+      try {
+        const [agents, configuredProviders] = await Promise.all([
+          client.agent.list({ location }, { signal: bounded }),
+          client.provider.list({ location }, { signal: bounded }),
+        ]);
 
-      const agentIds = new Set(agents.data.map(({ id }) => id));
-      const providerIds = new Set(configuredProviders.data.map(({ id }) => id));
+        const agentIds = new Set(agents.data.map(({ id }) => id));
+        const providerIds = new Set(configuredProviders.data.map(({ id }) => id));
 
-      if (agentIds.has("coder") && agentIds.has("code-reviewer") && providers.values().every((id) => providerIds.has(id))) {
-        return;
+        if (agentIds.has("coder") && agentIds.has("code-reviewer") && providers.values().every((id) => providerIds.has(id))) {
+          return;
+        }
+      } catch (cause) {
+        if (bounded.aborted || !(cause instanceof Error) || !transientReadinessErrors.has(cause.name)) {
+          throw cause;
+        }
       }
 
       await waitForPoll(bounded, nextUpdate);
@@ -208,12 +217,19 @@ export async function waitForLocationReady(
 async function collectSessionMessages(
   client: OpenCodeClient, sessionID: string, signal: AbortSignal, messages: SessionMessageInfo[],
 ): Promise<void> {
-  const request = { sessionID, limit: 200, order: "asc" } satisfies MessageListInput;
   const visited = new Set<string>();
   let cursor: string | undefined;
 
   do {
-    const page = await client.message.list(cursor === undefined ? request : { ...request, cursor }, { signal });
+    const input: MessageListInput = cursor === undefined
+      ? { sessionID, limit: 200, order: "asc" }
+      : { sessionID, limit: 200, cursor };
+
+    const page = await client.message.list(input, { signal });
+
+    if (page.data.length === 0) {
+      return;
+    }
 
     for (const message of page.data) {
       messages.push(message);
@@ -407,7 +423,13 @@ export async function runSession({
 
   function reply(work: Promise<void>): void {
     pendingReplies += 1;
-    void work.catch((cause) => fail(errorDiagnostic(cause))).finally(() => {
+    void work.catch((cause) => {
+      if (cause instanceof Error && settledReplyErrors.has(cause.name)) {
+        return;
+      }
+
+      fail(errorDiagnostic(cause));
+    }).finally(() => {
       pendingReplies -= 1;
       activity.notify();
     });

@@ -1,7 +1,7 @@
 import { OpenCode } from "@opencode/client";
 import { expect, test } from "bun:test";
 
-import { isRetryableApiFailure, isSafePairReviewerShellCommand, runSession } from "../../src/driver/session-runner.ts";
+import { errorDiagnostic, isRetryableApiFailure, isSafePairReviewerShellCommand, runSession } from "../../src/driver/session-runner.ts";
 import { parseJsonText, type JsonObject } from "../../src/util/json.ts";
 
 const repoDir = "/tmp/opencode/session-fixture";
@@ -10,6 +10,7 @@ const idle = (id: string): JsonObject => ({ id, type: "idle", time: { created: 1
 function fakeOpenCode(
   scenario:
     | "complete"
+    | "readiness-and-settled-reply"
     | "report-race"
     | "active-overlap-no-sse"
     | "child-failure"
@@ -26,6 +27,7 @@ function fakeOpenCode(
   let polls = 0;
   let providersReady = false;
   let agentsReady = false;
+  let transientReadinessPending = scenario === "readiness-and-settled-reply";
   let interrupts = 0;
   let processingReport = scenario === "report-race" || scenario === "active-overlap-no-sse";
   let messagesGate: Promise<void> | undefined;
@@ -63,6 +65,11 @@ function fakeOpenCode(
         case "/api/agent": {
           expect(initialized).toBe(true);
           expect(searchParams.get("location[directory]")).toBe(repoDir);
+
+          if (transientReadinessPending) {
+            return Response.json({ _tag: "LocationNotFoundError", message: "Location booting" }, { status: 404 });
+          }
+
           const data = agentsReady ? [{ id: "coder" }, { id: "code-reviewer" }] : [{ id: "coder" }];
 
           if (!agentsReady) {
@@ -76,6 +83,13 @@ function fakeOpenCode(
         case "/api/provider": {
           expect(initialized).toBe(true);
           expect(searchParams.get("location[directory]")).toBe(repoDir);
+
+          if (transientReadinessPending) {
+            transientReadinessPending = false;
+
+            return Response.json({ _tag: "ServiceUnavailableError", message: "Provider warming" }, { status: 503 });
+          }
+
           const data = providersReady ? [{ id: "synthetic" }, { id: "review" }] : [{ id: "synthetic" }];
 
           if (!providersReady) {
@@ -116,6 +130,13 @@ function fakeOpenCode(
               id: "question", sessionID: "root", title: "Continue?", fields: [{ type: "boolean", key: "continue" }],
             } });
             emit("session.idle", { sessionID: "root" });
+          } else if (scenario === "readiness-and-settled-reply") {
+            emit("permission.asked", { id: "ask-ext", sessionID: "root", action: "external_directory", resources: ["/etc/passwd"] });
+            emit("permission.asked", { id: "ask-settled", sessionID: "root", action: "external_directory", resources: ["/etc/hosts"] });
+            emit("form.created", { form: {
+              id: "form-settled", sessionID: "root", title: "Continue?", fields: [{ type: "boolean", key: "continue" }],
+            } });
+            emit("session.idle", { sessionID: "root" });
           } else if (scenario === "report-race" || scenario === "active-overlap-no-sse") {
             emit("session.idle", { sessionID: "root" });
           } else if (scenario === "child-failure") {
@@ -137,12 +158,20 @@ function fakeOpenCode(
           actions.push({ type: "permission-reject" });
 
           return new Response(null, { status: 204 });
+        case "/api/session/root/permission/ask-settled/reply":
+          actions.push({ type: "permission-settled" });
+
+          return Response.json({ _tag: "PermissionNotFoundError", message: "Permission already settled" }, { status: 404 });
         case "/api/session/root/form/question":
           expect(request.method).toBe("DELETE");
           expect(searchParams.get("message")).toContain("Make a reasonable, reversible choice");
           actions.push({ type: "form" });
 
           return new Response(null, { status: 204 });
+        case "/api/session/root/form/form-settled":
+          actions.push({ type: "form-settled" });
+
+          return Response.json({ _tag: "FormAlreadySettledError", message: "Form already settled" }, { status: 409 });
         case "/api/experimental/job":
           expect(searchParams.get("sessionID")).toBe("root");
           expect(searchParams.get("descendants")).toBe("true");
@@ -168,7 +197,12 @@ function fakeOpenCode(
 
           return Response.json({ data: {} });
         case "/api/session/root/inbox":
-          if (scenario === "report-race" || scenario === "active-overlap-no-sse" || scenario === "child-failure") {
+          if (
+            scenario === "readiness-and-settled-reply"
+            || scenario === "report-race"
+            || scenario === "active-overlap-no-sse"
+            || scenario === "child-failure"
+          ) {
             return Response.json({ data: [] });
           }
 
@@ -190,23 +224,39 @@ function fakeOpenCode(
         case "/api/session/child/message":
         case "/api/session/grandchild/message": {
           expect(searchParams.get("limit")).toBe("200");
-          expect(searchParams.get("order")).toBe("asc");
+          const cursor = searchParams.get("cursor");
+          const order = searchParams.get("order");
+
+          if (cursor !== null && order !== null) {
+            return Response.json({ _tag: "InvalidCursorError", message: "Cursor cannot be combined with order" }, { status: 400 });
+          }
+
+          if (cursor === null) {
+            expect(order).toBe("asc");
+          }
 
           if (pathname === "/api/session/root/message") {
-            const cursor = searchParams.get("cursor");
-            expect([null, "page-2"]).toContain(cursor);
+            expect([null, "page-2", "page-3"]).toContain(cursor);
 
-            if (scenario === "report-race" && cursor !== null) {
+            if (scenario === "report-race" && cursor === "page-2") {
               await messagesGate;
+            }
+
+            if (cursor === "page-3") {
+              return Response.json({ data: [], cursor: { previous: null, next: null } });
             }
 
             return Response.json({
               data: [idle(cursor === null ? "first" : "second")],
-              cursor: { next: "page-2" },
+              cursor: { next: cursor === null ? "page-2" : "page-3" },
             });
           }
 
-          return Response.json({ data: [idle(pathname.includes("grandchild") ? "nested" : "review")], cursor: { next: null } });
+          if (cursor !== null) {
+            return Response.json({ data: [], cursor: { previous: null, next: null } });
+          }
+
+          return Response.json({ data: [idle(pathname.includes("grandchild") ? "nested" : "review")], cursor: { next: "done" } });
         }
 
         case "/api/session/root/interrupt":
@@ -252,6 +302,28 @@ test("waits for both readiness barriers and collects quiescent root and descenda
     expect(result.rootMessages.map(({ id }) => id)).toEqual(["first", "second"]);
     expect(result.childMessagesBySessionId.get("child")?.map(({ id }) => id)).toEqual(["review"]);
     expect(result.childMessagesBySessionId.get("grandchild")?.map(({ id }) => id)).toEqual(["nested"]);
+  } finally {
+    await fixture.server.stop(true);
+  }
+});
+
+test("retries transient readiness errors and ignores already-settled permission and form replies", async () => {
+  const fixture = fakeOpenCode("readiness-and-settled-reply");
+
+  try {
+    const result = await fixture.run();
+    expect(result.exitCode).toBe(0);
+    expect(result.errorDiagnostic).toBeNull();
+    expect(fixture.actions).toContainEqual({ type: "permission-settled" });
+    expect(fixture.actions).toContainEqual({ type: "form-settled" });
+
+    const invalidCursor = new Error("Cursor cannot be combined with order");
+    invalidCursor.name = "InvalidCursorError";
+    expect(errorDiagnostic(invalidCursor)).toMatchObject({ status: 400, retryable: false });
+
+    const unknownError = new Error("Unexpected server failure");
+    unknownError.name = "UnknownError";
+    expect(errorDiagnostic(unknownError)).toMatchObject({ status: 500, retryable: true });
   } finally {
     await fixture.server.stop(true);
   }
