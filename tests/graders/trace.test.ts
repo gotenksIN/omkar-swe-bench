@@ -172,6 +172,14 @@ test("recognizes real commands after edits in the trial repository, not help mod
 
     expect(ranCommand({ ...shortCircuited, repoDir }, ["bun", "test"], { success: true })).toBe(false);
     expect(ranCommand({ ...shortCircuited, repoDir }, ["verify_deploy.sh"], { success: false })).toBe(false);
+
+    const nonTerminating = extractSessionEvidence([assistant([
+      completedShell("exec 2>&1; bun test", repoDir, 0),
+      completedShell("test -d tests || exit 1; ruff check .", repoDir, 0),
+    ])], { timedOut: false });
+
+    expect(ranCommand({ ...nonTerminating, repoDir }, ["bun", "test"], { success: true })).toBe(true);
+    expect(ranCommand({ ...nonTerminating, repoDir }, ["ruff", "check"], { success: true })).toBe(true);
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }

@@ -158,14 +158,42 @@ function disablesErrexit(words: readonly { readonly text: string }[]): boolean {
 
 const FLOW_TERMINATORS = new Set(["exit", "return", "exec"]);
 
-function terminatesShell(cmd: ShellRunTrace["parsed"]["commands"][number]): boolean {
-  const raw = cmd.words[0]?.text;
+function execHasOperand(args: readonly string[]): boolean {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
 
-  if (raw !== undefined && FLOW_TERMINATORS.has(raw)) return true;
+    if (arg === "--") return index + 1 < args.length;
 
+    if (arg === "-c" || arg === "-l") continue;
+
+    if (arg === "-a") {
+      index += 1;
+      continue;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+function terminatesShell(cmd: ShellRunTrace["parsed"]["commands"][number], exitCode: number): boolean {
   const unwrapped = unwrapSimpleCommand(cmd);
+  const name = unwrapped?.executable ?? cmd.words[0]?.text;
 
-  return unwrapped !== null && FLOW_TERMINATORS.has(unwrapped.executable);
+  if (name === undefined || !FLOW_TERMINATORS.has(name)) return false;
+
+  const args = unwrapped?.args ?? cmd.words.slice(1).map(({ text }) => text);
+
+  if (name === "exec") return execHasOperand(args);
+
+  const literal = args[0];
+
+  if (literal !== undefined && /^\d+$/u.test(literal) && (Number(literal) & 255) !== exitCode) {
+    return false;
+  }
+
+  return true;
 }
 
 function siblingExitApplies(
@@ -177,7 +205,7 @@ function siblingExitApplies(
   for (let idx = 0; idx < position; idx += 1) {
     const cmd = commands[siblingIndices[idx] ?? -1];
 
-    if (!cmd || terminatesShell(cmd)) return false;
+    if (!cmd || terminatesShell(cmd, exitCode)) return false;
   }
 
   // Partition sibling commands into `;`/`\n`-separated statements (lists).
