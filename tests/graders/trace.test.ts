@@ -251,3 +251,41 @@ test("supports leading bun flags and verified pass output on multi-statement com
   expect(ranCommand({ ...guardedDeployFail, repoDir }, ["verify_deploy.sh"], { success: false, verifiedOutput: deployMissing })).toBe(true);
   expect(ranCommand({ ...skippedDeploy, repoDir }, ["verify_deploy.sh"], { success: false, verifiedOutput: deployMissing })).toBe(false);
 });
+
+test("enforces beforeCommandIndex bounds without breaking compound AST semantics", () => {
+  const repoDir = "/tmp/opencode/repo";
+  const unittestPass = (output: string): boolean => /\bRan [1-9]\d* tests?\b[\s\S]*?\nOK\b/u.test(output);
+
+  const newlinePreAmend = extractSessionEvidence([assistant([
+    completedShell("python3 -m unittest discover -s tests\nruff check .\ngit add summary.py && git commit --amend --no-edit",
+      undefined, 0, "Ran 2 tests in 0.001s\n\nOK\nAll checks passed!\n"),
+  ])], { timedOut: false });
+
+  const orFallback = extractSessionEvidence([assistant([
+    completedShell("python3 -m unittest discover -s tests || git commit --amend --no-edit",
+      undefined, 0, "FAILED (failures=1)\n"),
+  ])], { timedOut: false });
+
+  const postAmendOnly = extractSessionEvidence([assistant([
+    completedShell("git add summary.py && git commit --amend --no-edit && python3 -m unittest discover -s tests",
+      undefined, 0, "Ran 2 tests in 0.001s\n\nOK\n"),
+  ])], { timedOut: false });
+
+  const failBeforePassAfter = extractSessionEvidence([assistant([
+    completedShell("python3 -m unittest discover -s tests\ngit commit --amend --no-edit\npython3 -m unittest discover -s tests",
+      undefined, 0, "FAILED (failures=1)\nRan 2 tests in 0.001s\n\nOK\n"),
+  ])], { timedOut: false });
+
+  expect(ranCommand({ ...newlinePreAmend, repoDir }, ["unittest"], {
+    success: true, verifiedOutput: unittestPass, beforeCommandIndex: 3,
+  })).toBe(true);
+  expect(ranCommand({ ...orFallback, repoDir }, ["unittest"], {
+    success: true, verifiedOutput: unittestPass, beforeCommandIndex: 1,
+  })).toBe(false);
+  expect(ranCommand({ ...postAmendOnly, repoDir }, ["unittest"], {
+    success: true, verifiedOutput: unittestPass, beforeCommandIndex: 1,
+  })).toBe(false);
+  expect(ranCommand({ ...failBeforePassAfter, repoDir }, ["unittest"], {
+    success: true, verifiedOutput: unittestPass, beforeCommandIndex: 1,
+  })).toBe(false);
+});

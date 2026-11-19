@@ -146,6 +146,7 @@ export function extractSessionEvidence(
 
 export interface RanCommandOptions {
   readonly afterLastEdit?: boolean;
+  readonly beforeCommandIndex?: number;
   readonly outputPattern?: RegExp;
   readonly success?: boolean | null;
   readonly verifiedOutput?: (output: string) => boolean;
@@ -234,10 +235,16 @@ function matchesStage(stage: SimpleCommand, prefix: readonly string[]): boolean 
     matchesPrefix({ ...command, executable: posix.basename(script), args: command.args.slice(idx + 1) }, prefix);
 }
 
-function matchesPipeline(run: ShellRunTrace, prefix: readonly string[]): boolean {
+function matchesPipeline(
+  run: ShellRunTrace, prefix: readonly string[], commandLimit = run.parsed.commands.length,
+): boolean {
   const preceding = new Map<number, SimpleCommand>();
 
-  for (const stage of run.parsed.commands) {
+  for (let cmdIndex = 0; cmdIndex < commandLimit; cmdIndex += 1) {
+    const stage = run.parsed.commands[cmdIndex];
+
+    if (!stage) continue;
+
     const left = preceding.get(stage.depth);
 
     if (left?.operatorAfter === "|" && (matchesStage(left, prefix) || matchesStage(stage, prefix))) return true;
@@ -264,21 +271,34 @@ export function ranCommand(
   }
 
   return evidence.shellRuns.some((run) => {
-    if (run.index <= lastEdit || run.parsed.malformed || !sameDirectory(run.workdir, evidence.repoDir) ||
-      !run.parsed.unwrapped.some((command) => matchesPrefix(command, wantedPrefix))) return false;
+    if (run.index <= lastEdit || run.parsed.malformed || !sameDirectory(run.workdir, evidence.repoDir)) return false;
+
+    const bounded = options.beforeCommandIndex !== undefined;
+    const commandLimit = bounded ? Math.min(options.beforeCommandIndex, run.parsed.commands.length) : run.parsed.commands.length;
+    const candidateCommands = bounded ? run.parsed.commands.slice(0, commandLimit) : run.parsed.commands;
+
+    const matched = bounded
+      ? candidateCommands.some((stage) => matchesStage(stage, wantedPrefix))
+      : run.parsed.unwrapped.some((command) => matchesPrefix(command, wantedPrefix));
+
+    if (!matched) return false;
 
     if (options.outputPattern && !new RegExp(options.outputPattern).test(run.output)) return false;
 
     if (options.success == null) return true;
 
-    const directStatus = run.parsed.commands.some((stage, cmdIndex) =>
+    const directStatus = candidateCommands.some((stage, cmdIndex) =>
       matchesStage(stage, wantedPrefix) && commandExitApplies(run, cmdIndex) && (run.exitCode === 0) === options.success);
 
+    const hasLaterMatch = bounded
+      && run.parsed.commands.slice(commandLimit).some((stage) => matchesStage(stage, wantedPrefix));
+
     const verifiedOutput = options.verifiedOutput !== undefined
+      && !hasLaterMatch
       && options.verifiedOutput(run.output)
-      && run.parsed.commands.some((stage, cmdIndex) =>
+      && candidateCommands.some((stage, cmdIndex) =>
         matchesStage(stage, wantedPrefix) && commandCanProduceOutput(run, cmdIndex));
 
-    return directStatus || verifiedOutput || (options.outputPattern !== undefined && matchesPipeline(run, wantedPrefix));
+    return directStatus || verifiedOutput || (options.outputPattern !== undefined && matchesPipeline(run, wantedPrefix, commandLimit));
   });
 }

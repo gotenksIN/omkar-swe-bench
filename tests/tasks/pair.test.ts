@@ -217,7 +217,9 @@ test("segments reused reviewer child sessions by turn in reviewHandoffs", () =>
 
 type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt"
   | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit"
-  | "chained-amend" | "newline-tests" | "passive-decline" | "reused-session";
+  | "chained-amend" | "newline-tests" | "passive-decline" | "reused-session"
+  | "newline-batched-amend" | "chained-amend-status" | "newline-amend-status"
+  | "post-amend-tests" | "or-amend-tests" | "failed-batched-amend";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -383,10 +385,15 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
 
   parts.push(tool("patch", { filePath: amendFile }));
 
+  const batchedAmendModes = new Set<Negative>([
+    "chained-amend", "newline-batched-amend", "chained-amend-status", "newline-amend-status",
+    "post-amend-tests", "or-amend-tests", "failed-batched-amend",
+  ]);
+
   if (negative === "newline-tests") {
     const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(`python3 ${testsCommand.join(" ")}\nruff check .`, ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n", ok ? 0 : 1);
-  } else if (negative !== "chained-amend") {
+  } else if (negative === undefined || !batchedAmendModes.has(negative)) {
     await runTests();
   }
 
@@ -397,6 +404,30 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
   if (negative === "chained-amend") {
     const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(`python3 ${testsCommand.join(" ")} && git commit --amend --no-edit`, ok ? "Ran 1 test\n\nOK\n" : "", ok ? 0 : 1);
+  } else if (negative === "newline-batched-amend") {
+    const ok = await runFixtureCheck(repo, "python3", testsCommand);
+    shell(
+      `python3 ${testsCommand.join(" ")}\nruff check .\ngit add ${amendFile} && git commit --amend --no-edit`,
+      ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n", ok ? 0 : 1,
+    );
+  } else if (negative === "chained-amend-status") {
+    const ok = await runFixtureCheck(repo, "python3", testsCommand);
+    shell(
+      `python3 ${testsCommand.join(" ")} && ruff check . && git commit --amend --no-edit && git status --short`,
+      ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n", ok ? 0 : 1,
+    );
+  } else if (negative === "newline-amend-status") {
+    const ok = await runFixtureCheck(repo, "python3", testsCommand);
+    shell(
+      `python3 ${testsCommand.join(" ")} && git commit --amend --no-edit\ngit status`,
+      ok ? "Ran 1 test\n\nOK\n" : "FAILED\n", ok ? 0 : 1,
+    );
+  } else if (negative === "post-amend-tests") {
+    shell(`git commit --amend --no-edit && python3 ${testsCommand.join(" ")}`, "Ran 1 test\n\nOK\n", 0);
+  } else if (negative === "or-amend-tests") {
+    shell(`python3 ${testsCommand.join(" ")} || git commit --amend --no-edit`, "FAILED (failures=1)\n", 0);
+  } else if (negative === "failed-batched-amend") {
+    shell(`python3 ${testsCommand.join(" ")}\ngit commit --amend --no-edit`, "FAILED (failures=1)\n", 0);
   } else {
     shell("git commit --amend --no-edit");
   }
@@ -466,6 +497,9 @@ const negatives = [
   [loopId, "loop", "review_loop_closed_clean"],
   [loopId, "extra-attempt", "review_loop_closed_clean"],
   [reportId, "late-edit", "tests_rerun_before_amend"],
+  [reportId, "post-amend-tests", "tests_rerun_before_amend"],
+  [reportId, "or-amend-tests", "tests_rerun_before_amend"],
+  [reportId, "failed-batched-amend", "tests_rerun_before_amend"],
   [reportId, "reviewer-unsafe-shell", "scope_preserved"],
   [reportId, "reviewer-blocked-edit", "scope_preserved"],
 ] as const;
@@ -522,5 +556,29 @@ test("accepts &&-chained amend tests, newline-verified test runs, and passive-vo
     expect(grade.checks.reviewer_caught_real_limit).toBe(true);
     expect(grade.checks.reviewer_emitted_unhittable).toBe(true);
     expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-batched-amend");
+
+    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+    expect(grade.checks.no_rejected_commits).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "chained-amend-status");
+
+    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+    expect(grade.checks.no_rejected_commits).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-amend-status");
+
+    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+    expect(grade.checks.no_rejected_commits).toBe(false);
+    expect(grade.passed).toBe(false);
   });
 });

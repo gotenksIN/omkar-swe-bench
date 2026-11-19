@@ -7,7 +7,9 @@ import { isSafePairReviewerShellCommand } from "../../driver/session-runner.ts";
 import { defectMatchesFinding, parseFindings, statesNoFindings } from "../../graders/findings.ts";
 import { setupSshSigning, signedCommitChecks, type SignedCommitOptions } from "../../graders/git.ts";
 import { ranCommand } from "../../graders/trace.ts";
-import { commandExitApplies, computeGradeResult, type CheckOutcomes, type Defect, type Evidence } from "../../graders/types.ts";
+import {
+  commandCanProduceOutput, computeGradeResult, type CheckOutcomes, type Defect, type Evidence, type ShellRunTrace,
+} from "../../graders/types.ts";
 import { isString } from "../../util/json.ts";
 import {
   PY_FILES, pytestRun, pythonTestFiles, runFixtureCheck, setupCoderFixture, unittestRun,
@@ -130,11 +132,18 @@ function scopePreserved(ev: Evidence, fixture: PairFixture, reviewedScope: boole
     staged === "" && unstaged === "" && untracked.length === 0;
 }
 
+function firstReachableAmendIndex(run: ShellRunTrace): number {
+  return run.parsed.commands.findIndex((cmd, cmdIndex) => {
+    const unwrapped = unwrapSimpleCommand(cmd);
+
+    return unwrapped !== null && extractGitCommit(unwrapped)?.amend === true && commandCanProduceOutput(run, cmdIndex);
+  });
+}
+
 function testsRerunBeforeAmend(ev: Evidence): boolean {
   const review = ev.reviewHandoffs[0];
 
-  const amend = ev.shellRuns.findLast(({ exitCode, parsed }) =>
-    exitCode === 0 && parsed.gitCommits.some((commit) => commit.amend));
+  const amend = ev.shellRuns.findLast((run) => run.exitCode === 0 && firstReachableAmendIndex(run) >= 0);
 
   if (review === undefined || amend === undefined || amend.index <= review.toolIndex) return false;
 
@@ -146,31 +155,14 @@ function testsRerunBeforeAmend(ev: Evidence): boolean {
     return true;
   }
 
-  const amendStageIndex = amend.parsed.commands.findIndex((cmd) => {
-    const unwrapped = unwrapSimpleCommand(cmd);
+  const amendStageIndex = firstReachableAmendIndex(amend);
 
-    return unwrapped !== null && extractGitCommit(unwrapped)?.amend === true;
-  });
+  if (amendStageIndex <= 0) return false;
 
-  if (
-    amendStageIndex <= 0
-    || !commandExitApplies(amend, amendStageIndex)
-    || !amend.parsed.commands.slice(0, amendStageIndex).every((cmd) => cmd.depth === 0 && cmd.operatorAfter === "&&")
-  ) {
-    return false;
-  }
+  const combinedTrace = { ...ev, shellRuns: [amend], tools };
 
-  const preAmendRun = {
-    ...amend,
-    parsed: {
-      ...amend.parsed,
-      commands: amend.parsed.commands.slice(0, amendStageIndex),
-    },
-  };
-
-  const combinedTrace = { ...ev, shellRuns: [preAmendRun], tools };
-
-  return ranCommand(combinedTrace, ["unittest"], unittestRun) || ranCommand(combinedTrace, ["pytest"], pytestRun);
+  return ranCommand(combinedTrace, ["unittest"], { ...unittestRun, beforeCommandIndex: amendStageIndex })
+    || ranCommand(combinedTrace, ["pytest"], { ...pytestRun, beforeCommandIndex: amendStageIndex });
 }
 
 function reviewerInvocations(ev: Evidence): number {
