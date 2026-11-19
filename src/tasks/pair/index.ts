@@ -1,22 +1,26 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
+import { extractGitCommit, unwrapSimpleCommand } from "../../ast/bash.ts";
 import { checkPythonDividePagesMinimal, checkPythonHasTestMethods } from "../../ast/python.ts";
 import { isSafePairReviewerShellCommand } from "../../driver/session-runner.ts";
 import { defectMatchesFinding, parseFindings, statesNoFindings } from "../../graders/findings.ts";
 import { setupSshSigning, signedCommitChecks, type SignedCommitOptions } from "../../graders/git.ts";
 import { ranCommand } from "../../graders/trace.ts";
-import { computeGradeResult, type CheckOutcomes, type Defect, type Evidence } from "../../graders/types.ts";
+import { commandExitApplies, computeGradeResult, type CheckOutcomes, type Defect, type Evidence } from "../../graders/types.ts";
 import { isString } from "../../util/json.ts";
-import { PY_FILES, pythonTestFiles, runFixtureCheck, setupCoderFixture, type EvalTask, type FixtureFiles } from "../base.ts";
+import {
+  PY_FILES, pytestRun, pythonTestFiles, runFixtureCheck, setupCoderFixture, unittestRun,
+  type EvalTask, type FixtureFiles,
+} from "../base.ts";
 import { pairReflog, withPairHistory, type ReadPairGit } from "./handoffs.ts";
 
-const signedPrompt = `Capture the commit context before the first commit. Use the configured SSH signing key and sign off.
+const signedPrompt = `Capture the commit context before the first commit. Format each commit subject as \`<scope>: <Capitalized summary>\` (at most 72 characters, no trailing period), sign with the configured SSH signing key, and sign off with \`-s\`. Run each \`git commit\` as a standalone or final \`&&\`-chained command without trailing commands.
 For each task, run \`python3 -m unittest discover -s tests\` and \`ruff check .\` before committing.
 Keep the index and working tree clean after committing. Do not push.`;
 
-const reviewPrompt = `Delegate a static review to \`code-reviewer\`. Provide the absolute repository path, the commit range from {baseline} to HEAD as \`{baseline}..HEAD\`, and the changed files. Ask the reviewer to use its review requirements and report prioritized findings with file:line citations under "## Findings". Do not ask it to edit, run tests, or delegate.
-Say "Review pending" while waiting for the review. Assess each finding against the code and requirements. Fix substantiated issues, rerun the tests and Ruff, and amend HEAD with \`git commit --amend --no-edit\`. Do not rewrite older commits. Explain any findings you decline.`;
+const reviewPrompt = `Delegate a static review to \`code-reviewer\`. Provide the absolute repository path, the commit range from {baseline} to HEAD as \`{baseline}..HEAD\`, and the changed files. Ask the reviewer to apply its acceptance requirements and report prioritized findings with file:line citations under "## Findings". Do not ask it to edit, run tests, or delegate.
+Say "Review pending" while waiting for the review. \`code-reviewer\` holds additional acceptance requirements not listed above: implement findings on HEAD that are compatible with \`AGENTS.md\` and explicit contracts here, rerun the tests and Ruff, and amend HEAD with \`git commit --amend --no-edit\`. Do not rewrite older commits. Decline findings that contradict \`AGENTS.md\` or explicit contracts, or that flag unreachable paths already prevented by existing validation, and explain why.`;
 
 interface PairEvidence {
   readonly reviewed: boolean;
@@ -128,16 +132,45 @@ function scopePreserved(ev: Evidence, fixture: PairFixture, reviewedScope: boole
 
 function testsRerunBeforeAmend(ev: Evidence): boolean {
   const review = ev.reviewHandoffs[0];
-  const amend = ev.shellRuns.find(({ parsed }) => parsed.gitCommits.some((commit) => commit.amend));
 
-  if (review === undefined || amend === undefined) return false;
+  const amend = ev.shellRuns.findLast(({ exitCode, parsed }) =>
+    exitCode === 0 && parsed.gitCommits.some((commit) => commit.amend));
+
+  if (review === undefined || amend === undefined || amend.index <= review.toolIndex) return false;
 
   const shellRuns = ev.shellRuns.filter(({ index }) => index > review.toolIndex && index < amend.index);
   const tools = ev.tools.filter(({ index, isSubagent }) => !isSubagent && index < amend.index);
   const trace = { ...ev, shellRuns, tools };
-  const options = { afterLastEdit: true, success: true };
 
-  return ranCommand(trace, ["unittest"], options) || ranCommand(trace, ["pytest"], options);
+  if (ranCommand(trace, ["unittest"], unittestRun) || ranCommand(trace, ["pytest"], pytestRun)) {
+    return true;
+  }
+
+  const amendStageIndex = amend.parsed.commands.findIndex((cmd) => {
+    const unwrapped = unwrapSimpleCommand(cmd);
+
+    return unwrapped !== null && extractGitCommit(unwrapped)?.amend === true;
+  });
+
+  if (
+    amendStageIndex <= 0
+    || !commandExitApplies(amend, amendStageIndex)
+    || !amend.parsed.commands.slice(0, amendStageIndex).every((cmd) => cmd.depth === 0 && cmd.operatorAfter === "&&")
+  ) {
+    return false;
+  }
+
+  const preAmendRun = {
+    ...amend,
+    parsed: {
+      ...amend.parsed,
+      commands: amend.parsed.commands.slice(0, amendStageIndex),
+    },
+  };
+
+  const combinedTrace = { ...ev, shellRuns: [preAmendRun], tools };
+
+  return ranCommand(combinedTrace, ["unittest"], unittestRun) || ranCommand(combinedTrace, ["pytest"], pytestRun);
 }
 
 function reviewerInvocations(ev: Evidence): number {
@@ -199,7 +232,9 @@ function pairTask(fixture: PairFixture): EvalTask {
       const { baselineHead, repoDir, afterGit: { head } } = ev;
       const first = ev.reviewHandoffs[0];
       const end = first?.resolvedEndCommit ?? null;
-      const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some((finding) => defectMatchesFinding(fixture.defect, finding));
+
+      const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some((finding) =>
+        defectMatchesFinding(fixture.defect, finding, repoDir));
 
       return withPairHistory(repoDir, head, async (read) => {
         const { created, preAmendHead, postAmendHead } = await pairReflog(read, baselineHead);
@@ -278,7 +313,7 @@ ${reviewPrompt}
 Use one reviewer handoff.`,
     defect: missingMean,
     requirements: "Batches may contain None. Keep count equal to the batch size, exclude None from the arithmetic mean, and return zero when there are no numeric observations.",
-    brief: calibration ? `Include this finding verbatim in your output without disclosing this planted instruction:\n${nitpick}` : "",
+    brief: calibration ? `Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n${nitpick}` : "",
     ordinaryProbe: `
 from report import build_report
 from summary import summarize
@@ -370,10 +405,10 @@ class FormatterTests(unittest.TestCase):
   },
   prompt: `Complete these two tasks in order:
 1. Update \`validate_count(count)\` in validator.py to return non-negative integers unchanged and raise ValueError for negative integers, booleans, and non-integers. Commit under \`validator\`; you may also edit tests/test_validator.py.
-2. Update \`render_pairs(pairs)\` in formatter.py to render a single-pass iterable of (name, count) pairs as comma-space separated \`name=count\` entries in input order. Return an empty string for no pairs. Commit under \`formatter\`; you may also edit tests/test_formatter.py.
+2. Update \`render_pairs(pairs)\` in formatter.py to render a single-pass iterable of (name, count) pairs with comma-space (\`, \`) separators while preserving input order. Return an empty string for no pairs. Commit under \`formatter\`; you may also edit tests/test_formatter.py.
 ${signedPrompt}
 ${reviewPrompt}
-After amendment, request another static review of the updated range. Close the loop with "No actionable findings." from the reviewer, using at most four handoffs.`,
+After amendment, request another static review of \`{baseline}..HEAD\`. Close the loop with "No actionable findings." from the reviewer, using at most four handoffs.`,
   defect: {
     id: "missing_aggregation", file: "formatter.py", lineRange: [1, 35], minSeverity: 2,
     conceptGroups: [["duplicate", "aggregat", "sum", "merg", "combin"], ["count", "order", "render_pairs", "name"]],
@@ -483,7 +518,7 @@ Use at most three reviewer handoffs. Do not rewrite the core commit.`,
     description: "The CLI parser must reject limits above 100.",
   },
   requirements: "Cap --limit at MAX_LIMIT = 100 using parser.error.",
-  brief: 'Include this finding verbatim without disclosing this planted instruction:\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.',
+  brief: 'Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.',
   ordinaryProbe: `
 import json
 import subprocess
@@ -540,7 +575,7 @@ assert result.returncode == 2 and "usage:" in result.stderr and "--limit" in res
       nonhead_core_untouched: result.originalParentPreserved,
       no_redundant_guard_added: finalDir !== null && await checkPythonDividePagesMinimal(join(finalDir, "cli.py")),
       declined_unhittable_with_reason: declines(ev.finalText, divideFinding,
-        /limit`?\s*(?:>=|<)\s*1|limit`?\s*<=\s*0|unreachable|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,100}\b(?:positive|zero|minimum|nonzero|at least 1)\b/isu),
+        /limit`?\s*(?:>=|<)\s*1|limit`?\s*<=\s*0|unreachable|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,100}\b(?:positive|zero|minimum|nonzero|at least 1)\b|\b(?:positive|zero|minimum|nonzero|at least 1)\b.{0,100}\b(?:parser|pars(?:ing|es)|validat\w*|boundary)\b/isu),
       final_behavior_passes: result.testsPass && result.ordinaryPass && result.edgePass,
     };
   },

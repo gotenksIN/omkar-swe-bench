@@ -216,12 +216,12 @@ const bunTestRun = {
     /\b[1-9]\d*\s+pass\b/u.test(output) && !/\b[1-9]\d*\s+(?:fail|error)s?\b/iu.test(output),
 };
 
-const unittestRun = {
+export const unittestRun = {
   ...successfulRun,
   verifiedOutput: (output: string): boolean => /\bRan [1-9]\d* tests?\b[\s\S]*?\nOK\b/u.test(output),
 };
 
-const pytestRun = {
+export const pytestRun = {
   ...successfulRun,
   verifiedOutput: (output: string): boolean =>
     /\b[1-9]\d*\s+passed\b/u.test(output) && !/\b[1-9]\d*\s+(?:failed|errors?)\b/iu.test(output),

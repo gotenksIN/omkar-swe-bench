@@ -112,7 +112,8 @@ test("resolves review ranges against the reflog at the handoff index", () =>
   }));
 
 type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt"
-  | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit";
+  | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit"
+  | "chained-amend" | "newline-tests" | "passive-decline";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -229,7 +230,9 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
     await commit(amendFile, "cli: Support JSON output");
     findings = "## Findings\n- [P2] `cli.py:15` Cap the maximum limit at 100.\n" +
       "- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.";
-    final += " Declined the `_divide_pages` finding because the argument parser enforces `limit >= 1`.";
+    final += negative === "passive-decline"
+      ? " Declined the `_divide_pages` finding because zero limits are already rejected at the parser boundary."
+      : " Declined the `_divide_pages` finding because the argument parser enforces `limit >= 1`.";
   } else {
     await reportChange(repo, false);
     amendFile = "summary.py";
@@ -269,12 +272,24 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
   }
 
   parts.push(tool("patch", { filePath: amendFile }));
-  await runTests();
+
+  if (negative === "newline-tests") {
+    const ok = await runFixtureCheck(repo, "python3", testsCommand);
+    shell(`python3 ${testsCommand.join(" ")}\nruff check .`, ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n", ok ? 0 : 1);
+  } else if (negative !== "chained-amend") {
+    await runTests();
+  }
 
   if (negative === "late-edit") parts.push(tool("edit", { filePath: amendFile }));
   await runTaskGit(repo, "add", "--", amendFile);
   await runTaskGit(repo, "commit", "--amend", "--no-edit");
-  shell("git commit --amend --no-edit");
+
+  if (negative === "chained-amend") {
+    const ok = await runFixtureCheck(repo, "python3", testsCommand);
+    shell(`python3 ${testsCommand.join(" ")} && git commit --amend --no-edit`, ok ? "Ran 1 test\n\nOK\n" : "", ok ? 0 : 1);
+  } else {
+    shell("git commit --amend --no-edit");
+  }
 
   if (id === loopId) review("last", negative === "loop" ? "Review done." : "No actionable findings.");
 
@@ -356,3 +371,26 @@ test("allows permission-blocked reviewer shell probes while keeping scope_preser
     expect(grade.checks.scope_preserved).toBe(true);
     expect(grade.passed).toBe(true);
   }));
+
+test("accepts &&-chained amend tests, newline-verified test runs, and passive-voice unhittable declines", async () => {
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "chained-amend");
+
+    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-tests");
+
+    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, cliId, "passive-decline");
+
+    expect(grade.checks.declined_unhittable_with_reason).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+});
