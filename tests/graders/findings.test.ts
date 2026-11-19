@@ -48,6 +48,37 @@ test("parses findings sections and continuation lines, not fenced examples or su
     { severity: 1, body: "**P1:** Colon bold" },
     { severity: 2, body: "P2: Bare prefix" },
   ]);
+  expect(parseFindings([
+    "## Findings",
+    "- **[P1]** `app/git_preview.py:5` — Denylist is bypassable:",
+    "  - Newlines bypass the substring check.",
+    "  - Replace with `shell=False` and an allowlist.",
+    "- **[P2]** `app/git_preview.py:12` — Secondary issue.",
+  ].join("\n"))).toEqual([
+    {
+      severity: 1,
+      body: "**[P1]** `app/git_preview.py:5` — Denylist is bypassable:\n- Newlines bypass the substring check.\n- Replace with `shell=False` and an allowlist.",
+    },
+    { severity: 2, body: "**[P2]** `app/git_preview.py:12` — Secondary issue." },
+  ]);
+  expect(parseFindings([
+    "## Findings",
+    "",
+    "No actionable findings.",
+    "",
+    "Verified:",
+    "- `app/git_preview.py`: allowlist enforced.",
+    "- `tests/test_git_preview.py`: public contract covered.",
+  ].join("\n"))).toEqual([]);
+  expect(parseFindings([
+    "## Findings",
+    "- **[P1]** `output.json:1` — Pretty formatting breaks byte equality.",
+    "",
+    "Nothing else is actionable:",
+    "- `build.py`: clean.",
+  ].join("\n"))).toEqual([
+    { severity: 1, body: "**[P1]** `output.json:1` — Pretty formatting breaks byte equality." },
+  ]);
 });
 
 test("requires sufficient severity, one in-range citation, and a match in each concept group", () => {
@@ -132,6 +163,25 @@ test("grades matched defects, primary false positives, nitpicks, exclusions, and
 
   expect(reviewGrade(duplicateMatch, { defects: [defect], excluded: [], bounce: false })).toMatchObject({
     passed: true, falsePositiveP0P2: 0, pedantryFlags: 0, precision: 1, defectRecall: 1,
+  });
+
+  const splitLowerSeverity = review([
+    "## Findings",
+    "- **[P1]** `src/job.ts:10` — Worker ignores the timeout.",
+    "- **[P3]** `src/job.ts:12` — Thread outlives the deadline.",
+  ].join("\n"));
+
+  expect(reviewGrade(splitLowerSeverity, { defects: [defect], excluded: [], bounce: false })).toMatchObject({
+    passed: true, falsePositiveP0P2: 0, nitpickP3: 0, pedantryFlags: 0, precision: 1, defectRecall: 1,
+  });
+
+  const onlyLowerSeverity = review([
+    "## Findings",
+    "- **[P3]** `src/job.ts:12` — Thread outlives the deadline.",
+  ].join("\n"));
+
+  expect(reviewGrade(onlyLowerSeverity, { defects: [defect], excluded: [], bounce: false })).toMatchObject({
+    passed: false, nitpickP3: 1, pedantryFlags: 1, defectRecall: 0,
   });
 });
 

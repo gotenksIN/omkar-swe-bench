@@ -2,6 +2,8 @@ import { gitStatesEqual } from "./git.ts";
 import { computeGradeResult, type Defect, type Evidence, type Finding, type FindingSeverity, type GradeResult, type ReviewSpec } from "./types.ts";
 
 const noFindings = /no actionable findings/iu;
+const cleanFindingsBoundary = /^(?:\*\*)?(?:no (?:other )?actionable findings|nothing else is actionable)\b/iu;
+const cleanFindingsBullet = /^(?:\*\*)?no (?:other )?actionable findings\.?(?:\*\*)?$/iu;
 const mutatingTools = new Set(["edit", "write", "patch", "execute"]);
 
 function normalizeReviewPath(rawPath: string, repoDir?: string): string {
@@ -55,15 +57,17 @@ export function parseFindings(markdown: string): readonly Finding[] {
   const findings: Finding[] = [];
   let level = 0;
   let item: string[] = [];
+  let itemIndent: number | null = null;
 
   function finishItem(): void {
     const body = item.join("\n").trim();
 
-    if (body && !/^no actionable findings\.?$/iu.test(body)) {
+    if (body && !cleanFindingsBullet.test(body)) {
       findings.push({ body, severity: severityOf(body) });
     }
 
     item = [];
+    itemIndent = null;
   }
 
   for (const line of proseLines(markdown)) {
@@ -83,11 +87,26 @@ export function parseFindings(markdown: string): readonly Finding[] {
 
     if (!level) continue;
 
-    const bullet = /^\s*(?:[-*+]|\d+[.)])\s+(.+)$/u.exec(line);
+    const bullet = /^(\s*)(?:[-*+]|\d+[.)])\s+(.+)$/u.exec(line);
 
-    if (bullet?.[1]) {
+    if (bullet?.[1] !== undefined && bullet[2]) {
+      const indent = bullet[1].length;
+
+      if (item.length > 0 && ((itemIndent !== null && indent > itemIndent) || (itemIndent === null && indent > 0))) {
+        item.push(line.trim());
+      } else {
+        finishItem();
+
+        if (cleanFindingsBullet.test(bullet[2].trim())) {
+          level = 0;
+        } else {
+          item.push(bullet[2]);
+          itemIndent = indent;
+        }
+      }
+    } else if (!/^\s/u.test(line) && cleanFindingsBoundary.test(line)) {
       finishItem();
-      item.push(bullet[1]);
+      level = 0;
     } else if (item.length) {
       item.push(line.trim());
     }
@@ -187,6 +206,11 @@ export function reviewGrade(evidence: Evidence, spec: ReviewSpec, reviewDiff: st
     if (matchedFindings.has(index)) continue;
 
     if (spec.defects.some((defect) => defectMatchesFinding(defect, finding, evidence.repoDir))) continue;
+
+    if (spec.defects.some((defect) =>
+      matches.has(defect.id) && defectMatchesFinding({ ...defect, minSeverity: 3 }, finding, evidence.repoDir))) {
+      continue;
+    }
 
     if (finding.severity === 3) nitpickP3 += 1;
     else falsePositiveP0P2 += 1;
