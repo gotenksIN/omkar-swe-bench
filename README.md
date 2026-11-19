@@ -74,7 +74,7 @@ For `list` and `run`, `--phase` defaults to `all`.
 | `--phase <all\|coder\|reviewer\|pair>` | `all`; select a stage or all stages. |
 | `--task <id>` | All tasks in the selected phase; repeat to select specific tasks. |
 | `--coder-model <provider/model[#variant]>` | The eight coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the default list. |
-| `--reviewer-model <provider/model[#variant]>` | All eight reviewer specs for solo review, and only `openai/gpt-6.2-sol#high` for pairs; repeat to replace both lists. |
+| `--reviewer-model <provider/model[#variant]>` | All nine reviewer specs in [`src/config/models.ts`](src/config/models.ts) for solo review, and only `openai/gpt-6.2-sol#high` for pairs; repeat to replace both lists. |
 | `--all-pairs` | Off; pair each selected coder model with all default reviewer models unless you provide an explicit reviewer list. |
 | `--trials-per-cell <n>` | `1`; use a positive integer for repetitions per task and model or model pair. |
 | `--workers <n>` | `4`; use a positive integer for the maximum number of concurrent trials (capped at 2 concurrent trials per provider by default). |
