@@ -107,6 +107,7 @@ function reviewerStayedReadOnly(ev: Evidence): boolean {
 
     if (
       entry.tool === "shell"
+      && entry.status === "completed"
       && (entry.input.background === true || !isString(entry.input.command) || !isSafePairReviewerShellCommand(entry.input.command))
     ) {
       return false;

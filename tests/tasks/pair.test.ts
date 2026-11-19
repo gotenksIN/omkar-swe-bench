@@ -111,7 +111,8 @@ test("resolves review ranges against the reflog at the handoff index", () =>
     expect(unavailable[0]?.reviewerFinalText).toBe(report);
   }));
 
-type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt";
+type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt"
+  | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -287,10 +288,29 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
   parts.push({ type: "text", text: final });
 
   const trace = extractSessionEvidence([assistant(parts)], { timedOut: false, sessionId: "root" });
+
+  const subagentTools: Evidence["tools"] = negative === "reviewer-blocked-shell"
+    ? [{
+      tool: "shell", status: "error", index: trace.tools.length, input: { command: "git status" },
+      sessionId: "first", isSubagent: true, textOutput: "", metadata: null, errorText: "Permission denied",
+    }]
+    : negative === "reviewer-unsafe-shell"
+      ? [{
+        tool: "shell", status: "completed", index: trace.tools.length, input: { command: "git status" },
+        sessionId: "first", isSubagent: true, textOutput: "", metadata: null, errorText: null,
+      }]
+      : negative === "reviewer-blocked-edit"
+        ? [{
+          tool: "edit", status: "error", index: trace.tools.length, input: { filePath: "summary.py" },
+          sessionId: "first", isSubagent: true, textOutput: "", metadata: null, errorText: "Permission denied",
+        }]
+        : [];
+
   const reviewHandoffsFound = await reviewHandoffs(repo, baselineHead, trace.tools, trace.shellRuns, children);
 
   const evidence: Evidence = {
-    ...trace, repoDir: repo, trialDir: trial, baselineHead, beforeGit, afterGit: await captureGitState(repo, baselineHead),
+    ...trace, tools: [...trace.tools, ...subagentTools], repoDir: repo, trialDir: trial, baselineHead,
+    beforeGit, afterGit: await captureGitState(repo, baselineHead),
     actualReviewerModels: actualReviewerModels(reviewHandoffsFound), reviewHandoffs: reviewHandoffsFound,
     finalText: final, reviewerText: findings, questionFormCount: 0, timedOut: false,
   };
@@ -317,6 +337,8 @@ const negatives = [
   [loopId, "loop", "review_loop_closed_clean"],
   [loopId, "extra-attempt", "review_loop_closed_clean"],
   [reportId, "late-edit", "tests_rerun_before_amend"],
+  [reportId, "reviewer-unsafe-shell", "scope_preserved"],
+  [reportId, "reviewer-blocked-edit", "scope_preserved"],
 ] as const;
 
 test.each(negatives)("%s rejects %s", async (id, negative, check) =>
@@ -325,4 +347,12 @@ test.each(negatives)("%s rejects %s", async (id, negative, check) =>
 
     expect(grade.checks[check]).toBe(false);
     expect(grade.passed).toBe(false);
+  }));
+
+test("allows permission-blocked reviewer shell probes while keeping scope_preserved green", async () =>
+  inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, reportId, "reviewer-blocked-shell");
+
+    expect(grade.checks.scope_preserved).toBe(true);
+    expect(grade.passed).toBe(true);
   }));

@@ -19,10 +19,10 @@ const NEUTRAL_CODER_PROMPT = [
   "Report verification outcomes and any missing external fixtures. Do not fabricate files outside the task scope.",
 ].join("\n");
 
-const REVIEWER_GIT_RULE = "When inspecting diffs or history with shell, always pass --no-ext-diff --no-textconv (for example: git diff --no-ext-diff --no-textconv <range> and git log --no-ext-diff --no-textconv <range>).";
+const REVIEWER_GIT_RULE = "Your working directory is already the repository root. When inspecting diffs or history with shell, run one standalone git diff --no-ext-diff --no-textconv <range> or git log --no-ext-diff --no-textconv <range> command per shell call without -C, cd, git status, git show, or command chaining.";
 
 const NEUTRAL_REVIEWER_PROMPT = [
-  "Perform a read-only static review of the requested commit range, working-tree diff, and in-scope files against the task prompt and repository AGENTS.md.",
+  "Perform a read-only static review of the requested commit range, working-tree diff, and in-scope files against the task prompt and repository AGENTS.md (when present).",
   "Do not edit files, mutate Git state, run tests, or delegate.",
   "If you have a commit range but no explicit file list, derive the changed files from git diff and git log.",
   REVIEWER_GIT_RULE,
@@ -32,7 +32,7 @@ const NEUTRAL_REVIEWER_PROMPT = [
   'Open with "Scope needed" and list the missing inputs only when the target repository or diff scope is genuinely missing.',
 ].join("\n");
 
-const FINDINGS_FORMAT = 'Report actionable items under "## Findings" as "- **[P1]** `path:line` — Explanation", with the appropriate severity (P0–P3). If none are actionable, say "No actionable findings." If scope is missing, open with "Scope needed".';
+const FINDINGS_FORMAT = 'Report actionable items under "## Findings" as "- **[P1]** `path:line` — Explanation", with the appropriate severity (P0 critical, P1 high, P2 medium, P3 low). If none are actionable, say "No actionable findings." If scope is missing, open with "Scope needed".';
 
 interface AgentConfig {
   readonly description: string;
