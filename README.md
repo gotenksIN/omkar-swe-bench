@@ -119,6 +119,82 @@ xychart-beta
 
 </details>
 
+### Phase 3: `pair` (`neutral` profile)
+
+Single-repetition Stage 3 (`pair`) pass across all 4 pair tasks, 8 default coder models, and 2 default cross-family pair reviewers (`openai/gpt-6.2-astra#medium` and `google/gemini-4-carbon#medium`; `64` trials total, `53/64` passed, `0` provider retries, `$14.29` total API cost, `--sandbox require`, OpenCode `2.3.2`).
+
+#### By coder (8 trials each across both reviewers)
+
+| Coder | Pass@1 | Passed | Mean score | Cold visible | Warm visible | Total tok/s | Cache hit | Median wall | Median cost | 8-trial cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `anthropic/claude-opus-5-5#medium` | **100.0%** | 8/8 | **100.0%** | 1.83s | 2.84s | 74 | 85% | 67.7s | $0.2132 | $1.72 |
+| `google/gemini-4-hydrogen#high` | **100.0%** | 8/8 | **100.0%** | 2.41s | 3.20s | 87 | 78% | 125.7s | $0.2321 | $1.89 |
+| `google/gemini-4-neon#medium` | **100.0%** | 8/8 | **100.0%** | 4.29s | 5.30s | 47 | 74% | 169.8s | $0.3327 | $2.69 |
+| `google/gemini-4-neon#high` | 87.5% | 7/8 | 97.9% | 2.87s | 6.25s | 56 | 80% | 222.5s | $0.4545 | $3.95 |
+| `deepseek/deepseek-flash#high` | 75.0% | 6/8 | 94.4% | **1.80s** | **2.04s** | **106** | **93%** | 82.8s | **$0.0593** | **$0.57** |
+| `openai/gpt-6.2-sol#high` | 75.0% | 6/8 | 89.6% | 3.76s | 2.53s | 50 | 89% | 106.6s | $0.1489 | $1.24 |
+| `openai/gpt-6.2-sol#medium` | 75.0% | 6/8 | 88.5% | 3.33s | 2.28s | 45 | 87% | 91.4s | $0.1380 | $1.16 |
+| `anthropic/claude-sonnet-5-5#high` | 50.0% | 4/8 | 95.3% | 2.11s | 3.29s | 89 | 85% | **63.7s** | $0.1255 | $1.07 |
+
+#### By reviewer (32 trials each across all 8 coders)
+
+| Reviewer | Pass@1 | Passed | Mean score | Median wall | Median cost | 32-trial cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `google/gemini-4-carbon#medium` | **84.4%** | 27/32 | **96.2%** | 139.6s | $0.2006 | $7.48 |
+| `openai/gpt-6.2-astra#medium` | 81.3% | 26/32 | 95.3% | **80.6s** | **$0.1928** | **$6.81** |
+
+```mermaid
+xychart-beta
+  title "Phase 3 (pair) — Median wall time per trial by coder (seconds)"
+  x-axis ["sonnet-5.5#h", "opus-5.5#m", "deepseek#h", "sol#m", "sol#h", "hydrogen#h", "neon#m", "neon#h"]
+  y-axis "Seconds" 0 --> 240
+  bar [63.7, 67.7, 82.8, 91.4, 106.6, 125.7, 169.8, 222.5]
+```
+
+```mermaid
+xychart-beta
+  title "Phase 3 (pair) — Total API cost across all 8 trials by coder (USD)"
+  x-axis ["deepseek#h", "sonnet-5.5#h", "sol#m", "sol#h", "opus-5.5#m", "hydrogen#h", "neon#m", "neon#h"]
+  y-axis "USD" 0 --> 4.2
+  bar [0.57, 1.07, 1.16, 1.24, 1.72, 1.89, 2.69, 3.95]
+```
+
+<details>
+<summary><strong>Phase 3 full 16-pair leaderboard (4 trials per coder → reviewer pair)</strong></summary>
+
+| Coder → Reviewer | Pass@1 | Passed | Mean score | Median wall | Median cost | 4-trial cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `anthropic/claude-opus-5-5#medium -> openai/gpt-6.2-astra#medium` | **100.0%** | 4/4 | 100.0% | **55.7s** | $0.2145 | $0.86 |
+| `anthropic/claude-opus-5-5#medium -> google/gemini-4-carbon#medium` | **100.0%** | 4/4 | 100.0% | 96.5s | $0.2099 | $0.86 |
+| `google/gemini-4-hydrogen#high -> openai/gpt-6.2-astra#medium` | **100.0%** | 4/4 | 100.0% | 107.2s | $0.2209 | $0.89 |
+| `deepseek/deepseek-flash#high -> google/gemini-4-carbon#medium` | **100.0%** | 4/4 | 100.0% | 122.5s | $0.0653 | $0.30 |
+| `google/gemini-4-hydrogen#high -> google/gemini-4-carbon#medium` | **100.0%** | 4/4 | 100.0% | 154.7s | $0.2462 | $1.00 |
+| `google/gemini-4-neon#medium -> openai/gpt-6.2-astra#medium` | **100.0%** | 4/4 | 100.0% | 156.5s | $0.3297 | $1.31 |
+| `google/gemini-4-neon#medium -> google/gemini-4-carbon#medium` | **100.0%** | 4/4 | 100.0% | 188.4s | $0.3327 | $1.38 |
+| `google/gemini-4-neon#high -> openai/gpt-6.2-astra#medium` | **100.0%** | 4/4 | 100.0% | 211.0s | $0.4369 | $1.78 |
+| `google/gemini-4-neon#high -> google/gemini-4-carbon#medium` | 75.0% | 3/4 | 95.8% | 239.1s | $0.4591 | $2.18 |
+| `openai/gpt-6.2-sol#medium -> openai/gpt-6.2-astra#medium` | 75.0% | 3/4 | 89.6% | 64.2s | $0.1171 | $0.51 |
+| `openai/gpt-6.2-sol#high -> openai/gpt-6.2-astra#medium` | 75.0% | 3/4 | 89.6% | 90.3s | $0.1473 | $0.62 |
+| `openai/gpt-6.2-sol#high -> google/gemini-4-carbon#medium` | 75.0% | 3/4 | 89.6% | 141.1s | $0.1551 | $0.62 |
+| `openai/gpt-6.2-sol#medium -> google/gemini-4-carbon#medium` | 75.0% | 3/4 | 87.5% | 142.9s | $0.1533 | $0.65 |
+| `anthropic/claude-sonnet-5-5#high -> google/gemini-4-carbon#medium` | 50.0% | 2/4 | 96.7% | 63.7s | $0.1207 | $0.50 |
+| `anthropic/claude-sonnet-5-5#high -> openai/gpt-6.2-astra#medium` | 50.0% | 2/4 | 94.0% | 55.0s | $0.1330 | $0.58 |
+| `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium` | 50.0% | 2/4 | 88.8% | 61.0s | **$0.0587** | **$0.28** |
+
+</details>
+
+<details>
+<summary><strong>Phase 3 per-task pass rates and failure breakdown (11 of 64 trials)</strong></summary>
+
+| Task ID | Passed | Failed trials and checks |
+| --- | ---: | --- |
+| `pair-unhittable-finding-and-nonhead` | 15/16 | `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium`: declined both findings and never amended `HEAD` |
+| `pair-commit-review-amend` | 14/16 | `anthropic/claude-sonnet-5-5#high` (with both reviewers): failed `no_rejected_commits` |
+| `pair-pushback-on-false-nitpick` | 14/16 | `anthropic/claude-sonnet-5-5#high -> google/gemini-4-carbon#medium`, `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium`: failed `no_rejected_commits` |
+| `pair-multitask-review-loop-clean` | 10/16 | `openai/gpt-6.2-sol#medium` and `openai/gpt-6.2-sol#high` (with both reviewers): refused duplicate-name aggregation across all 4 handoffs without amending `HEAD`; `google/gemini-4-neon#high -> google/gemini-4-carbon#medium`: failed `commit_context_before_commit` and `no_rejected_commits`; `anthropic/claude-sonnet-5-5#high -> openai/gpt-6.2-astra#medium`: committed Task 1 in parallel with Ruff and amended Task 1 before Task 2 (`no_rejected_commits`, `reviewed_commit_needs_fix`) |
+
+</details>
+
 ## How it works
 
 ### Trial execution pipeline
