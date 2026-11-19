@@ -443,8 +443,16 @@ python3 -m json.tool fixtures/prod.json >/dev/null
         "$1: ",
       );
 
+    const clauseBoundary = new RegExp(
+      "[.!?;]|\\n+|,\\s*(?:but|while|whereas|however|yet|and)\\b|\\b(?:but|while|whereas|however)\\b"
+      + "|,\\s+(?=(?:the\\s+|`)?(?:ruff|lint\\w*|deploy\\w*|verify_deploy)\\b)"
+      + "|\\s+(?:and|&)\\s+(?=(?:the\\s+|`)?(?:deploy\\w*|verify_deploy|fixtures\\/)\\b)"
+      + "|(?<=\\b(?:pass\\w*|ok|succeed\\w*|fail\\w*|ran|run|executed?|skipped)\\b[^.!?\\n]*?)\\s+(?:and|&)\\s+(?=(?:the\\s+|all\\s+|\\d+\\s+|`)?(?:ruff|lint\\w*|unit tests?|unittest|pytest)\\b)",
+      "iu",
+    );
+
     const testClauses = normalized
-      .split(/[.!?;]|\n+|,\s*(?:but|while|whereas|however|yet)\b|\b(?:but|while|whereas|however)\b|,\s+(?=(?:ruff|deploy\w*|verify_deploy)\b)/iu)
+      .split(clauseBoundary)
       .filter((clause) => testSubject.test(clause));
 
     const reportsTests = testClauses.length > 0
