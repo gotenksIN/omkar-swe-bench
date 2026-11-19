@@ -209,3 +209,28 @@ test("uses matching output to disambiguate pipeline status only for a command in
   expect(ranCommand(evidence, ["bun", "run", "typecheck"], { success: true })).toBe(false);
   expect(ranCommand(evidence, ["background-task"], { success: true })).toBe(false);
 });
+
+test("supports leading bun flags and verified pass output on multi-statement commands", () => {
+  const bunPassOutput = (output: string): boolean =>
+    /\b[1-9]\d*\s+pass\b/u.test(output) && !/\b[1-9]\d*\s+(?:fail|error)s?\b/iu.test(output);
+
+  const passing = extractSessionEvidence([assistant([
+    completedShell("bun --no-env-file test; tsc --noEmit; git status", undefined, 0, " 13 pass\n 0 fail\n"),
+  ])], { timedOut: false });
+
+  const failing = extractSessionEvidence([assistant([
+    completedShell("bun test; tsc --noEmit; git status", undefined, 0, " 12 pass\n 1 fail\n"),
+  ])], { timedOut: false });
+
+  const shortCircuited = extractSessionEvidence([assistant([
+    completedShell("false && bun test; echo '13 pass'", undefined, 0, "13 pass\n"),
+    completedShell("bash -c 'exit 0; bun test'", undefined, 0, "13 pass\n"),
+    completedShell("! bun test", undefined, 0, "13 pass\n"),
+  ])], { timedOut: false });
+
+  const repoDir = "/tmp/opencode/repo";
+
+  expect(ranCommand({ ...passing, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(true);
+  expect(ranCommand({ ...failing, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(false);
+  expect(ranCommand({ ...shortCircuited, repoDir }, ["bun", "test"], { success: true, verifiedPassOutput: bunPassOutput })).toBe(false);
+});

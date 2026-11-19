@@ -312,3 +312,62 @@ export function commandExitApplies(run: ShellRunTrace, commandIndex: number): bo
 
   return position >= 0 && siblingExitApplies(commands, siblings, position, run.exitCode);
 }
+
+function isShortCircuitedByPrevious(
+  commands: ShellRunTrace["parsed"]["commands"],
+  siblings: readonly number[],
+  position: number,
+): boolean {
+  if (position <= 0) return false;
+
+  const previous = commands[siblings[position - 1] ?? -1];
+
+  if (!previous) return false;
+
+  const name = unwrapSimpleCommand(previous)?.executable ?? previous.words[0]?.text;
+
+  return (previous.operatorAfter === "&&" && name === "false")
+    || (previous.operatorAfter === "||" && (name === "true" || name === ":"));
+}
+
+export function commandCanProduceOutput(run: ShellRunTrace, commandIndex: number): boolean {
+  const { commands, malformed } = run.parsed;
+
+  if (malformed || run.exitCode === null || commands.length === 0) return false;
+
+  const target = commands[commandIndex];
+
+  if (target === undefined || target.operatorAfter === "&" || target.words[0]?.text === "!") return false;
+
+  let siblings: number[];
+
+  if (target.depth === 0) {
+    siblings = [];
+
+    for (let index = 0; index < commands.length; index += 1) {
+      if (commands[index]?.depth === 0) siblings.push(index);
+    }
+  } else {
+    const origin = target.shellCOrigin;
+
+    if (origin === undefined || !commandCanProduceOutput(run, origin)) return false;
+
+    siblings = [];
+
+    for (let index = origin + 1; index < commands.length; index += 1) {
+      if (commands[index]?.shellCOrigin === origin) siblings.push(index);
+    }
+  }
+
+  const position = siblings.indexOf(commandIndex);
+
+  if (position < 0) return false;
+
+  for (let idx = 0; idx < position; idx += 1) {
+    const cmd = commands[siblings[idx] ?? -1];
+
+    if (!cmd || terminatesShell(cmd, run.exitCode)) return false;
+  }
+
+  return !isShortCircuitedByPrevious(commands, siblings, position);
+}

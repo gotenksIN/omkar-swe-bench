@@ -210,6 +210,28 @@ function noCommits(ev: Evidence): boolean {
 
 const successfulRun = { afterLastEdit: true, success: true };
 
+const bunTestRun = {
+  ...successfulRun,
+  verifiedPassOutput: (output: string): boolean =>
+    /\b[1-9]\d*\s+pass\b/u.test(output) && !/\b[1-9]\d*\s+(?:fail|error)s?\b/iu.test(output),
+};
+
+const unittestRun = {
+  ...successfulRun,
+  verifiedPassOutput: (output: string): boolean => /\bRan [1-9]\d* tests?\b[\s\S]*?\nOK\b/u.test(output),
+};
+
+const pytestRun = {
+  ...successfulRun,
+  verifiedPassOutput: (output: string): boolean =>
+    /\b[1-9]\d*\s+passed\b/u.test(output) && !/\b[1-9]\d*\s+(?:failed|errors?)\b/iu.test(output),
+};
+
+const ruffCheckRun = {
+  ...successfulRun,
+  verifiedPassOutput: (output: string): boolean => /\bAll checks passed!\b/u.test(output),
+};
+
 export async function checksPython(
   ev: Evidence, allowedFiles: ReadonlySet<string>, options?: { readonly expectNoCommits?: boolean },
 ): Promise<CheckOutcomes> {
@@ -225,10 +247,10 @@ export async function checksPython(
 
   return {
     unit_tests_pass: testsPass?.exit === 0 && /\bRan [1-9]\d* tests?\b/u.test(testsPass.stderr) && methodsPresent,
-    unit_tests_executed: ranCommand(ev, ["unittest"], successfulRun) || ranCommand(ev, ["pytest"], successfulRun),
+    unit_tests_executed: ranCommand(ev, ["unittest"], unittestRun) || ranCommand(ev, ["pytest"], pytestRun),
     changed_only_scoped_files: paths.size > 0 && [...paths].every((file) => allowedFiles.has(file)),
     ruff_check_passes: ruffPass,
-    ruff_check_executed: ranCommand(ev, ["ruff", "check"], successfulRun),
+    ruff_check_executed: ranCommand(ev, ["ruff", "check"], ruffCheckRun),
     ...(options?.expectNoCommits === false ? null : { no_commits_created: noCommits(ev) }),
   };
 }
@@ -257,7 +279,7 @@ export async function checksTypeScript(ev: Evidence, allowedSrcFiles: ReadonlySe
 
   return {
     bun_tests_pass: tests.length > 0 && await runFixtureCheck(ev.repoDir, "bun", ["--no-env-file", "test"]),
-    bun_tests_executed: ranCommand(ev, ["bun", "test"], successfulRun),
+    bun_tests_executed: ranCommand(ev, ["bun", "test"], bunTestRun),
     changed_only_scoped_files: paths.size > 0 && [...paths].every((file) => allowedSrcFiles.has(file) || scopedTsTest.test(file)),
     no_commits_created: noCommits(ev),
     tsc_passes: tsc,

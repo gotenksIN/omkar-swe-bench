@@ -5,7 +5,7 @@ import { posix, resolve } from "node:path";
 import { parseShellScript, skipShellFlags, unwrapSimpleCommand, type SimpleCommand, type UnwrappedCommand } from "../ast/bash.ts";
 import { isInteger, isJsonArray, isJsonObject, isString, type JsonObject, type JsonValue } from "../util/json.ts";
 import { scopeNeeded, statesNoFindings } from "./findings.ts";
-import { commandExitApplies, type Evidence, type ShellRunTrace, type ToolTraceEntry } from "./types.ts";
+import { commandCanProduceOutput, commandExitApplies, type Evidence, type ShellRunTrace, type ToolTraceEntry } from "./types.ts";
 
 export interface ExtractedSessionTrace {
   readonly tools: readonly ToolTraceEntry[];
@@ -148,26 +148,35 @@ export interface RanCommandOptions {
   readonly afterLastEdit?: boolean;
   readonly outputPattern?: RegExp;
   readonly success?: boolean | null;
+  readonly verifiedPassOutput?: (output: string) => boolean;
 }
 
 const ruffValueFlags = new Set(["--config", "--cache-dir", "--output-format"]);
 
-function normalizeCommandArgs(command: UnwrappedCommand): readonly string[] {
-  if (command.executable === "ruff") {
-    let idx = 0;
+const bunValueFlags = new Set([
+  "-c", "--config", "--cwd", "--env-file", "--preload", "-r", "--conditions", "--main-fields", "--define", "-d", "--loader",
+]);
 
-    while (idx < command.args.length) {
-      const arg = command.args[idx] ?? "";
+function stripLeadingFlags(args: readonly string[], valueFlags: ReadonlySet<string>): readonly string[] {
+  let idx = 0;
 
-      if (!arg.startsWith("-") || arg === "-") break;
+  while (idx < args.length) {
+    const arg = args[idx] ?? "";
 
-      idx += 1;
+    if (!arg.startsWith("-") || arg === "-") break;
 
-      if (ruffValueFlags.has(arg)) idx += 1;
-    }
+    idx += 1;
 
-    return command.args.slice(idx);
+    if (valueFlags.has(arg)) idx += 1;
   }
+
+  return args.slice(idx);
+}
+
+function normalizeCommandArgs(command: UnwrappedCommand): readonly string[] {
+  if (command.executable === "ruff") return stripLeadingFlags(command.args, ruffValueFlags);
+
+  if (command.executable === "bun") return stripLeadingFlags(command.args, bunValueFlags);
 
   return command.args;
 }
@@ -265,6 +274,12 @@ export function ranCommand(
     const directStatus = run.parsed.commands.some((stage, cmdIndex) =>
       matchesStage(stage, wantedPrefix) && commandExitApplies(run, cmdIndex) && (run.exitCode === 0) === options.success);
 
-    return directStatus || (options.outputPattern !== undefined && matchesPipeline(run, wantedPrefix));
+    const verifiedOutput = options.success === true
+      && options.verifiedPassOutput !== undefined
+      && options.verifiedPassOutput(run.output)
+      && run.parsed.commands.some((stage, cmdIndex) =>
+        matchesStage(stage, wantedPrefix) && commandCanProduceOutput(run, cmdIndex));
+
+    return directStatus || verifiedOutput || (options.outputPattern !== undefined && matchesPipeline(run, wantedPrefix));
   });
 }
