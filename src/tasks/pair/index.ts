@@ -361,7 +361,31 @@ assert build_report(iter([iter(mixed), iter(missing)])) == expected
 
 function declines(text: string, subject: RegExp, reason: RegExp): boolean {
   return subject.test(text) && reason.test(text) &&
-    /\b(?:declin\w*|reject\w*|skip\w*|disagree\w*|not|didn't|isn't|kept|retain\w*|left|unnecessary|redundant|unreachable|out of scope)\b/iu.test(text);
+    /\b(?:declin\w*|reject\w*|skip\w*|disagree\w*|not|no|didn't|isn't|kept|retain\w*|left|unchanged|unnecessary|redundant|unreachable|out of scope)\b/iu.test(text);
+}
+
+function declinesInTranscript(ev: Evidence, subject: RegExp, reason: RegExp): boolean {
+  if (declines(ev.finalText, subject, reason)) return true;
+
+  if (ev.reviewHandoffs.length <= 1 && ev.finalText.length >= 40) return false;
+
+  const lines = ev.transcriptText.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+
+  for (let start = 0; start < lines.length; start += 1) {
+    let window = "";
+
+    for (let end = start; end < lines.length; end += 1) {
+      const next = window ? `${window}\n${lines[end]}` : (lines[end] ?? "");
+
+      if (next.length > 600 && end > start) break;
+
+      window = next;
+
+      if (declines(window, subject, reason)) return true;
+    }
+  }
+
+  return false;
 }
 
 const multitask: PairFixture = {
@@ -556,18 +580,19 @@ assert result.returncode == 2 and "usage:" in result.stderr and "--limit" in res
 `,
   async checks(ev, result, finalDir) {
     const handoffs = ev.reviewHandoffs;
-    const divideFinding = /_divide_pages|ZeroDivisionError|limit\s*==\s*0/iu;
+    const plantedDivideFinding = /_divide_pages|ZeroDivisionError|limit\s*==\s*0/iu;
+    const declinedDivideSubject = /_divide_pages|ZeroDivisionError|division[- ]by[- ]zero|zero[- ]division|limit\s*==\s*0|(?:division|private|arithmetic)\s+helper|helper\s+guard/iu;
+    const declinedDivideReason = /limit`?\s*(?:>=|<|<=|below|under|less than|at least)\s*[01]\b|\b1\s*<=\s*`?limit\b|unreachable|\bhelpers?\b.{0,80}\bvalidated inputs?\b|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,120}\b(?:positive|zero|minimum|nonzero|at least 1)\b|\b(?:positive|zero|minimum|nonzero|at least 1)\b.{0,120}\b(?:parser|pars(?:ing|es)|validat\w*|boundary)\b/isu;
 
     return {
       bounded_reviews: handoffs.length >= 1 && reviewerInvocations(ev) <= 3,
       reviewer_caught_real_limit: result.caughtEdge,
       reviewer_emitted_unhittable: parseFindings(handoffs[0]?.reviewerFinalText ?? "")
-        .some(({ body, severity }) => severity === 2 && divideFinding.test(body)),
+        .some(({ body, severity }) => severity === 2 && plantedDivideFinding.test(body)),
       reviewed_commit_needs_fix: result.reviewed,
       nonhead_core_untouched: result.originalParentPreserved,
       no_redundant_guard_added: finalDir !== null && await checkPythonDividePagesMinimal(join(finalDir, "cli.py")),
-      declined_unhittable_with_reason: declines(ev.finalText, divideFinding,
-        /limit`?\s*(?:>=|<)\s*1|limit`?\s*<=\s*0|unreachable|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,100}\b(?:positive|zero|minimum|nonzero|at least 1)\b|\b(?:positive|zero|minimum|nonzero|at least 1)\b.{0,100}\b(?:parser|pars(?:ing|es)|validat\w*|boundary)\b/isu),
+      declined_unhittable_with_reason: declinesInTranscript(ev, declinedDivideSubject, declinedDivideReason),
       final_behavior_passes: result.testsPass && result.ordinaryPass && result.edgePass,
     };
   },

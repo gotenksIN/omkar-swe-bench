@@ -53,6 +53,14 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(reviewer.system).toContain("## Findings");
     expect(reviewer.system).toContain("No actionable findings.");
     expect(reviewer.system).toContain("Scope needed");
+
+    if (role === "pair") {
+      expect(reviewer.system).not.toContain("working-tree diff");
+      expect(reviewer.system).toContain("explicit <start>..<end> commit range");
+    } else {
+      expect(reviewer.system).toContain("working-tree diff");
+    }
+
     expect(reviewer).not.toHaveProperty("model");
 
     for (const [action, resource] of [

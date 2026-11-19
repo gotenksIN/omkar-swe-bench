@@ -20,17 +20,24 @@ const NEUTRAL_CODER_PROMPT = [
 ].join("\n");
 
 const REVIEWER_GIT_RULE = "Your working directory is already the repository root. When inspecting diffs or history with shell, run one standalone git diff --no-ext-diff --no-textconv <range> or git log --no-ext-diff --no-textconv <range> command per shell call without -C, cd, git status, git show, or command chaining. Omit file pathspecs or place them after --.";
+const PAIR_REVIEWER_GIT_RULE = `${REVIEWER_GIT_RULE} Always pass an explicit <start>..<end> commit range to git diff; do not run working-tree git diff, git diff HEAD, or git diff --cached.`;
 
-const NEUTRAL_REVIEWER_PROMPT = [
-  "Perform a read-only static review of the requested commit range, working-tree diff, and in-scope files against the task prompt and repository AGENTS.md (when present).",
-  "Do not edit files, mutate Git state, run tests, or delegate.",
-  "If you have a commit range but no explicit file list, derive the changed files from git diff and git log.",
-  REVIEWER_GIT_RULE,
-  "Respect explicit file exclusions.",
-  "Report only discrete, actionable defects introduced in scope. Do not invent speculative regressions or request abstractions outside the task.",
-  "When a change patches symptoms on top of a fundamentally flawed design—such as extending a fragile substring or flag denylist—flag the root design flaw and recommend replacing it with a sound mechanism instead of proposing another narrow patch.",
-  'Open with "Scope needed" and list the missing inputs only when the target repository or diff scope is genuinely missing.',
-].join("\n");
+function neutralReviewerPrompt(role: TrialConfigOptions["role"]): string {
+  const isPair = role === "pair";
+
+  return [
+    isPair
+      ? "Perform a read-only static review of the requested commit range and in-scope files against the task prompt and repository AGENTS.md (when present)."
+      : "Perform a read-only static review of the requested commit range, working-tree diff, and in-scope files against the task prompt and repository AGENTS.md (when present).",
+    "Do not edit files, mutate Git state, run tests, or delegate.",
+    "If you have a commit range but no explicit file list, derive the changed files from git diff and git log.",
+    isPair ? PAIR_REVIEWER_GIT_RULE : REVIEWER_GIT_RULE,
+    "Respect explicit file exclusions.",
+    "Report only discrete, actionable defects introduced in scope. Do not invent speculative regressions or request abstractions outside the task.",
+    "When a change patches symptoms on top of a fundamentally flawed design—such as extending a fragile substring or flag denylist—flag the root design flaw and recommend replacing it with a sound mechanism instead of proposing another narrow patch.",
+    'Open with "Scope needed" and list the missing inputs only when the target repository or diff scope is genuinely missing.',
+  ].join("\n");
+}
 
 const FINDINGS_FORMAT = 'Report actionable items under "## Findings" as "- **[P1]** `path:line` — Explanation", with the appropriate severity (P0 critical, P1 high, P2 medium, P3 low). If none are actionable, say "No actionable findings." If scope is missing, open with "Scope needed".';
 
@@ -170,8 +177,8 @@ export function buildTrialConfig({
     : [coderBase.system, DIRECT_SHELL];
 
   const reviewerPrompt = reviewerBase.system === undefined
-    ? [NEUTRAL_REVIEWER_PROMPT, FINDINGS_FORMAT]
-    : [reviewerBase.system, REVIEWER_GIT_RULE, FINDINGS_FORMAT];
+    ? [neutralReviewerPrompt(role), FINDINGS_FORMAT]
+    : [reviewerBase.system, role === "pair" ? PAIR_REVIEWER_GIT_RULE : REVIEWER_GIT_RULE, FINDINGS_FORMAT];
 
   const coderRules = [...coderBase.permissions, ...COMMON_DENIALS];
 

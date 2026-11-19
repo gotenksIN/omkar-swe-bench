@@ -219,7 +219,9 @@ type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-att
   | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit"
   | "chained-amend" | "newline-tests" | "passive-decline" | "reused-session"
   | "newline-batched-amend" | "chained-amend-status" | "newline-amend-status"
-  | "post-amend-tests" | "or-amend-tests" | "failed-batched-amend";
+  | "post-amend-tests" | "or-amend-tests" | "failed-batched-amend"
+  | "helper-guard-decline" | "division-by-zero-decline" | "below-one-decline"
+  | "turn-two-decline" | "unreasoned-decline" | "omitted-decline";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -344,7 +346,19 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
       "- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.";
     final += negative === "passive-decline"
       ? " Declined the `_divide_pages` finding because zero limits are already rejected at the parser boundary."
-      : " Declined the `_divide_pages` finding because the argument parser enforces `limit >= 1`.";
+      : negative === "helper-guard-decline"
+        ? " Follow-up review found no actionable issues: the parser rejects zero before calling the division helper, so no helper guard was added."
+        : negative === "division-by-zero-decline"
+          ? " The division-by-zero finding was declined because the parser already rejects zero before calling the helper."
+          : negative === "below-one-decline"
+            ? " Declined (`cli.py:5`): it flagged a possible zero division in `_divide_pages`. The CLI already rejects `--limit` below 1 before calling it."
+            : negative === "turn-two-decline"
+              ? " Follow-up review reported no actionable findings."
+              : negative === "unreasoned-decline"
+                ? " Declined the `_divide_pages` finding."
+                : negative === "omitted-decline"
+                  ? ""
+                  : " Declined the `_divide_pages` finding because the argument parser enforces `limit >= 1`.";
   } else {
     await reportChange(repo, false);
     amendFile = "summary.py";
@@ -434,7 +448,14 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
 
   if (id === loopId) {
     review(negative === "reused-session" ? "first" : "last", negative === "loop" ? "Review done." : "No actionable findings.");
-  } else if (id === cliId && negative === "reused-session") {
+  } else if (id === cliId && (negative === "reused-session" || negative === "turn-two-decline")) {
+    if (negative === "turn-two-decline") {
+      parts.push({
+        type: "text",
+        text: "I left the private helper unchanged because the parser already rejects zero, as required by AGENTS.md.",
+      });
+    }
+
     review("first", "## Findings\n\nNo actionable findings.\n\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.");
   }
 
@@ -494,6 +515,8 @@ const negatives = [
   [nitpickId, "nitpick", "declined_nitpick_with_reason"],
   [cliId, "guard", "no_redundant_guard_added"],
   [cliId, "core", "nonhead_core_untouched"],
+  [cliId, "unreasoned-decline", "declined_unhittable_with_reason"],
+  [cliId, "omitted-decline", "declined_unhittable_with_reason"],
   [loopId, "loop", "review_loop_closed_clean"],
   [loopId, "extra-attempt", "review_loop_closed_clean"],
   [reportId, "late-edit", "tests_rerun_before_amend"],
@@ -520,65 +543,33 @@ test("allows permission-blocked reviewer shell probes while keeping scope_preser
     expect(grade.passed).toBe(true);
   }));
 
-test("accepts &&-chained amend tests, newline-verified test runs, and passive-voice unhittable declines", async () => {
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, reportId, "chained-amend");
+const positiveModes = [
+  [reportId, "chained-amend", "tests_rerun_before_amend"],
+  [reportId, "newline-tests", "tests_rerun_before_amend"],
+  [reportId, "newline-batched-amend", "tests_rerun_before_amend"],
+  [reportId, "chained-amend-status", "tests_rerun_before_amend"],
+  [loopId, "reused-session", "reviewer_caught_edge"],
+  [cliId, "reused-session", "reviewer_caught_real_limit"],
+  [cliId, "passive-decline", "declined_unhittable_with_reason"],
+  [cliId, "helper-guard-decline", "declined_unhittable_with_reason"],
+  [cliId, "division-by-zero-decline", "declined_unhittable_with_reason"],
+  [cliId, "below-one-decline", "declined_unhittable_with_reason"],
+  [cliId, "turn-two-decline", "declined_unhittable_with_reason"],
+] as const;
 
-    expect(grade.checks.tests_rerun_before_amend).toBe(true);
+test.each(positiveModes)("%s accepts %s", async (id, mode, check) =>
+  inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, id, mode);
+
+    expect(grade.checks[check]).toBe(true);
     expect(grade.passed).toBe(true);
-  });
+  }));
 
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-tests");
-
-    expect(grade.checks.tests_rerun_before_amend).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, cliId, "passive-decline");
-
-    expect(grade.checks.declined_unhittable_with_reason).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, loopId, "reused-session");
-
-    expect(grade.checks.reviewer_caught_edge).toBe(true);
-    expect(grade.checks.review_loop_closed_clean).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, cliId, "reused-session");
-
-    expect(grade.checks.reviewer_caught_real_limit).toBe(true);
-    expect(grade.checks.reviewer_emitted_unhittable).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-batched-amend");
-
-    expect(grade.checks.tests_rerun_before_amend).toBe(true);
-    expect(grade.checks.no_rejected_commits).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, reportId, "chained-amend-status");
-
-    expect(grade.checks.tests_rerun_before_amend).toBe(true);
-    expect(grade.checks.no_rejected_commits).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
+test("decouples pre-amend test verification from trailing newline git status", async () =>
+  inTrial(async (repo, trial) => {
     const { grade } = await fixtureEvidence(repo, trial, reportId, "newline-amend-status");
 
     expect(grade.checks.tests_rerun_before_amend).toBe(true);
     expect(grade.checks.no_rejected_commits).toBe(false);
     expect(grade.passed).toBe(false);
-  });
-});
+  }));
