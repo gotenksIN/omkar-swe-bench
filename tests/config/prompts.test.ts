@@ -74,17 +74,18 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(evaluatePermission(reviewer.permissions, "subagent", "explore")).toBe("deny");
     expect(evaluatePermission(reviewer.permissions, "skill", "code-review")).toBe("deny");
     const expectedGitEffect = role === "pair" ? "ask" : "allow";
+    const expectedFlagEffect = role === "pair" ? "ask" : "deny";
     expect(evaluatePermission(reviewer.permissions, "shell", "rm -rf .")).toBe("deny");
     expect(evaluatePermission(reviewer.permissions, "shell", "git diff main..HEAD")).toBe(expectedGitEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv main..HEAD")).toBe(expectedGitEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git log -n 5")).toBe(expectedGitEffect);
     expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv -n 5")).toBe(expectedGitEffect);
-    expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --show-signature -n 5")).toBe("deny");
-    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --output=pwned.txt")).toBe("deny");
+    expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --show-signature -n 5")).toBe(expectedFlagEffect);
+    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --output=pwned.txt")).toBe(expectedFlagEffect);
     expect(reviewer.system).toContain("fundamentally flawed design");
-    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --no-index /etc/passwd /dev/null")).toBe("deny");
-    expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --ext-diff -p")).toBe("deny");
-    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --textconv HEAD")).toBe("deny");
+    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --no-index /etc/passwd /dev/null")).toBe(expectedFlagEffect);
+    expect(evaluatePermission(reviewer.permissions, "shell", "git log --no-ext-diff --no-textconv --ext-diff -p")).toBe(expectedFlagEffect);
+    expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --textconv HEAD")).toBe(expectedFlagEffect);
   });
 }
 
@@ -146,7 +147,7 @@ test("imports only approved agent fields, overrides user allows via last-match-w
   expect(reviewer.system).toContain("Check the error handling.");
   expect(evaluatePermission(reviewer.permissions, "shell", "bun test")).toBe("deny");
   expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv HEAD~1..HEAD")).toBe("ask");
-  expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv --output=leak")).toBe("deny");
+  expect(evaluatePermission(reviewer.permissions, "shell", "git diff --no-ext-diff --no-textconv a1b2..HEAD -- docs/--output.md")).toBe("ask");
 
   const path = writeTrialConfig(tempDir, config);
   expect(path).toBe(join(tempDir, "config", "opencode", "opencode.json"));

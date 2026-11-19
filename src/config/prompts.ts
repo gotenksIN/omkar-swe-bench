@@ -109,7 +109,7 @@ function reviewerRules(role: TrialConfigOptions["role"]): readonly PermissionRul
     ...REVIEWER_COMMON_RULES,
     { action: "shell", resource: "git diff *", effect },
     { action: "shell", resource: "git log *", effect },
-    ...REVIEWER_FLAG_DENIALS,
+    ...(role === "pair" ? [] : REVIEWER_FLAG_DENIALS),
   ];
 }
 

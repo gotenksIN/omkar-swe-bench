@@ -327,7 +327,7 @@ export function isSafePairReviewerShellCommand(command: string): boolean {
       const inlineFormat = /^--(?:format|pretty)=(.*)$/u.exec(arg);
 
       if (inlineFormat?.[1] !== undefined) {
-        if (!safeFormatValue.test(inlineFormat[1]) || /%G/u.test(inlineFormat[1])) return false;
+        if (!safeFormatValue.test(inlineFormat[1]) || /%[^A-Za-z]*G/u.test(inlineFormat[1])) return false;
 
         continue;
       }
@@ -335,7 +335,7 @@ export function isSafePairReviewerShellCommand(command: string): boolean {
       if (arg === "--format" || arg === "--pretty") {
         const value = rest[index + 1];
 
-        if (value === undefined || !safeFormatValue.test(value) || /%G/u.test(value)) return false;
+        if (value === undefined || !safeFormatValue.test(value) || /%[^A-Za-z]*G/u.test(value)) return false;
 
         index += 1;
         continue;
@@ -428,7 +428,11 @@ export async function runSession({
       const rejectReviewerMutation = isReviewerSession && ["edit", "write", "patch", "execute"].includes(event.data.action);
 
       const rejectReviewerShell = isReviewerSession && event.data.action === "shell"
-        && (event.data.resources.length === 0 || !event.data.resources.every(isSafePairReviewerShellCommand));
+        && (
+          event.data.resources.length !== 1
+          || event.data.metadata?.background === true
+          || !isSafePairReviewerShellCommand(event.data.resources[0] ?? "")
+        );
 
       if (rejectExternal || rejectReviewerMutation || rejectReviewerShell) {
         reply(client.permission.reply({
@@ -438,7 +442,7 @@ export async function runSession({
           message: rejectExternal
             ? "Access outside the trial repository is disabled in benchmark runs."
             : rejectReviewerShell
-              ? "Reviewer shell commands must use git diff --no-ext-diff --no-textconv <rev>..<rev> or git log --no-ext-diff --no-textconv."
+              ? "Run one foreground git diff --no-ext-diff --no-textconv <rev>..<rev> or git log --no-ext-diff --no-textconv command per shell call."
               : "Write and execution actions are disabled for read-only reviews.",
         }, request));
       } else {

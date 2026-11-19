@@ -105,7 +105,10 @@ function reviewerStayedReadOnly(ev: Evidence): boolean {
 
     if (reviewerMutatingTools.has(entry.tool)) return false;
 
-    if (entry.tool === "shell" && (!isString(entry.input.command) || !isSafePairReviewerShellCommand(entry.input.command))) {
+    if (
+      entry.tool === "shell"
+      && (entry.input.background === true || !isString(entry.input.command) || !isSafePairReviewerShellCommand(entry.input.command))
+    ) {
       return false;
     }
   }

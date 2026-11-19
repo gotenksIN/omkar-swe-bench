@@ -414,10 +414,11 @@ test("classifies HTTP and provider errors", () => {
 
 test("validates pair reviewer git shell commands strictly against commit ranges and safe flags", () => {
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD")).toBe(true);
-  expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv -U 3 --stat a1b2c3d4..e5f6a7b8 -- summary.py")).toBe(true);
+  expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv -U 3 --stat a1b2c3d4..e5f6a7b8 -- docs/--output.md")).toBe(true);
   expect(isSafePairReviewerShellCommand("git log -n 5 --no-ext-diff --no-textconv --format='%h %s' a1b2c3d4..HEAD")).toBe(true);
   expect(isSafePairReviewerShellCommand("git log --no-ext-diff --no-textconv --oneline HEAD")).toBe(true);
 
+  expect(isSafePairReviewerShellCommand("> pwned.txt; git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD")).toBe(false);
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv -S a1b2c3d4..HEAD HEAD")).toBe(false);
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD > pwned.txt")).toBe(false);
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD 2>&1")).toBe(false);
@@ -429,5 +430,6 @@ test("validates pair reviewer git shell commands strictly against commit ranges 
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv --output=pwn a1b2c3d4..HEAD")).toBe(false);
   expect(isSafePairReviewerShellCommand("git log --no-ext-diff --no-textconv --show-signature HEAD")).toBe(false);
   expect(isSafePairReviewerShellCommand("git log --no-ext-diff --no-textconv --format=%GG HEAD")).toBe(false);
+  expect(isSafePairReviewerShellCommand("git log --no-ext-diff --no-textconv --format=%+G? HEAD")).toBe(false);
   expect(isSafePairReviewerShellCommand("git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD && rm -rf .")).toBe(false);
 });

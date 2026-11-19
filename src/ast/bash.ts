@@ -490,7 +490,7 @@ class ShellScanner {
 
     while (isAssignment(words[index])) index += 1;
 
-    if (!words.length) return;
+    if (!words.length && !hasRedirection) return;
 
     const head = words[index];
 
