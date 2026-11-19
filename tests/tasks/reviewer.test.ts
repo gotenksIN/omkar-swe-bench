@@ -55,9 +55,9 @@ const cases: readonly ReviewCase[] = [
         finding: "[P1] `src/google.ts:13` — Following redirects forwards the API key header to a different origin.",
       },
       {
-        id: "decoder_standards", file: "src/types.ts", range: [3, 10], severity: 2,
+        id: "decoder_standards", file: "src/types.ts", range: [3, 10], severity: 3,
         needles: ["typeof title", "as SearchResponse"],
-        finding: "[P2] `src/types.ts:6` — The runtime typeof and unannotated cast violate AGENTS.md.",
+        finding: "[P3] `src/types.ts:6` — The runtime typeof and unannotated cast violate AGENTS.md.",
       },
     ],
   },
@@ -66,14 +66,14 @@ const cases: readonly ReviewCase[] = [
     committed: ["modules/gemini.py", "tests/test_e2e_pipeline.py"], dirty: [],
     defects: [
       {
-        id: "cache_discard", file: "modules/gemini.py", range: [23, 28], severity: 1,
+        id: "cache_discard", file: "modules/gemini.py", range: [23, 28], severity: 2,
         needles: ["except (OSError, json.JSONDecodeError):", "cache.unlink("],
-        finding: "[P1] `modules/gemini.py:24` — An OSError can cause recovery to delete a valid cache.",
+        finding: "[P2] `modules/gemini.py:24` — A read error can cause recovery to delete a valid cache.",
       },
       {
-        id: "internal_monkeypatch", file: "tests/test_e2e_pipeline.py", range: [12, 13], severity: 2,
+        id: "internal_monkeypatch", file: "tests/test_e2e_pipeline.py", range: [22, 23], severity: 2,
         needles: ['with patch("modules.gemini._call_model"'],
-        finding: "[P2] `tests/test_e2e_pipeline.py:12` — The test patches internal `_call_model` instead of faking the transport.",
+        finding: "[P2] `tests/test_e2e_pipeline.py:22` — The test patches internal `_call_model` instead of faking the transport.",
       },
     ],
   },
@@ -82,9 +82,9 @@ const cases: readonly ReviewCase[] = [
     committed: ["app/main.py", "app/preview.py"], dirty: [],
     defects: [
       {
-        id: "thread_timeout", file: "app/preview.py", range: [5, 10], severity: 1,
+        id: "thread_timeout", file: "app/preview.py", range: [5, 10], severity: 2,
         needles: ["asyncio.wait_for(asyncio.to_thread(_extract_title, video_id), timeout=3)"],
-        finding: "[P1] `app/preview.py:8` — The worker thread keeps running after the asyncio timeout.",
+        finding: "[P2] `app/preview.py:8` — The worker thread keeps running after the asyncio timeout.",
       },
       {
         id: "quota_before_validation", file: "app/main.py", range: [22, 27], severity: 2,

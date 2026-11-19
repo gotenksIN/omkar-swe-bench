@@ -366,7 +366,7 @@ def render_playlist(rows):
           description: "Following redirects can forward the custom API key header to another origin.",
         },
         {
-          id: "decoder_standards", file: "src/types.ts", lineRange: [3, 10], minSeverity: 2,
+          id: "decoder_standards", file: "src/types.ts", lineRange: [3, 10], minSeverity: 3,
           conceptGroups: [
             ["typeof", "assert", "assertion", "cast", "as SearchResponse"],
             ["safety", "anti-slop", "project", "AGENTS", "forbid", "prohibit", "avoid", "disallow", "violat", "standard", "rule"],
@@ -415,12 +415,16 @@ export const maxPromptLength = "4096" as string;
       excluded: [], bounce: false,
       defects: [
         {
-          id: "cache_discard", file: "modules/gemini.py", lineRange: [23, 28], minSeverity: 1,
-          conceptGroups: [["cache"], ["discard", "delete", "unlink", "destroy", "remove"], ["oserror", "permission", "filesystem", "disk"]],
+          id: "cache_discard", file: "modules/gemini.py", lineRange: [23, 28], minSeverity: 2,
+          conceptGroups: [
+            ["cache"],
+            ["discard", "delete", "unlink", "destroy", "remove"],
+            ["oserror", "permission", "filesystem", "read error", "unreadable", "i/o"],
+          ],
           description: "The cache recovery path deletes the original file after filesystem errors that do not imply corruption.",
         },
         {
-          id: "internal_monkeypatch", file: "tests/test_e2e_pipeline.py", lineRange: [12, 13], minSeverity: 2,
+          id: "internal_monkeypatch", file: "tests/test_e2e_pipeline.py", lineRange: [22, 23], minSeverity: 2,
           conceptGroups: [["patch"], ["_call_model", "internal"], ["transport", "AGENTS", "public", "boundary", "interface", "summarize"]],
           description: "The end-to-end test patches the internal model helper instead of supplying a fake transport.",
         },
@@ -452,6 +456,16 @@ def test_summarizes_on_cache_miss(tmp_path):
 from modules.gemini import summarize
 
 
+class FakeTransport:
+    def generate(self, prompt):
+        return "short summary"
+
+
+def test_summarizes_on_cache_miss(tmp_path):
+    cache = tmp_path / "summary.json"
+    assert summarize("notes", cache, FakeTransport()) == "short summary"
+
+
 def test_rebuilds_corrupt_cache(tmp_path):
     cache = tmp_path / "summary.json"
     cache.write_text("{", encoding="utf-8")
@@ -472,7 +486,7 @@ def test_rebuilds_corrupt_cache(tmp_path):
       excluded: [], bounce: false,
       defects: [
         {
-          id: "thread_timeout", file: "app/preview.py", lineRange: [5, 10], minSeverity: 1,
+          id: "thread_timeout", file: "app/preview.py", lineRange: [5, 10], minSeverity: 2,
           conceptGroups: [
             ["thread"], ["timeout", "cancel"],
             ["continue", "running", "run", "hang", "stop", "leak", "release", "block", "alive", "background", "terminat", "exit"],
@@ -512,7 +526,7 @@ def test_rebuilds_corrupt_cache(tmp_path):
         id: "manifest_bytes", file: "output.json", lineRange: [1, 4], minSeverity: 1,
         conceptGroups: [
           ["byte", "whitespace", "format", "indent", "pretty"],
-          ["head", "commit", "worktree", "working tree", "uncommitted", "unstaged", "dirty", "modified"],
+          ["head", "commit", "worktree", "working tree", "working-tree", "uncommitted", "unstaged", "dirty", "modified"],
         ],
         description: "The working-tree manifest has the same data as HEAD but its pretty formatting breaks byte equality.",
       }],
@@ -617,7 +631,11 @@ def test_quoted_title(tmp_path):
         id: "denylist_shell_rewrite", file: "app/git_preview.py", lineRange: [3, 18], minSeverity: 1,
         conceptGroups: [
           ["denylist", "deny-list", "blocklist", "block-list", "blacklist", "blocked", "shell=true", "shell injection", "command injection"],
-          ["bypass", "newline", "\\n", "flag", "--no-index", "quote", "interpolat", "concatenat", "fundamental", "symptom", "band-aid", "whack-a-mole", "fragile", "brittle", "insufficient"],
+          [
+            "bypass", "newline", "\\n", "flag", "--no-index", "quote", "interpolat", "concatenat",
+            "fundamental", "symptom", "band-aid", "whack-a-mole", "fragile", "brittle", "insufficient",
+            "command separator", "does not block", "option parsing disabled",
+          ],
           ["allowlist", "allow-list", "whitelist", "shell=false", "argument list", "argument vector", "argv", "list of arguments", "sequence of arguments", "without a shell", "without shell"],
         ],
         description: "Extending a substring denylist on a shell=True git command remains trivially bypassable; replace it with strict revision allowlisting and direct argument-list execution without a shell.",
