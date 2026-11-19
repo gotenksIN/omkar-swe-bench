@@ -114,7 +114,7 @@ export const commitGuardTwoTask: EvalTask = {
 Capture the commit context before committing. Use the configured SSH signing key and sign off.
 Leave the pre-existing unstaged change in NOTES.md untouched. Do not edit the tests.
 
-1. In config.py, accept scope names starting with a lowercase ASCII letter and followed only by lowercase ASCII letters, digits, underscores, or hyphens. Raise ValueError for invalid input. Commit only config.py with subject "${configSubject}".
+1. In config.py, accept scope names starting with a lowercase ASCII letter and followed only by lowercase ASCII letters, digits, underscores, or hyphens. Do not strip surrounding whitespace; raise ValueError for any invalid input, including leading, trailing, or newline whitespace. Commit only config.py with subject "${configSubject}".
 2. In cli.py, support \`version --json\` with a JSON object containing the version. Preserve the plain version output. Commit only cli.py with subject "${cliSubject}".
 
 Run \`python3 -m unittest discover -s tests\` and \`ruff check .\` after the edits.
