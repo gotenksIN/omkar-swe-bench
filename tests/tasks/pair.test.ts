@@ -1,4 +1,6 @@
-import type { SessionMessageAssistant, SessionMessageAssistantTool } from "@opencode/client";
+import type {
+  SessionMessageAssistant, SessionMessageAssistantTool, SessionMessageIdle, SessionMessageInfo, SessionMessageUser,
+} from "@opencode/client";
 import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -26,14 +28,24 @@ async function inTrial(run: (repo: string, trial: string) => Promise<void>): Pro
   }
 }
 
-function assistant(content: SessionMessageAssistant["content"], variant = "high"): SessionMessageAssistant {
+function assistant(
+  content: SessionMessageAssistant["content"], variant = "high", finish: SessionMessageAssistant["finish"] = "stop",
+): SessionMessageAssistant {
   const model = { providerID: "synthetic", id: "review" };
 
   return {
     content, id: "synthetic-message", type: "assistant", agent: "code-reviewer",
     model: variant ? { ...model, variant } : model,
-    time: { created: 1, completed: 2 }, finish: "stop",
+    time: { created: 1, completed: 2 }, finish,
   };
+}
+
+function userMessage(text: string): SessionMessageUser {
+  return { id: "synthetic-user", type: "user", text, time: { created: 1 } };
+}
+
+function idleMessage(outcome: SessionMessageIdle["outcome"] = "succeeded"): SessionMessageIdle {
+  return { id: "synthetic-idle", type: "idle", outcome, time: { created: 2 } };
 }
 
 type CompletedTool = Extract<SessionMessageAssistantTool["state"], { status: "completed" }>;
@@ -141,9 +153,71 @@ test("resolves reflog-proven amends in reviewHandoffs even when git commit --ame
     expect(handoffs.map(({ resolvedEndCommit }) => resolvedEndCommit)).toEqual([pre, post]);
   }));
 
+test("segments reused reviewer child sessions by turn in reviewHandoffs", () =>
+  inTrial(async (repo) => {
+    const baseline = await initGitRepo(repo, { "notes.txt": "Initial\n" }, "fixture: Seed notes");
+    const path = join(repo, "notes.txt");
+
+    await writeFile(path, "Before review\n");
+    const pre = await commitTaskFiles(repo, ["notes.txt"], "notes: Revise notes");
+
+    await writeFile(path, "After review\n");
+    await runTaskGit(repo, "add", "--", "notes.txt");
+    await runTaskGit(repo, "commit", "--amend", "--no-edit");
+
+    const post = (await runTaskGit(repo, "rev-parse", "HEAD")).trim();
+    const findings = "## Findings\n- **[P2]** `notes.txt:1` — Fix missing edge case.";
+    const clean = "No actionable findings.";
+
+    const messages = new Map<string, readonly SessionMessageInfo[]>([
+      ["shared", [
+        userMessage(`Review ${baseline}..HEAD.`),
+        assistant([tool("read", { filePath: "notes.txt" })], "high", "tool-calls"),
+        assistant([{ type: "text", text: findings }], "high", "stop"),
+        idleMessage("succeeded"),
+        userMessage(`Re-review ${baseline}..HEAD.`),
+        assistant([{ type: "text", text: clean }], "medium", "stop"),
+        idleMessage("succeeded"),
+      ]],
+      ["failed-first", [
+        userMessage(`Review ${baseline}..HEAD.`),
+        idleMessage("failed"),
+        userMessage(`Retry ${baseline}..HEAD.`),
+        assistant([{ type: "text", text: clean }], "high", "stop"),
+        idleMessage("succeeded"),
+      ]],
+    ]);
+
+    const trace = extractSessionEvidence([assistant([
+      tool("subagent", { agent: "code-reviewer", prompt: `Review ${baseline}..HEAD.` }, { sessionID: "shared" }),
+      tool("shell", { command: "git commit --amend --no-edit" }, { exit: 0 }),
+      tool("subagent", { agent: "code-reviewer", prompt: `Re-review ${baseline}..HEAD.` }, { sessionID: "shared" }),
+    ])], { timedOut: false });
+
+    const handoffs = await reviewHandoffs(repo, baseline, trace.tools, trace.shellRuns, messages);
+
+    expect(handoffs).toMatchObject([
+      { resolvedEndCommit: pre, reviewerFinalText: findings, reviewerModel: "synthetic/review#high" },
+      { resolvedEndCommit: post, reviewerFinalText: clean, reviewerModel: "synthetic/review#medium" },
+    ]);
+
+    const failedTrace = extractSessionEvidence([assistant([
+      tool("subagent", { agent: "code-reviewer", prompt: `Review ${baseline}..HEAD.` }, { sessionID: "failed-first" }),
+      tool("shell", { command: "git commit --amend --no-edit" }, { exit: 0 }),
+      tool("subagent", { agent: "code-reviewer", prompt: `Retry ${baseline}..HEAD.` }, { sessionID: "failed-first" }),
+    ])], { timedOut: false });
+
+    const failedHandoffs = await reviewHandoffs(repo, baseline, failedTrace.tools, failedTrace.shellRuns, messages);
+
+    expect(failedHandoffs).toMatchObject([
+      { resolvedEndCommit: pre, reviewerFinalText: "", reviewerModel: null },
+      { resolvedEndCommit: post, reviewerFinalText: clean, reviewerModel: "synthetic/review#high" },
+    ]);
+  }));
+
 type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt"
   | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit"
-  | "chained-amend" | "newline-tests" | "passive-decline";
+  | "chained-amend" | "newline-tests" | "passive-decline" | "reused-session";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -209,14 +283,20 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
   const { baselineHead } = setup;
   const beforeGit = await captureGitState(repo, baselineHead);
   const parts: ToolPart[] = [];
-  const children = new Map<string, readonly SessionMessageAssistant[]>();
+  const children = new Map<string, SessionMessageInfo[]>();
   const shell = (command: string, output = "", exit = 0) => parts.push(tool("shell", { command, workdir: repo }, { exit }, output));
 
   const review = (sessionID: string, text: string, end = "HEAD") => {
     const prompt = `Review ${baselineHead}..${end} in ${repo}. Use the specified requirements. Do not edit or execute code.`;
+    const existing = children.get(sessionID);
 
     parts.push(tool("subagent", { agent: "code-reviewer", prompt }, { sessionID }));
-    children.set(sessionID, [assistant([{ type: "text", text }])]);
+
+    if (existing !== undefined) {
+      existing.push(userMessage(prompt), assistant([{ type: "text", text }]), idleMessage("succeeded"));
+    } else {
+      children.set(sessionID, [userMessage(prompt), assistant([{ type: "text", text }]), idleMessage("succeeded")]);
+    }
   };
 
   const runTests = async () => shell(`python3 ${testsCommand.join(" ")}`, "",
@@ -321,7 +401,11 @@ async function fixtureEvidence(repo: string, trial: string, id: string, negative
     shell("git commit --amend --no-edit");
   }
 
-  if (id === loopId) review("last", negative === "loop" ? "Review done." : "No actionable findings.");
+  if (id === loopId) {
+    review(negative === "reused-session" ? "first" : "last", negative === "loop" ? "Review done." : "No actionable findings.");
+  } else if (id === cliId && negative === "reused-session") {
+    review("first", "## Findings\n\nNo actionable findings.\n\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.");
+  }
 
   if (negative === "extra-attempt") {
     parts.push({
@@ -421,6 +505,22 @@ test("accepts &&-chained amend tests, newline-verified test runs, and passive-vo
     const { grade } = await fixtureEvidence(repo, trial, cliId, "passive-decline");
 
     expect(grade.checks.declined_unhittable_with_reason).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, loopId, "reused-session");
+
+    expect(grade.checks.reviewer_caught_edge).toBe(true);
+    expect(grade.checks.review_loop_closed_clean).toBe(true);
+    expect(grade.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const { grade } = await fixtureEvidence(repo, trial, cliId, "reused-session");
+
+    expect(grade.checks.reviewer_caught_real_limit).toBe(true);
+    expect(grade.checks.reviewer_emitted_unhittable).toBe(true);
     expect(grade.passed).toBe(true);
   });
 });

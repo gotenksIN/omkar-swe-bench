@@ -359,7 +359,9 @@ async function runTrialLifecycle(
     }
 
     const handoffs = task.role === "pair" && !signal.aborted
-      ? await reviewHandoffs(repoDir, fixture.baselineHead, root.tools, root.shellRuns, run.childMessagesBySessionId) : [];
+      ? await reviewHandoffs(
+        repoDir, fixture.baselineHead, root.tools, root.shellRuns, run.childMessagesBySessionId, { timedOut: run.timedOut },
+      ) : [];
 
     const firstHandoff = handoffs[0];
     const reviewerText = firstHandoff?.reviewerFinalText ?? "";

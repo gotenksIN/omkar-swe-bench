@@ -59,12 +59,47 @@ function reviewerModel(messages: readonly SessionMessageInfo[]): string | null {
   return `${model.providerID}/${model.id}${model.variant ? `#${model.variant}` : ""}`;
 }
 
+function splitSessionTurns(messages: readonly SessionMessageInfo[]): readonly (readonly SessionMessageInfo[])[] {
+  const turns: SessionMessageInfo[][] = [];
+  let current: SessionMessageInfo[] = [];
+  let hasTurnMessage = false;
+
+  for (const message of messages) {
+    if (message.type === "user" && hasTurnMessage) {
+      turns.push(current);
+      current = [];
+      hasTurnMessage = false;
+    }
+
+    current.push(message);
+
+    if (message.type === "user" || message.type === "assistant") {
+      hasTurnMessage = true;
+    }
+
+    if (message.type === "idle" && hasTurnMessage) {
+      turns.push(current);
+      current = [];
+      hasTurnMessage = false;
+    }
+  }
+
+  if (hasTurnMessage) turns.push(current);
+
+  return turns;
+}
+
+export interface ReviewHandoffsOptions {
+  readonly timedOut?: boolean;
+}
+
 export async function reviewHandoffs(
   repoDir: string,
   baselineHead: string,
   tools: readonly ToolTraceEntry[],
   shellRuns: readonly ShellRunTrace[],
   childMessagesBySessionId: ReadonlyMap<string, readonly SessionMessageInfo[]>,
+  options?: ReviewHandoffsOptions,
 ): Promise<readonly ReviewHandoff[]> {
   const provenAmendIndices: number[] = [];
   const ambiguousAmendIndices: number[] = [];
@@ -106,6 +141,8 @@ export async function reviewHandoffs(
   const exactProven = provenAmendIndices.length === history.amended.length;
   const traceMatchesReflog = exactProven || (history.amended.length > 0 && orderedAmendIndices.length === history.amended.length);
   const resolvedAmendIndices = exactProven ? provenAmendIndices : orderedAmendIndices;
+  const turnsBySessionId = new Map<string, readonly (readonly SessionMessageInfo[])[]>();
+  const nextTurnBySessionId = new Map<string, number>();
 
   return reviews.sort((left, right) => left.toolIndex - right.toolIndex).map((review) => {
     const { childSessionId, prompt, toolIndex } = review;
@@ -129,10 +166,26 @@ export async function reviewHandoffs(
       if (matches.length === 1) resolvedEndCommit = matches[0] ?? null;
     }
 
-    const messages = childMessagesBySessionId.get(childSessionId) ?? [];
-    const { finalText } = extractSessionEvidence(messages, { timedOut: false, isSubagent: true, sessionId: childSessionId });
+    let turns = turnsBySessionId.get(childSessionId);
 
-    return { ...review, rangeStart, rangeEndToken, resolvedEndCommit, reviewerFinalText: finalText, reviewerModel: reviewerModel(messages) };
+    if (turns === undefined) {
+      turns = splitSessionTurns(childMessagesBySessionId.get(childSessionId) ?? []);
+      turnsBySessionId.set(childSessionId, turns);
+    }
+
+    const turnIndex = nextTurnBySessionId.get(childSessionId) ?? 0;
+    nextTurnBySessionId.set(childSessionId, turnIndex + 1);
+
+    const turnMessages = turns[turnIndex] ?? [];
+
+    const { finalText } = extractSessionEvidence(turnMessages, {
+      timedOut: options?.timedOut ?? false, isSubagent: true, sessionId: childSessionId,
+    });
+
+    return {
+      ...review, rangeStart, rangeEndToken, resolvedEndCommit,
+      reviewerFinalText: finalText, reviewerModel: reviewerModel(turnMessages),
+    };
   });
 }
 
