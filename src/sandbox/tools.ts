@@ -1,8 +1,9 @@
 import { lstatSync, mkdirSync, readlinkSync, realpathSync, rmdirSync, statSync, symlinkSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
-import { assertNoSymlinkBoundary } from "../util/fs.ts";
+import { assertNoSymlinkBoundary, atomicWriteFile } from "../util/fs.ts";
+import { isJsonObject, parseJsonText } from "../util/json.ts";
 
 export interface TsCompilerDir {
   readonly sourceDir: string;
@@ -18,6 +19,8 @@ const tsPackages = ["typescript", "@typescript", "@types", "bun-types", "undici-
 const toolNames = ["opencode", "bun", "node", "ruff", "git", "python3", "ssh-keygen"];
 export const COMMIT_GUARD_PACKAGE = "opencode-commit-guard@1.1.1";
 export const FORBIDDEN_HARNESS_MOUNT = /(?:^|\/)(?:oxlint|oxc-parser|@oxlint|anti-slop)(?:\/|$)/u;
+export const DEFAULT_MODELS_URL = "https://models.opencode.ai";
+export const MODELS_CATALOG_PATH = "/experimental/v2.0/api.json?type=chat,decision,image,video";
 
 function whichOnPath(name: string): string | null {
   const pathEnv = process.env.PATH;
@@ -92,11 +95,55 @@ export function discoverOpenCodeCaches() {
   const cacheHome = process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
   const commitGuard = join(cacheHome, "opencode", "npm", COMMIT_GUARD_PACKAGE);
   const bin = join(cacheHome, "opencode", "bin");
+  const models = process.env.OPENCODE_MODELS_PATH ?? join(cacheHome, "opencode", "models.json");
 
   return {
     commitGuardCacheDir: statSync(commitGuard, { throwIfNoEntry: false })?.isDirectory() ? commitGuard : null,
     opencodeBinCacheDir: statSync(bin, { throwIfNoEntry: false })?.isDirectory() ? bin : null,
+    opencodeModelsCacheFile: statSync(models, { throwIfNoEntry: false })?.isFile() ? realpathSync(models) : null,
   };
+}
+
+export async function refreshOpenCodeModelsCache(signal: AbortSignal): Promise<string | null> {
+  const override = process.env.OPENCODE_MODELS_PATH;
+
+  if (override !== undefined) {
+    if (!statSync(override, { throwIfNoEntry: false })?.isFile()) {
+      throw new Error(`OPENCODE_MODELS_PATH is not a readable file: ${override}`);
+    }
+
+    return realpathSync(override);
+  }
+
+  const cacheHome = process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
+  const opencodeCacheDir = resolve(cacheHome, "opencode");
+  const target = join(opencodeCacheDir, "models.json");
+  const existing = statSync(target, { throwIfNoEntry: false })?.isFile() ? realpathSync(target) : null;
+  const baseUrl = (process.env.OPENCODE_MODELS_URL || DEFAULT_MODELS_URL).replace(/\/+$/u, "");
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
+
+  try {
+    let response = await fetch(`${baseUrl}${MODELS_CATALOG_PATH}`, { signal: requestSignal });
+
+    if (response.status === 404 && baseUrl !== DEFAULT_MODELS_URL) {
+      response = await fetch(`${baseUrl}/api.json`, { signal: requestSignal });
+    }
+
+    if (!response.ok) return existing;
+
+    const text = await response.text();
+
+    if (!isJsonObject(parseJsonText(text))) return existing;
+
+    mkdirSync(opencodeCacheDir, { recursive: true });
+    atomicWriteFile(target, text, 0o644);
+
+    return realpathSync(target);
+  } catch (cause) {
+    if (signal.aborted) throw cause;
+
+    return existing;
+  }
 }
 
 export function discoverTsCompilerDirs(harnessRoot: string): TsCompilerDir[] {

@@ -11,7 +11,7 @@ import { runPool, scheduleTrials } from "./runner/pool.ts";
 import { runTrial, validateTrialCatalog } from "./runner/run-trial.ts";
 import type { RunConfig, TrialJob } from "./runner/types.ts";
 import { probeSandbox, RunController } from "./sandbox/process.ts";
-import { COMMIT_GUARD_PACKAGE, discoverOpenCodeCaches, requireGlobalRuff } from "./sandbox/tools.ts";
+import { COMMIT_GUARD_PACKAGE, discoverOpenCodeCaches, refreshOpenCodeModelsCache, requireGlobalRuff } from "./sandbox/tools.ts";
 import { TASKS_BY_ID, tasksForPhase } from "./tasks/index.ts";
 import { atomicWriteFile } from "./util/fs.ts";
 import { parseJsonText } from "./util/json.ts";
@@ -185,7 +185,10 @@ async function run(args: string[]): Promise<number> {
 
     if (values["agents-file"] !== undefined) options = { ...options, agentsFile: values["agents-file"] };
 
-    if (!dryRun && !signal.aborted) await preflightCatalogs(jobs, options);
+    if (!dryRun && !signal.aborted) {
+      await refreshOpenCodeModelsCache(signal);
+      await preflightCatalogs(jobs, options);
+    }
 
     mkdirSync(out, { recursive: true, mode: 0o700 });
     const resultsPath = join(out, "results.json");

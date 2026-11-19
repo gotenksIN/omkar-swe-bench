@@ -132,7 +132,11 @@ async function runTrialLifecycle(
     ? (hostToolFiles.length > 0 ? [join(trialDir, "host-bin")] : [])
     : discoverHostToolDirs();
 
-  const { commitGuardCacheDir, opencodeBinCacheDir } = discoverOpenCodeCaches();
+  const { commitGuardCacheDir, opencodeBinCacheDir, opencodeModelsCacheFile } = discoverOpenCodeCaches();
+
+  const resolvedModelsCatalogPath = opencodeModelsCacheFile === null
+    ? null
+    : sandboxed ? join(trialDir, "cache", "opencode", "models.json") : opencodeModelsCacheFile;
 
   if (catalogSpecs === undefined && task.commitGuard && !dryRun && commitGuardCacheDir === null) {
     throw new Error(`Cache ${COMMIT_GUARD_PACKAGE} in OpenCode before running commit-guard tasks.`);
@@ -223,7 +227,7 @@ async function runTrialLifecycle(
     }) {
       const mountPlan = compileMountPlan({
         trialDir, repoDir, hostHome: homedir(), hostToolFiles, tsCompilerDirs: plan.tsDirs,
-        opencodeBinCacheDir, readOnlyRepo: plan.readOnlyRepo,
+        opencodeBinCacheDir, opencodeModelsCacheFile, readOnlyRepo: plan.readOnlyRepo,
         commitGuardCacheDir: plan.guardDir, extraRoFiles: providers.extraRoFiles,
       });
 
@@ -232,6 +236,7 @@ async function runTrialLifecycle(
       const envVars = buildTrialEnv({
         trialDir, tsCompilerDirs: plan.tsDirs, resolvedHostToolDirs,
         keepWorkspaces: plan.persistDb, extraEnvNames: providers.extraEnvNames,
+        modelsCatalogPath: resolvedModelsCatalogPath,
       });
 
       return { mountPlan, envVars };

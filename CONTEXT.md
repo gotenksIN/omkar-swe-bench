@@ -21,6 +21,7 @@ Use file-level `--ro-bind` overlays in the sandbox so neither file can change wh
 Remove the generated credential file in `finally` even if you retain the workspace.
 
 Set `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`, `OPENCODE_DISABLE_CLAUDE_CODE=1`, `OPENCODE_DISABLE_PROJECT_CONFIG=1`, and `OPENCODE_DISABLE_MODELS_FETCH=1`.
+Before live runs, refresh the `models.opencode.ai` v2 catalog once on the host into `${XDG_CACHE_HOME:-$HOME/.cache}/opencode/models.json` (or honor `OPENCODE_MODELS_PATH`), bind-mount it read-only into each trial, and point `OPENCODE_MODELS_PATH` at it so OpenCode loads post-release models synchronously without per-trial fetches or startup races.
 Deny `external_directory:*` across all roles.
 In writable `pair` trials, route reviewer `git diff` and `git log` commands through `ask` and validate them with the strict AST allowlist (`isSafePairReviewerShellCommand`) so working-tree clean filters, unknown flags, and shell redirections cannot run.
 Use `plugins: []` for the 21 tasks without commit guard.

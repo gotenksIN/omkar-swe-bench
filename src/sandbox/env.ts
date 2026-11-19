@@ -9,6 +9,7 @@ export interface BuildTrialEnvInput {
   readonly resolvedHostToolDirs: readonly string[];
   readonly keepWorkspaces: boolean;
   readonly extraEnvNames: readonly string[];
+  readonly modelsCatalogPath?: string | null;
 }
 
 const excludedHostNames = new Set([
@@ -62,6 +63,10 @@ export function buildTrialEnv(input: BuildTrialEnvInput): ReadonlyMap<string, st
     ["OPENCODE_DISABLE_EXTERNAL_SKILLS", "1"],
     ["OPENCODE_DISABLE_MODELS_FETCH", "1"],
   ]);
+
+  if (input.modelsCatalogPath !== undefined && input.modelsCatalogPath !== null) {
+    env.set("OPENCODE_MODELS_PATH", input.modelsCatalogPath);
+  }
 
   for (const name of extraEnvNames) {
     if (

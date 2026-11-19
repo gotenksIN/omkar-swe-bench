@@ -23,6 +23,7 @@ export interface MountPlanInput {
   readonly readOnlyRepo: boolean;
   readonly commitGuardCacheDir: string | null;
   readonly opencodeBinCacheDir: string | null;
+  readonly opencodeModelsCacheFile?: string | null;
   readonly tsCompilerDirs: readonly TsCompilerDir[];
   readonly hostToolFiles: readonly HostToolFile[];
   readonly extraRoFiles: readonly string[];
@@ -212,6 +213,12 @@ export function compileMountPlan(input: MountPlanInput): MountPlan {
     const target = join(trialDir, "cache", "opencode", "bin");
     ensureParent(target);
     bind(readOnlyMount(input.opencodeBinCacheDir, target, false));
+  }
+
+  if (input.opencodeModelsCacheFile !== undefined && input.opencodeModelsCacheFile !== null) {
+    const target = join(trialDir, "cache", "opencode", "models.json");
+    ensureParent(target);
+    bind(readOnlyMount(input.opencodeModelsCacheFile, target, true));
   }
 
   if (input.tsCompilerDirs.length > 0) {
