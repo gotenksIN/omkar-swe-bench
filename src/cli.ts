@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { CODER_MODELS, parseModelSpec, REVIEWER_MODELS, validateModels } from "./config/models.ts";
+import { CODER_MODELS, PAIR_REVIEWER_MODELS, parseModelSpec, REVIEWER_MODELS, validateModels } from "./config/models.ts";
 import { exportBlindJudgePacket, validateBlindJudgeAnswers } from "./judge/blind.ts";
 import { readResultsJson, renderMarkdownReport, writeResultsJson } from "./report/markdown.ts";
 import { runPool, scheduleTrials } from "./runner/pool.ts";
@@ -144,7 +144,7 @@ async function run(args: string[]): Promise<number> {
   const tasks = requested.size === 0 ? phaseTasks : phaseTasks.filter((task) => requested.has(task.id));
   const coderModels = values["coder-model"] ?? CODER_MODELS;
   const reviewerModels = values["reviewer-model"] ?? REVIEWER_MODELS;
-  const pairReviewerModels = values["reviewer-model"] ?? (values["all-pairs"] ? reviewerModels : reviewerModels.slice(0, 1));
+  const pairReviewerModels = values["reviewer-model"] ?? (values["all-pairs"] ? reviewerModels : PAIR_REVIEWER_MODELS);
   const trialsPerCell = integerFlag(values["trials-per-cell"], 1, 1, "trials-per-cell");
   const workers = integerFlag(values.workers, 4, 1, "workers");
   const apiRetries = integerFlag(values["api-retries"], 3, 0, "api-retries");

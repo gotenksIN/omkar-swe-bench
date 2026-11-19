@@ -186,10 +186,8 @@ bun ./src/cli.ts run --phase coder
 # Stage 2: read-only code reviewer (99 trials across 9 default models)
 bun ./src/cli.ts run --phase reviewer
 
-# Stage 3: coder + reviewer collaboration
-bun ./src/cli.ts run --phase pair \
-  --reviewer-model 'openai/gpt-6.2-sol#high' \
-  --reviewer-model 'google/gemini-4-neon#high'
+# Stage 3: coder + reviewer collaboration (64 trials across 8 coders × 2 default pair reviewers)
+bun ./src/cli.ts run --phase pair
 ```
 
 ### 4. Benchmark custom agent prompts
@@ -309,7 +307,7 @@ The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in 
 | `--phase <all\|coder\|reviewer\|pair>` | `all`; select a stage or run all stages |
 | `--task <id>` | All tasks in the selected phase; repeat to filter specific task IDs |
 | `--coder-model <provider/model[#variant]>` | The 8 coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the list |
-| `--reviewer-model <provider/model[#variant]>` | All 9 reviewer specs for solo review, and only `openai/gpt-6.2-sol#high` for pairs; repeat to replace both lists |
+| `--reviewer-model <provider/model[#variant]>` | All 9 reviewer specs for solo review, and `openai/gpt-6.2-astra#medium` + `google/gemini-4-carbon#medium` for pairs; repeat to replace both lists |
 | `--all-pairs` | Off; pair each selected coder model with all default reviewer models unless you pass `--reviewer-model` |
 | `--trials-per-cell <n>` | `1`; positive integer repetitions per task and model or model pair |
 | `--workers <n>` | `4`; positive integer maximum concurrent trials (capped at 2 concurrent trials per provider by default) |

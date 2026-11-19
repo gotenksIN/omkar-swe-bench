@@ -23,6 +23,11 @@ export const REVIEWER_MODELS: readonly string[] = [
   "anthropic/claude-fable-5-2#high",
 ];
 
+export const PAIR_REVIEWER_MODELS: readonly string[] = [
+  "openai/gpt-6.2-astra#medium",
+  "google/gemini-4-carbon#medium",
+];
+
 export interface ParsedModelSpec {
   readonly spec: string;
   readonly providerID: string;

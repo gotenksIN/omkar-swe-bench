@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CODER_MODELS, parseModelRef, parseModelSpec, REVIEWER_MODELS, validateModels } from "../../src/config/models.ts";
+import { CODER_MODELS, PAIR_REVIEWER_MODELS, parseModelRef, parseModelSpec, REVIEWER_MODELS, validateModels } from "../../src/config/models.ts";
 import { buildTrialConfig, writeTrialConfig } from "../../src/config/prompts.ts";
 import { parseJsoncObject } from "../../src/util/json.ts";
 
@@ -173,13 +173,17 @@ test.each([
 });
 
 test("default model matrices contain unique valid specs", () => {
-  for (const matrix of [CODER_MODELS, REVIEWER_MODELS]) {
+  for (const matrix of [CODER_MODELS, REVIEWER_MODELS, PAIR_REVIEWER_MODELS]) {
     expect(matrix.length).toBeGreaterThan(0);
     expect(new Set(matrix).size).toBe(matrix.length);
 
     for (const spec of matrix) {
       expect(() => parseModelSpec(spec)).not.toThrow();
     }
+  }
+
+  for (const spec of PAIR_REVIEWER_MODELS) {
+    expect(REVIEWER_MODELS).toContain(spec);
   }
 });
 
