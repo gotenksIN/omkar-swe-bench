@@ -1,0 +1,24 @@
+{
+  "name": "omkar-swe-bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "omkar-swe-bench": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode/client": "2.3.2",
+    "oxc-parser": "0.159.0"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.94.0",
+    "@types/bun": "1.4.4",
+    "oxlint": "1.94.0",
+    "typescript": "7.0.2"
+  }
+}

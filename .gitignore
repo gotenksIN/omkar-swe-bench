@@ -1,0 +1,10 @@
+node_modules/
+results/
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
