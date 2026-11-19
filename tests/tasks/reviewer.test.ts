@@ -289,8 +289,15 @@ for (const reference of cases) {
           finalText: "## Findings\n\n- [P1] `app/git_preview.py:3` — Add newline and `--no-index` to `BLOCKED` so they are blocked too.",
         }, setup);
 
+        const expandedDenylistReplace = await task.grade({
+          ...ev,
+          finalText: "## Findings\n\n- [P1] `app/git_preview.py:3` — Replace `BLOCKED` with an expanded denylist to block `--no-index` and newline bypasses.",
+        }, setup);
+
         expect(symptomPatchOnly.passed).toBe(false);
         expect(symptomPatchOnly.checks.caught_denylist_shell_rewrite).toBe(false);
+        expect(expandedDenylistReplace.passed).toBe(false);
+        expect(expandedDenylistReplace.checks.caught_denylist_shell_rewrite).toBe(false);
       }
 
       if (reference.bounce) {

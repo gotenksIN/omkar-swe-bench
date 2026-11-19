@@ -574,7 +574,7 @@ def test_quoted_title(tmp_path):
         conceptGroups: [
           ["denylist", "deny-list", "blocklist", "block-list", "blacklist", "blocked", "shell=true", "shell injection", "command injection"],
           ["bypass", "newline", "\\n", "flag", "--no-index", "quote", "interpolat", "concatenat", "fundamental", "symptom", "band-aid", "whack-a-mole", "fragile", "brittle", "insufficient"],
-          ["allowlist", "allow-list", "whitelist", "shell=false", "argument list", "argv", "list of arguments", "sequence of arguments", "without a shell", "without shell", "rewrite", "replace"],
+          ["allowlist", "allow-list", "whitelist", "shell=false", "argument list", "argument vector", "argv", "list of arguments", "sequence of arguments", "without a shell", "without shell"],
         ],
         description: "Extending a substring denylist on a shell=True git command remains trivially bypassable; replace it with strict revision allowlisting and direct argument-list execution without a shell.",
       }],
