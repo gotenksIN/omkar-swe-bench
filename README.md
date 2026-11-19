@@ -68,6 +68,57 @@ xychart-beta
 
 </details>
 
+### Phase 2: `code-reviewer` (`neutral` profile)
+
+Single-repetition Stage 2 (`code-reviewer`) pass across all 11 reviewer tasks and 9 default reviewer models (`99` trials total, `76/99` passed, `0` provider retries, `$9.35` total API cost, `--sandbox require`, OpenCode `2.3.2`).
+
+| Model | Pass@1 | Passed | Mean score | Cold visible | Warm visible | Total tok/s | Cache hit | Median wall | Median cost | 11-task cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `google/gemini-4-carbon#medium` | **90.9%** | 10/11 | **96.4%** | 8.35s | 12.39s | 65 | 44% | 88.8s | $0.0886 | $1.31 |
+| `openai/gpt-6.2-astra#medium` | **90.9%** | 10/11 | 94.5% | 5.65s | 2.92s | 26 | 61% | **15.2s** | $0.0584 | $0.61 |
+| `google/gemini-4-neon#xhigh` | **90.9%** | 10/11 | 94.5% | 9.19s | 7.98s | 104 | 46% | 154.6s | $0.2996 | $2.97 |
+| `anthropic/claude-opus-5-5#high` | 81.8% | 9/11 | 94.5% | 2.20s | **2.61s** | 78 | **87%** | 15.4s | $0.0492 | $0.52 |
+| `google/gemini-4-neon#high` | 81.8% | 9/11 | 93.0% | 6.57s | 15.63s | 89 | 36% | 55.3s | $0.1042 | $1.35 |
+| `openai/gpt-6.2-astra#high` | 72.7% | 8/11 | 89.1% | 5.74s | 4.14s | 32 | 66% | 20.0s | $0.0627 | $0.73 |
+| `anthropic/claude-fable-5-2#high` | 63.6% | 7/11 | 91.5% | **1.87s** | 4.88s | 91 | 82% | 19.5s | $0.1124 | $1.41 |
+| `openai/gpt-6.2-sol#xhigh` | 63.6% | 7/11 | 83.6% | 4.69s | 2.97s | 46 | 63% | 23.1s | $0.0223 | $0.25 |
+| `openai/gpt-6.2-sol#high` | 54.5% | 6/11 | 86.1% | 4.63s | 3.57s | 44 | 62% | 15.8s | **$0.0176** | **$0.20** |
+
+```mermaid
+xychart-beta
+  title "Phase 2 (code-reviewer) — Median wall time per task (seconds)"
+  x-axis ["astra#m", "opus-5.5#h", "sol#h", "fable-5.2#h", "astra#h", "sol#xh", "neon#h", "carbon#m", "neon#xh"]
+  y-axis "Seconds" 0 --> 170
+  bar [15.2, 15.4, 15.8, 19.5, 20.0, 23.1, 55.3, 88.8, 154.6]
+```
+
+```mermaid
+xychart-beta
+  title "Phase 2 (code-reviewer) — Total API cost across all 11 tasks (USD)"
+  x-axis ["sol#h", "sol#xh", "opus-5.5#h", "astra#m", "astra#h", "carbon#m", "neon#h", "fable-5.2#h", "neon#xh"]
+  y-axis "USD" 0 --> 3.2
+  bar [0.20, 0.25, 0.52, 0.61, 0.73, 1.31, 1.35, 1.41, 2.97]
+```
+
+<details>
+<summary><strong>Phase 2 per-task pass rates and failure breakdown (23 of 99 trials)</strong></summary>
+
+| Task ID | Passed | Failed trials and checks |
+| --- | ---: | --- |
+| `rev-soft-commit-range-no-filelist` | 9/9 | — |
+| `rev-ts-redirect-leak-and-antislop` | 9/9 | — |
+| `rev-py-ytdlp-thread-leak-and-ratelimit` | 9/9 | — |
+| `rev-mixed-committed-plus-worktree` | 9/9 | — |
+| `rev-calibration-trap-clean-idiomatic` | 9/9 | — |
+| `rev-clean-personal-script-v2` | 7/9 | `openai/gpt-6.2-sol#high`, `openai/gpt-6.2-sol#xhigh`: filed a `[P3]` nitpick on a clean diff |
+| `rev-ts-tautological-and-inverted-test` | 7/9 | `openai/gpt-6.2-sol#high`: missed `catalog_id_mismatch`; `anthropic/claude-fable-5-2#high`: added a `[P3]` nitpick |
+| `rev-py-clean-security-rewrite-restraint` | 7/9 | `openai/gpt-6.2-sol#xhigh`, `openai/gpt-6.2-astra#high`: filed a `[P3]` nitpick on a clean security rewrite |
+| `rev-py-cache-discard-and-monkeypatch` | 6/9 | `google/gemini-4-neon#high`: missed `cache_discard`; `openai/gpt-6.2-sol#high`: added a `[P3]` nitpick; `anthropic/claude-fable-5-2#high`: added a false-positive finding |
+| `rev-py-denylist-bandaid-rewrite` | 4/9 | `openai/gpt-6.2-sol#xhigh`: missed `denylist_shell_rewrite` and added extra findings; `openai/gpt-6.2-sol#high`, `openai/gpt-6.2-astra#high`, `anthropic/claude-opus-5-5#high`, `anthropic/claude-fable-5-2#high`: added extra out-of-spec findings |
+| `rev-missing-scope-true-bounce` | 0/9 | All 9 models failed to open with `Scope needed` (`google/gemini-4-carbon#medium` hit the 480s wall-clock timeout; the other 8 inferred `HEAD` from the lone commit) |
+
+</details>
+
 ## How it works
 
 ### Trial execution pipeline
