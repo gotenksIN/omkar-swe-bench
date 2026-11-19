@@ -68,6 +68,7 @@ export async function reviewHandoffs(
 ): Promise<readonly ReviewHandoff[]> {
   const provenAmendIndices: number[] = [];
   const ambiguousAmendIndices: number[] = [];
+  const orderedAmendIndices: number[] = [];
   const reviews = [];
 
   for (const shellTrace of shellRuns) {
@@ -79,11 +80,13 @@ export async function reviewHandoffs(
 
       if (shellTrace.exitCode === 0 && commandExitApplies(shellTrace, cmdIndex)) {
         provenAmendIndices.push(shellTrace.index);
+        orderedAmendIndices.push(shellTrace.index);
       } else if (shellTrace.exitCode !== null && shellTrace.exitCode !== 0 && commandExitApplies(shellTrace, cmdIndex)) {
         // A definitively failed amend did not create a reflog entry.
         continue;
       } else {
         ambiguousAmendIndices.push(shellTrace.index);
+        orderedAmendIndices.push(shellTrace.index);
       }
     }
   }
@@ -100,7 +103,9 @@ export async function reviewHandoffs(
 
   const history = await withPairHistory(repoDir, baselineHead, (read) => pairReflog(read, baselineHead));
   const commits = new Set([...history.created, ...history.amended]);
-  const traceMatchesReflog = provenAmendIndices.length === history.amended.length;
+  const exactProven = provenAmendIndices.length === history.amended.length;
+  const traceMatchesReflog = exactProven || (history.amended.length > 0 && orderedAmendIndices.length === history.amended.length);
+  const resolvedAmendIndices = exactProven ? provenAmendIndices : orderedAmendIndices;
 
   return reviews.sort((left, right) => left.toolIndex - right.toolIndex).map((review) => {
     const { childSessionId, prompt, toolIndex } = review;
@@ -110,7 +115,7 @@ export async function reviewHandoffs(
     let resolvedEndCommit: string | null = null;
 
     if (rangeEndToken === "HEAD") {
-      const amendsBefore = provenAmendIndices.filter((amendIndex) => amendIndex < toolIndex).length;
+      const amendsBefore = resolvedAmendIndices.filter((amendIndex) => amendIndex < toolIndex).length;
       const hadAmbiguousAmend = ambiguousAmendIndices.some((amendIndex) => amendIndex < toolIndex);
 
       if (amendsBefore === 0 && (!hadAmbiguousAmend || traceMatchesReflog)) {

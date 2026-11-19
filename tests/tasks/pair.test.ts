@@ -111,6 +111,36 @@ test("resolves review ranges against the reflog at the handoff index", () =>
     expect(unavailable[0]?.reviewerFinalText).toBe(report);
   }));
 
+test("resolves reflog-proven amends in reviewHandoffs even when git commit --amend is followed by git status", () =>
+  inTrial(async (repo) => {
+    const baseline = await initGitRepo(repo, { "notes.txt": "Initial\n" }, "fixture: Seed notes");
+    const path = join(repo, "notes.txt");
+
+    await writeFile(path, "Before review\n");
+    const pre = await commitTaskFiles(repo, ["notes.txt"], "notes: Revise notes");
+
+    await writeFile(path, "After review\n");
+    await runTaskGit(repo, "add", "--", "notes.txt");
+    await runTaskGit(repo, "commit", "--amend", "--no-edit");
+
+    const post = (await runTaskGit(repo, "rev-parse", "HEAD")).trim();
+
+    const messages = new Map([
+      ["first", [assistant([{ type: "text", text: "## Findings\n- [P2] `notes.txt:1` Fix." }])]],
+      ["last", [assistant([{ type: "text", text: "No actionable findings." }])]],
+    ]);
+
+    const trace = extractSessionEvidence([assistant([
+      tool("subagent", { agent: "code-reviewer", prompt: `Review ${baseline}..HEAD.` }, { sessionID: "first" }),
+      tool("shell", { command: "git commit --amend --no-edit\ngit status" }, { exit: 0 }),
+      tool("subagent", { agent: "code-reviewer", prompt: `Review ${baseline}..HEAD.` }, { sessionID: "last" }),
+    ])], { timedOut: false });
+
+    const handoffs = await reviewHandoffs(repo, baseline, trace.tools, trace.shellRuns, messages);
+
+    expect(handoffs.map(({ resolvedEndCommit }) => resolvedEndCommit)).toEqual([pre, post]);
+  }));
+
 type Negative = "nitpick" | "guard" | "core" | "loop" | "late-edit" | "extra-attempt"
   | "reviewer-blocked-shell" | "reviewer-unsafe-shell" | "reviewer-blocked-edit"
   | "chained-amend" | "newline-tests" | "passive-decline";
