@@ -9,7 +9,7 @@ import { exportBlindJudgePacket, validateBlindJudgeAnswers } from "./judge/blind
 import { readResultsJson, renderMarkdownReport, writeResultsJson } from "./report/markdown.ts";
 import { runPool, scheduleTrials } from "./runner/pool.ts";
 import { runTrial, validateTrialCatalog } from "./runner/run-trial.ts";
-import type { RunConfig, TrialJob } from "./runner/types.ts";
+import type { RunConfig, TrialJob, TrialResult } from "./runner/types.ts";
 import { probeSandbox, RunController } from "./sandbox/process.ts";
 import { COMMIT_GUARD_PACKAGE, discoverOpenCodeCaches, refreshOpenCodeModelsCache, requireGlobalRuff } from "./sandbox/tools.ts";
 import { TASKS_BY_ID, tasksForPhase } from "./tasks/index.ts";
@@ -70,6 +70,22 @@ async function sandboxEnabled(mode = "require"): Promise<boolean> {
   return false;
 }
 
+function progress(line: string): void {
+  process.stderr.write(`${line}\n`);
+}
+
+function modelLabel(model: string, reviewerModel: string | null): string {
+  return reviewerModel === null ? model : `${model} -> ${reviewerModel}`;
+}
+
+function failureDetail(result: TrialResult): string {
+  if (result.error_message !== null) return ` (${result.error_message})`;
+
+  const failed = Object.entries(result.checks).flatMap(([name, ok]) => ok ? [] : [name]);
+
+  return failed.length > 0 ? ` (${failed.join(", ")})` : "";
+}
+
 async function preflightCatalogs(jobs: readonly TrialJob[], options: RunConfig): Promise<void> {
   const catalogs = Map.groupBy(jobs, ({ model, reviewerModel }) => {
     const specs = reviewerModel === null ? [model] : [model, reviewerModel];
@@ -78,12 +94,17 @@ async function preflightCatalogs(jobs: readonly TrialJob[], options: RunConfig):
     return JSON.stringify(Array.from(providers).sort());
   });
 
+  let index = 0;
+
   for (const group of catalogs.values()) {
     const [job] = group;
 
     if (job === undefined || options.signal.aborted) break;
 
+    index += 1;
     const specs = new Set(group.flatMap(({ model, reviewerModel }) => reviewerModel === null ? [model] : [model, reviewerModel]));
+    const providers = Array.from(new Set([...specs].map((spec) => parseModelSpec(spec).providerID))).sort();
+    progress(`Preflighting catalog ${index}/${catalogs.size} (${providers.join(", ")})...`);
     await validateTrialCatalog(job, options, [...specs]);
   }
 }
@@ -186,21 +207,52 @@ async function run(args: string[]): Promise<number> {
     if (values["agents-file"] !== undefined) options = { ...options, agentsFile: values["agents-file"] };
 
     if (!dryRun && !signal.aborted) {
+      progress(`Starting ${jobs.length} trial(s) (${Math.min(workers, jobs.length)} workers) -> ${out}`);
+      progress("Refreshing OpenCode models catalog...");
       await refreshOpenCodeModelsCache(signal);
       await preflightCatalogs(jobs, options);
     }
 
     mkdirSync(out, { recursive: true, mode: 0o700 });
     const resultsPath = join(out, "results.json");
+    let started = 0;
+    let finished = 0;
 
-    const results = await runPool(jobs, (job) => runTrial(job, options), {
+    const results = await runPool(jobs, async (job) => {
+      if (!dryRun) {
+        started += 1;
+        progress(`[start ${started}/${jobs.length}] ${job.task.id} | ${modelLabel(job.model, job.reviewerModel)}`);
+      }
+
+      const result = await runTrial(job, options);
+
+      if (!dryRun) {
+        finished += 1;
+        const status = result.timed_out ? "TIMEOUT" : result.passed ? "PASS" : "FAIL";
+        const pct = `${Math.round(result.score * 100)}%`.padStart(4);
+
+        progress(
+          `[${finished}/${jobs.length}] ${status} ${pct} | ${result.task_id} | ${modelLabel(result.model, result.reviewer_model)}`
+          + ` | ${result.wall_s.toFixed(1)}s | $${result.total_cost_usd.toFixed(4)}${failureDetail(result)}`,
+        );
+      }
+
+      return result;
+    }, {
       signal,
       workers,
       onResult: (completed) => writeResultsJson(resultsPath, completed),
     });
 
+    const summaryPath = join(out, "summary.md");
     writeResultsJson(resultsPath, results);
-    atomicWriteFile(join(out, "summary.md"), renderMarkdownReport(results));
+    atomicWriteFile(summaryPath, renderMarkdownReport(results));
+
+    if (!dryRun) {
+      const passed = results.filter((entry) => entry.passed).length;
+      const totalCost = results.reduce((sum, entry) => sum + entry.total_cost_usd, 0);
+      progress(`Done: ${passed}/${results.length} passed | $${totalCost.toFixed(4)} | ${summaryPath}`);
+    }
 
     return signal.aborted ? 130 : 0;
   } catch (cause) {
