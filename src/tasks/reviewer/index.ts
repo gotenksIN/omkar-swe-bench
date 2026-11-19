@@ -217,6 +217,50 @@ def read_titles(path):
         return [row["title"] for row in csv.DictReader(stream)]
 `;
 
+const catalogModelModule = `export interface CatalogModel {
+  /** Session model identifier passed to toSessionModel. */
+  readonly id: string;
+  /** Upstream provider wire name used internally by the transport layer. */
+  readonly wireModel: string;
+  readonly variants: readonly string[];
+}
+
+export interface CatalogProvider {
+  readonly id: string;
+  readonly models: readonly CatalogModel[];
+}
+
+export interface ModelSpec {
+  readonly providerID: string;
+  readonly modelID: string;
+  readonly variant?: string;
+}
+
+export const DEFAULT_MODELS = [
+  "openai/gpt-fast#medium",
+  "anthropic/claude-core#high",
+  "google/gemini-pro#medium",
+] as const;
+
+export function parseModelSpec(spec: string): ModelSpec {
+  const trimmed = spec.trim();
+  const hash = trimmed.indexOf("#");
+  const base = hash >= 0 ? trimmed.slice(0, hash) : trimmed;
+  const variant = hash >= 0 ? trimmed.slice(hash + 1) : undefined;
+  const slash = base.indexOf("/");
+  if (slash <= 0 || slash === base.length - 1) throw new Error(\`Invalid model spec: \${spec}\`);
+  if (variant !== undefined && (!variant || variant.includes("#"))) throw new Error(\`Invalid variant: \${spec}\`);
+  return variant === undefined
+    ? { providerID: base.slice(0, slash), modelID: base.slice(slash + 1) }
+    : { providerID: base.slice(0, slash), modelID: base.slice(slash + 1), variant };
+}
+
+export function toSessionModel(spec: string): { readonly providerID: string; readonly modelID: string } {
+  const { providerID, modelID } = parseModelSpec(spec);
+  return { providerID, modelID };
+}
+`;
+
 export const REVIEWER_TASKS: readonly EvalTask[] = [
   reviewerTask({
     id: "rev-clean-personal-script-v2", category: "clean-review", language: "python",
@@ -622,6 +666,107 @@ def preview_diff(repo, revision_spec):
         text=True,
     )
     return completed.stdout
+`,
+      },
+    }],
+  }),
+  reviewerTask({
+    id: "rev-ts-tautological-and-inverted-test", category: "standards-review", language: "typescript",
+    spec: {
+      excluded: [], bounce: false,
+      defects: [
+        {
+          id: "catalog_id_mismatch", file: "src/models.ts", lineRange: [44, 54], minSeverity: 1,
+          conceptGroups: [
+            ["wiremodel", "wire model", "wire name"],
+            ["entry.id", ".id", "`id`", " id", "identifier", "tosessionmodel", "session model", "alias"],
+          ],
+          description: "validateCatalogSpecs matches entry.wireModel instead of entry.id, diverging from the modelID passed by toSessionModel.",
+        },
+        {
+          id: "tautological_and_inverted_tests", file: "tests/models.test.ts", lineRange: [17, 36], minSeverity: 3,
+          conceptGroups: [
+            ["tautolog", "copy", "duplicat", "change-detector", "literal", "verbatim", "hardcod", "default_models", "invert", "mirror", "enshrin", "circular", "wiremodel"],
+            ["test", "agents", "contract", "behavior", "public", "interface", "tosessionmodel", "assert", "bug", "wrong", "spec"],
+          ],
+          description: "tests/models.test.ts duplicates DEFAULT_MODELS verbatim as a tautological assertion and enshrines the inverted wireModel lookup bug.",
+        },
+      ],
+    },
+    request: "Review {range} in {repo} for catalog validation regressions and conformance to the testing rules in AGENTS.md.",
+    initial: {
+      "AGENTS.md": `${TS_FILES["AGENTS.md"]}Do not write tautological or change-detector tests that duplicate exported constants or mirror implementation bugs.\n`,
+      "src/models.ts": catalogModelModule,
+      "tests/models.test.ts": `import { expect, test } from "bun:test";
+
+import { parseModelSpec, toSessionModel } from "../src/models.ts";
+
+test("extracts provider, model ID, and optional variant", () => {
+  expect(parseModelSpec("openai/gpt-fast#medium")).toEqual({
+    providerID: "openai",
+    modelID: "gpt-fast",
+    variant: "medium",
+  });
+  expect(toSessionModel("openai/gpt-fast#medium")).toEqual({
+    providerID: "openai",
+    modelID: "gpt-fast",
+  });
+});
+`,
+    },
+    commits: [{
+      message: "models: Add catalog validation and model list tests",
+      files: {
+        "src/models.ts": `${catalogModelModule}
+export function validateCatalogSpecs(specs: readonly string[], providers: readonly CatalogProvider[]): void {
+  for (const spec of specs) {
+    const parsed = parseModelSpec(spec);
+    const provider = providers.find((entry) => entry.id === parsed.providerID);
+    if (!provider) throw new Error(\`Unknown provider: \${parsed.providerID}\`);
+    const model = provider.models.find((entry) => entry.wireModel === parsed.modelID);
+    if (!model) throw new Error(\`Unknown model: \${parsed.providerID}/\${parsed.modelID}\`);
+    if (parsed.variant !== undefined && !model.variants.includes(parsed.variant)) {
+      throw new Error(\`Unknown variant: \${parsed.variant}\`);
+    }
+  }
+}
+`,
+        "tests/models.test.ts": `import { expect, test } from "bun:test";
+
+import { DEFAULT_MODELS, parseModelSpec, toSessionModel, validateCatalogSpecs } from "../src/models.ts";
+
+test("extracts provider, model ID, and optional variant", () => {
+  expect(parseModelSpec("openai/gpt-fast#medium")).toEqual({
+    providerID: "openai",
+    modelID: "gpt-fast",
+    variant: "medium",
+  });
+  expect(toSessionModel("openai/gpt-fast#medium")).toEqual({
+    providerID: "openai",
+    modelID: "gpt-fast",
+  });
+});
+
+test("keeps default model specs", () => {
+  expect(DEFAULT_MODELS).toEqual([
+    "openai/gpt-fast#medium",
+    "anthropic/claude-core#high",
+    "google/gemini-pro#medium",
+  ]);
+});
+
+test("validates model specs against catalog entries", () => {
+  const providers = [
+    {
+      id: "openai",
+      models: [
+        { id: "gpt-fast", wireModel: "gpt-wire-v1", variants: ["medium"] },
+      ],
+    },
+  ];
+  expect(() => validateCatalogSpecs(["openai/gpt-wire-v1#medium"], providers)).not.toThrow();
+  expect(() => validateCatalogSpecs(["openai/gpt-fast#medium"], providers)).toThrow(/Unknown model/u);
+});
 `,
       },
     }],

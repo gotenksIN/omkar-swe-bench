@@ -115,6 +115,22 @@ const cases: readonly ReviewCase[] = [
       finding: "[P1] `app/git_preview.py:3` — Extending the substring denylist on a `shell=True` command is still bypassable via newlines or flags like `--no-index`; replace it with strict revision allowlisting and an argument list with `shell=False`.",
     }],
   },
+  {
+    id: "rev-ts-tautological-and-inverted-test", language: "typescript",
+    committed: ["src/models.ts", "tests/models.test.ts"], dirty: [],
+    defects: [
+      {
+        id: "catalog_id_mismatch", file: "src/models.ts", range: [44, 54], severity: 1,
+        needles: ["entry.wireModel === parsed.modelID"],
+        finding: "[P1] `src/models.ts:49` — `validateCatalogSpecs` matches `entry.wireModel` instead of `entry.id`, which conflicts with `toSessionModel`.",
+      },
+      {
+        id: "tautological_and_inverted_tests", file: "tests/models.test.ts", range: [17, 36], severity: 3,
+        needles: ["expect(DEFAULT_MODELS).toEqual([", 'validateCatalogSpecs(["openai/gpt-wire-v1#medium"], providers)'],
+        finding: "[P2] `tests/models.test.ts:18` — The test suite duplicates `DEFAULT_MODELS` verbatim as a tautological assertion violating AGENTS.md and enshrines the inverted `wireModel` bug.",
+      },
+    ],
+  },
 ];
 
 const cleanReview = "## Findings\n\nNo actionable findings.";
@@ -298,6 +314,30 @@ for (const reference of cases) {
         expect(symptomPatchOnly.checks.caught_denylist_shell_rewrite).toBe(false);
         expect(expandedDenylistReplace.passed).toBe(false);
         expect(expandedDenylistReplace.checks.caught_denylist_shell_rewrite).toBe(false);
+      }
+
+      if (reference.id === "rev-ts-tautological-and-inverted-test") {
+        const missedTests = await task.grade({
+          ...ev,
+          finalText: "## Findings\n\n- [P1] `src/models.ts:49` — `validateCatalogSpecs` matches `entry.wireModel` instead of `entry.id`, diverging from `toSessionModel`.",
+        }, setup);
+
+        const splitTestFindings = await task.grade({
+          ...ev,
+          finalText: [
+            "## Findings",
+            "",
+            "- [P1] `src/models.ts:49` — `validateCatalogSpecs` matches `entry.wireModel` instead of `entry.id`, diverging from `toSessionModel`.",
+            "- [P3] `tests/models.test.ts:18` — Duplicating `DEFAULT_MODELS` verbatim is a tautological test forbidden by AGENTS.md.",
+            "- [P2] `tests/models.test.ts:34` — The test asserts the inverted `wireModel` behavior instead of the public catalog contract.",
+          ].join("\n"),
+        }, setup);
+
+        expect(missedTests.passed).toBe(false);
+        expect(missedTests.checks.caught_catalog_id_mismatch).toBe(true);
+        expect(missedTests.checks.caught_tautological_and_inverted_tests).toBe(false);
+        expect(splitTestFindings.passed).toBe(true);
+        expect(splitTestFindings.pedantryFlags).toBe(0);
       }
 
       if (reference.bounce) {
