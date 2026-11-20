@@ -918,7 +918,6 @@ const fixtureEvidence = async (
   const pre = rawPre.trim();
 
   review("first", findings, negative === "core" ? pre : "HEAD");
-  parts.push({ type: "text", text: "Review pending" });
 
   if (id === loopId) {
     await formatterChange(repo, true);

@@ -691,7 +691,6 @@ assert build_report(iter([iter(mixed), iter(missing)])) == expected
         one_reviewer: ev.reviewHandoffs.length === 1,
         reviewer_caught_edge: result.caughtEdge,
         reviewed_commit_needs_fix: result.reviewed,
-        review_pending: /review pending/iu.test(ev.transcriptText),
         tests_rerun_before_amend: testsRerunBeforeAmend(ev),
         scope_preserved: scopePreserved(ev, task, result.reviewedScope),
         unit_tests_pass: result.testsPass,
