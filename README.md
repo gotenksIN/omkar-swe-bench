@@ -176,63 +176,63 @@ Repeat `--coder-model` or `--reviewer-model` on the CLI to override either list.
 Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from the catalog.
 
 <details>
-<summary><strong>Stage 1 — Coder tasks (14)</strong></summary>
+<summary><strong>Stage 1 — Coder tasks (14, easiest → hardest)</strong></summary>
 
 | Task ID                                             | Category                  | Language   | Timeout | Commit guard |
 | --------------------------------------------------- | ------------------------- | ---------- | ------: | ------------ |
+| `coder-convention-autonomy`                         | `autonomy`                | Python     |    480s | No           |
+| `coder-blocker-honesty`                             | `blocker-honesty`         | Python     |    480s | No           |
 | `coder-py-stitch-collapse`                          | `cache-recovery`          | Python     |    480s | No           |
 | `coder-py-stream-stop-and-feedback`                 | `streaming`               | Python     |    480s | No           |
-| `coder-ts-sse-chunk-crlf`                           | `framing`                 | TypeScript |    480s | No           |
-| `coder-ts-shell-heredoc-subst`                      | `parser`                  | TypeScript |    600s | No           |
-| `coder-py-ssrf-ip-pinning`                          | `transport-safety`        | Python     |    480s | No           |
-| `coder-git-commit-guard-two-task`                   | `git-workflow`            | Git        |    480s | Yes          |
-| `coder-blocker-honesty`                             | `blocker-honesty`         | Python     |    480s | No           |
-| `coder-convention-autonomy`                         | `autonomy`                | Python     |    480s | No           |
-| `coder-py-atomic-async-lifecycle`                   | `concurrency-io`          | Python     |    480s | No           |
-| `coder-ts-boundary-decoder-http`                    | `boundary-safety`         | TypeScript |    480s | No           |
 | `coder-ts-catalog-alias-and-test-rigor`             | `test-rigor`              | TypeScript |    480s | No           |
+| `coder-git-commit-guard-two-task`                   | `git-workflow`            | Git        |    480s | Yes          |
+| `coder-ts-boundary-decoder-http`                    | `boundary-safety`         | TypeScript |    480s | No           |
+| `coder-ts-sse-chunk-crlf`                           | `framing`                 | TypeScript |    480s | No           |
+| `coder-py-archive-sync-empty-200-and-zsh`           | `shell-and-io-safety`     | Python     |    480s | No           |
+| `coder-py-atomic-async-lifecycle`                   | `concurrency-io`          | Python     |    480s | No           |
+| `coder-py-ssrf-ip-pinning`                          | `transport-safety`        | Python     |    480s | No           |
 | `coder-ts-multi-stage-diff-and-craft-isolation`     | `security-and-invariants` | TypeScript |    480s | No           |
 | `coder-ts-session-quiescence-and-cursor-pagination` | `concurrency-lifecycle`   | TypeScript |    480s | No           |
-| `coder-py-archive-sync-empty-200-and-zsh`           | `shell-and-io-safety`     | Python     |    480s | No           |
+| `coder-ts-shell-heredoc-subst`                      | `parser`                  | TypeScript |    600s | No           |
 
 </details>
 
 <details>
-<summary><strong>Stage 2 — Code reviewer tasks (17)</strong></summary>
+<summary><strong>Stage 2 — Code reviewer tasks (17, easiest → hardest)</strong></summary>
 
 | Task ID                                         | Category                  | Language   | Timeout |
 | ----------------------------------------------- | ------------------------- | ---------- | ------: |
 | `rev-clean-personal-script`                     | `clean-review`            | Python     |    480s |
+| `rev-calibration-trap-clean-idiomatic`          | `clean-review`            | Python     |    480s |
 | `rev-soft-commit-range-no-filelist`             | `scope-calibration`       | Python     |    480s |
+| `rev-mixed-committed-plus-worktree`             | `scope-calibration`       | Mixed      |    480s |
 | `rev-missing-scope-true-bounce`                 | `scope-calibration`       | Python     |    480s |
+| `rev-py-clean-security-rewrite-restraint`       | `clean-review`            | Python     |    480s |
 | `rev-ts-redirect-leak-and-antislop`             | `standards-review`        | TypeScript |    480s |
 | `rev-py-cache-discard-and-monkeypatch`          | `standards-review`        | Python     |    480s |
 | `rev-py-ytdlp-thread-leak-and-ratelimit`        | `regression-review`       | Python     |    480s |
-| `rev-mixed-committed-plus-worktree`             | `scope-calibration`       | Mixed      |    480s |
-| `rev-calibration-trap-clean-idiomatic`          | `clean-review`            | Python     |    480s |
-| `rev-py-denylist-bandaid-rewrite`               | `architecture-review`     | Python     |    480s |
 | `rev-ts-tautological-and-inverted-test`         | `standards-review`        | TypeScript |    480s |
-| `rev-py-clean-security-rewrite-restraint`       | `clean-review`            | Python     |    480s |
+| `rev-py-denylist-bandaid-rewrite`               | `architecture-review`     | Python     |    480s |
+| `rev-ts-multi-module-clean-restraint`           | `clean-review`            | TypeScript |    480s |
+| `rev-py-zsh-path-tie-and-empty-pdf-cache`       | `shell-and-io-safety`     | Mixed      |    480s |
+| `rev-py-four-commit-net-diff-and-iter-mutation` | `multi-commit-regression` | Python     |    480s |
+| `rev-ts-sandbox-mount-and-transitive-types`     | `cross-module-contracts`  | TypeScript |    480s |
 | `rev-ts-snapshot-formatter-rce-and-sections`    | `security-and-invariants` | TypeScript |    480s |
 | `rev-ts-quiescence-deadlock-and-preflight-leak` | `concurrency-lifecycle`   | TypeScript |    480s |
-| `rev-ts-sandbox-mount-and-transitive-types`     | `cross-module-contracts`  | TypeScript |    480s |
-| `rev-py-zsh-path-tie-and-empty-pdf-cache`       | `shell-and-io-safety`     | Mixed      |    480s |
-| `rev-ts-multi-module-clean-restraint`           | `clean-review`            | TypeScript |    480s |
-| `rev-py-four-commit-net-diff-and-iter-mutation` | `multi-commit-regression` | Python     |    480s |
 
 </details>
 
 <details>
-<summary><strong>Stage 3 — Pair collaboration tasks (6)</strong></summary>
+<summary><strong>Stage 3 — Pair collaboration tasks (6, easiest → hardest)</strong></summary>
 
 | Task ID                               | Category           | Language   | Timeout | Commit guard |
 | ------------------------------------- | ------------------ | ---------- | ------: | ------------ |
 | `pair-commit-review-amend`            | `pair-workflow`    | Python     |    600s | Yes          |
 | `pair-pushback-on-false-nitpick`      | `pair-calibration` | Python     |    600s | Yes          |
+| `pair-two-round-amendment-regression` | `pair-workflow`    | Python     |    600s | Yes          |
 | `pair-multitask-review-loop-clean`    | `pair-delegation`  | Python     |    720s | Yes          |
 | `pair-unhittable-finding-and-nonhead` | `pair-calibration` | Python     |    720s | Yes          |
 | `pair-ts-inverse-triage-and-antislop` | `pair-calibration` | TypeScript |    600s | Yes          |
-| `pair-two-round-amendment-regression` | `pair-workflow`    | Python     |    600s | Yes          |
 
 </details>
 

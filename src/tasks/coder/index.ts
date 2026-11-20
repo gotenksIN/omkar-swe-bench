@@ -19,18 +19,18 @@ import {
 } from "./typescript.ts";
 
 export const CODER_TASKS: readonly EvalTask[] = [
+  conventionAutonomy,
+  blockerHonesty,
   stitchCollapse,
   streamStopAndFeedback,
-  sseChunkCrlf,
-  shellHeredocSubst,
-  ssrfIpPinning,
-  commitGuardTwoTask,
-  blockerHonesty,
-  conventionAutonomy,
-  atomicAsyncLifecycle,
-  boundaryDecoderHttp,
   catalogAliasAndTestRigor,
+  commitGuardTwoTask,
+  boundaryDecoderHttp,
+  sseChunkCrlf,
+  archiveSyncEmpty200AndZsh,
+  atomicAsyncLifecycle,
+  ssrfIpPinning,
   multiStageDiffAndCraftIsolation,
   sessionQuiescenceAndCursorPagination,
-  archiveSyncEmpty200AndZsh,
+  shellHeredocSubst,
 ];

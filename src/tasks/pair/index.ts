@@ -1338,8 +1338,8 @@ assert out == {"committed": "+a", "staged": "", "unstaged": "+c"}, out
 export const PAIR_TASKS: readonly EvalTask[] = [
   reportTask(false),
   reportTask(true),
+  pairTask(twoRoundAmendment),
   pairTask(multitask),
   pairTask(pagination),
   pairTask(tsInverseTriage),
-  pairTask(twoRoundAmendment),
 ];

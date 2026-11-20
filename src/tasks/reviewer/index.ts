@@ -353,7 +353,27 @@ export function toSessionModel(spec: string): { readonly providerID: string; rea
 }
 `;
 
-export const REVIEWER_TASKS: readonly EvalTask[] = [
+const REVIEWER_COMPLEXITY_ORDER: readonly string[] = [
+  "rev-clean-personal-script",
+  "rev-calibration-trap-clean-idiomatic",
+  "rev-soft-commit-range-no-filelist",
+  "rev-mixed-committed-plus-worktree",
+  "rev-missing-scope-true-bounce",
+  "rev-py-clean-security-rewrite-restraint",
+  "rev-ts-redirect-leak-and-antislop",
+  "rev-py-cache-discard-and-monkeypatch",
+  "rev-py-ytdlp-thread-leak-and-ratelimit",
+  "rev-ts-tautological-and-inverted-test",
+  "rev-py-denylist-bandaid-rewrite",
+  "rev-ts-multi-module-clean-restraint",
+  "rev-py-zsh-path-tie-and-empty-pdf-cache",
+  "rev-py-four-commit-net-diff-and-iter-mutation",
+  "rev-ts-sandbox-mount-and-transitive-types",
+  "rev-ts-snapshot-formatter-rce-and-sections",
+  "rev-ts-quiescence-deadlock-and-preflight-leak",
+];
+
+const UNORDERED_REVIEWER_TASKS: readonly EvalTask[] = [
   reviewerTask({
     id: "rev-clean-personal-script",
     category: "clean-review",
@@ -1395,3 +1415,14 @@ def test_preview_diff_rejects_invalid_shas(tmp_path, bad_sha):
   }),
   ...MULTI_FILE_REVIEWER_FIXTURES.map(reviewerTask),
 ];
+
+const reviewerOrderIndex = new Map(
+  REVIEWER_COMPLEXITY_ORDER.map((id, index) => [id, index])
+);
+
+export const REVIEWER_TASKS: readonly EvalTask[] =
+  UNORDERED_REVIEWER_TASKS.toSorted(
+    (left, right) =>
+      (reviewerOrderIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+      (reviewerOrderIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+  );
