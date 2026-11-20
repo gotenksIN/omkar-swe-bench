@@ -444,20 +444,52 @@ def render_playlist(rows):
     category: "scope-calibration",
     language: "python",
     spec: { defects: [], excluded: [], bounce: true },
-    request: "Review my recent refactor in {repo} for regressions.",
+    request: "Review my refactor in {repo} for regressions.",
     initial: {
-      "inventory.py":
-        "def count_items(items):\n    return sum(len(batch) for batch in items)\n",
+      "parser.py":
+        "def split_tokens(text):\n    return [part for part in text.split(' ') if part]\n",
+      "cache.py": "def is_expired(age_s, ttl_s):\n    return age_s >= ttl_s\n",
+      "table.py":
+        "def pad_cell(value, width):\n    return str(value).ljust(width)\n",
+      "http_retry.py":
+        "def should_retry(status_code):\n    return status_code in {502, 503}\n",
+      "storage.py":
+        "def normalize_key(name):\n    return name.strip().lower()\n",
     },
     commits: [
       {
-        message: "inventory: Clarify the batch parameter",
+        message: "parser: Refactor token cursor",
         files: {
-          "inventory.py":
-            "def count_items(batches):\n    return sum(len(batch) for batch in batches)\n",
+          "parser.py":
+            "def split_tokens(text):\n    return [part for part in text.split() if part]\n",
+        },
+      },
+      {
+        message: "cache: Refactor TTL eviction",
+        files: {
+          "cache.py":
+            "def is_expired(age_s, ttl_s):\n    return ttl_s <= 0 or age_s >= ttl_s\n",
+        },
+      },
+      {
+        message: "table: Refactor column alignment",
+        files: {
+          "table.py":
+            "def pad_cell(value, width):\n    text = str(value)\n    return text.ljust(max(width, len(text)))\n",
+        },
+      },
+      {
+        message: "http: Retry 503 status codes",
+        files: {
+          "http_retry.py":
+            "def should_retry(status_code):\n    return status_code in {429, 502, 503, 504}\n",
         },
       },
     ],
+    dirty: {
+      "storage.py":
+        "def normalize_key(name):\n    return '_'.join(name.strip().lower().split())\n",
+    },
   }),
   reviewerTask({
     id: "rev-ts-redirect-leak-and-antislop",
@@ -489,17 +521,19 @@ def render_playlist(rows):
             "Following redirects can forward the custom API key header to another origin.",
         },
         {
-          id: "decoder_standards",
+          id: "decoder_standards_cast",
           file: "src/types.ts",
-          lineRange: [3, 10],
+          lineRange: [3, 6],
           minSeverity: 3,
+          maxUrgency: 2,
+          allowBundledMatch: true,
           conceptGroups: [
-            ["typeof", "assert", "assertion", "cast", "as SearchResponse"],
+            ["assert", "assertion", "cast", "as searchresponse"],
             [
               "safety",
               "anti-slop",
               "project",
-              "AGENTS",
+              "agents",
               "forbid",
               "prohibit",
               "avoid",
@@ -510,7 +544,33 @@ def render_playlist(rows):
             ],
           ],
           description:
-            "The decoder uses runtime typeof and an unannotated type assertion against the project standards.",
+            "The decoder uses an unannotated `as SearchResponse | null` type assertion without a SAFETY comment against AGENTS.md.",
+        },
+        {
+          id: "decoder_standards_typeof",
+          file: "src/types.ts",
+          lineRange: [5, 10],
+          minSeverity: 3,
+          maxUrgency: 2,
+          allowBundledMatch: true,
+          conceptGroups: [
+            ["typeof"],
+            [
+              "anti-slop",
+              "project",
+              "agents",
+              "forbid",
+              "prohibit",
+              "avoid",
+              "disallow",
+              "violat",
+              "standard",
+              "rule",
+              "predicate",
+            ],
+          ],
+          description:
+            "The decoder uses runtime typeof instead of a predicate against AGENTS.md.",
         },
       ],
     },
@@ -1016,10 +1076,12 @@ def preview_diff(repo, revision_spec):
             "validateCatalogSpecs matches entry.wireModel instead of entry.id, diverging from the modelID passed by toSessionModel.",
         },
         {
-          id: "tautological_and_inverted_tests",
+          id: "tautological_literal_test",
           file: "tests/models.test.ts",
-          lineRange: [17, 36],
+          lineRange: [15, 28],
           minSeverity: 3,
+          maxUrgency: 2,
+          allowBundledMatch: true,
           conceptGroups: [
             [
               "tautolog",
@@ -1030,11 +1092,6 @@ def preview_diff(repo, revision_spec):
               "verbatim",
               "hardcod",
               "default_models",
-              "invert",
-              "mirror",
-              "enshrin",
-              "circular",
-              "wiremodel",
             ],
             [
               "test",
@@ -1043,15 +1100,36 @@ def preview_diff(repo, revision_spec):
               "behavior",
               "public",
               "interface",
-              "tosessionmodel",
               "assert",
-              "bug",
-              "wrong",
-              "spec",
+              "constant",
             ],
           ],
           description:
-            "tests/models.test.ts duplicates DEFAULT_MODELS verbatim as a tautological assertion and enshrines the inverted wireModel lookup bug.",
+            "tests/models.test.ts duplicates DEFAULT_MODELS verbatim as a tautological change-detector test.",
+        },
+        {
+          id: "inverted_wiremodel_test",
+          file: "tests/models.test.ts",
+          lineRange: [28, 38],
+          minSeverity: 3,
+          maxUrgency: 2,
+          allowBundledMatch: true,
+          conceptGroups: [
+            ["invert", "mirror", "enshrin", "circular", "wiremodel", "bug"],
+            [
+              "test",
+              "agents",
+              "contract",
+              "behavior",
+              "tosessionmodel",
+              "assert",
+              "wrong",
+              "spec",
+              "expect",
+            ],
+          ],
+          description:
+            "tests/models.test.ts enshrines the inverted wireModel lookup bug as expected behavior.",
         },
       ],
     },

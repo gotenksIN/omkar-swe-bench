@@ -432,8 +432,15 @@ const scoreReviewerTrial = (
   const base = isSeeded ? 100 * recall : 100;
   const fpPenalty = 30 * trial.false_positive_p0_p2;
   const nitPenalty = 15 * trial.nitpick_p3;
+  const overstatedCount = trial.severity_overstated ?? 0;
+  const overstatedPenalty = 5 * overstatedCount;
   const toolPenalty = Math.min(8, 2 * rootToolErrors);
-  const lsas = round1(Math.max(0, base - fpPenalty - nitPenalty - toolPenalty));
+
+  const lsas = round1(
+    Math.max(0, base - fpPenalty - nitPenalty - overstatedPenalty - toolPenalty)
+  );
+
+  const failedTierC = overstatedCount > 0 ? ["severity_overstated"] : [];
 
   if (trial.passed) {
     return {
@@ -444,7 +451,7 @@ const scoreReviewerTrial = (
       rootToolErrors,
       failedTierA: [],
       failedTierB: [],
-      failedTierC: [],
+      failedTierC,
       diff,
     };
   }

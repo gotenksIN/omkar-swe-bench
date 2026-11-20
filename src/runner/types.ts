@@ -64,6 +64,7 @@ export interface TrialResult {
   readonly pedantry_flags: number;
   readonly false_positive_p0_p2: number;
   readonly nitpick_p3: number;
+  readonly severity_overstated?: number;
   readonly defect_recall: number | null;
   readonly precision: number | null;
   readonly scope_bounced: boolean;

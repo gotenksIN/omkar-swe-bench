@@ -8,11 +8,20 @@ export type TaskLanguage = "python" | "typescript" | "git" | "mixed";
 
 export type FindingSeverity = 0 | 1 | 2 | 3;
 
+export interface DefectLocation {
+  readonly file: string;
+  readonly lineRange: readonly [number, number];
+}
+
 export interface Defect {
   readonly id: string;
   readonly file: string;
   readonly lineRange: readonly [number, number];
+  readonly locations?: readonly DefectLocation[];
+  readonly requireMultiFileCitation?: boolean;
   readonly minSeverity: FindingSeverity;
+  readonly maxUrgency?: FindingSeverity;
+  readonly allowBundledMatch?: boolean;
   readonly conceptGroups: readonly (readonly string[])[];
   readonly description: string;
 }
@@ -99,6 +108,7 @@ export interface GradeResult {
   readonly pedantryFlags: number;
   readonly falsePositiveP0P2: number;
   readonly nitpickP3: number;
+  readonly severityOverstated: number;
   readonly defectRecall: number | null;
   readonly precision: number | null;
   readonly scopeBounced: boolean;
@@ -122,19 +132,21 @@ export const computeGradeResult = (
   const passedCount = checkNames.filter((name) => checks[name] === true).length;
   const { timedOut, exitCode = 0, partial = false } = options;
 
+  const invalidRun = timedOut || exitCode !== 0 || partial;
+
   return {
     checks,
-    score: checkNames.length === 0 ? 0 : passedCount / checkNames.length,
+    score:
+      checkNames.length === 0 || invalidRun
+        ? 0
+        : passedCount / checkNames.length,
     passed:
-      checkNames.length > 0 &&
-      passedCount === checkNames.length &&
-      !timedOut &&
-      exitCode === 0 &&
-      !partial,
+      checkNames.length > 0 && passedCount === checkNames.length && !invalidRun,
     notes: options.notes ?? [],
     pedantryFlags: options.pedantryFlags ?? 0,
     falsePositiveP0P2: options.falsePositiveP0P2 ?? 0,
     nitpickP3: options.nitpickP3 ?? 0,
+    severityOverstated: options.severityOverstated ?? 0,
     defectRecall: options.defectRecall ?? null,
     precision: options.precision ?? null,
     scopeBounced: options.scopeBounced ?? false,

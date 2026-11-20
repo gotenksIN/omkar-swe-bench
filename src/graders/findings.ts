@@ -17,6 +17,12 @@ const cleanFindingsBoundary =
 const cleanFindingsBullet =
   /^(?:\*\*)?no (?:other )?actionable findings\.?(?:\*\*)?$/iu;
 
+const metadataBullet =
+  /^(?:\*\*)?(?:location|file|line|lines|path|scenario|impact|cause|root cause|evidence|fix|correction|recommendation|remediation|details?|why|risk|context|scope|note)s?(?:\*\*)?\s*:/iu;
+
+const locationMetadataLine =
+  /^\s*(?:[-*+]\s+)?(?:\*\*)?(?:location|file|path)s?(?:\*\*)?\s*:/iu;
+
 const mutatingTools = new Set(["edit", "write", "patch", "execute"]);
 
 const normalizeReviewPath = (rawPath: string, repoDir?: string): string => {
@@ -140,6 +146,7 @@ export const parseFindings = (markdown: string): readonly Finding[] => {
   let level = 0;
   let item: string[] = [];
   let itemIndent: number | null = null;
+  let inSeverityHeading = false;
 
   const finishItem = (): void => {
     const body = item.join("\n").trim();
@@ -150,6 +157,7 @@ export const parseFindings = (markdown: string): readonly Finding[] => {
 
     item = [];
     itemIndent = null;
+    inSeverityHeading = false;
   };
 
   for (const line of proseLines(markdown)) {
@@ -159,7 +167,10 @@ export const parseFindings = (markdown: string): readonly Finding[] => {
       finishItem();
 
       if (level && heading.level > level) {
-        item.push(heading.title);
+        if (severityOf(heading.title) !== null) {
+          item.push(heading.title);
+          inSeverityHeading = true;
+        }
       } else {
         level = heading.title.toLowerCase() === "findings" ? heading.level : 0;
       }
@@ -174,7 +185,15 @@ export const parseFindings = (markdown: string): readonly Finding[] => {
     const bullet = parseMarkdownBullet(line);
 
     if (bullet !== null) {
-      if (isNestedBullet(item.length, itemIndent, bullet.indent)) {
+      const headingDetail =
+        inSeverityHeading &&
+        severityOf(bullet.text) === null &&
+        metadataBullet.test(bullet.text);
+
+      if (
+        isNestedBullet(item.length, itemIndent, bullet.indent) ||
+        headingDetail
+      ) {
         item.push(line.trim());
       } else {
         finishItem();
@@ -199,27 +218,85 @@ export const parseFindings = (markdown: string): readonly Finding[] => {
   return findings;
 };
 
-const citations = (
-  body: string,
-  repoDir?: string
-): readonly { path: string; line: number }[] => {
-  const pattern =
-    /`(?<quotedPath>[^`\r\n]+?):(?<quotedLine>\d+)(?:[-:]\d+)?`|(?:^|[\s([<"'])`?(?<barePath>[\w./~@%+-]+)`?:(?<bareLine>\d+)(?:[-:]\d+)?(?![\w/])/gu;
+interface Citation {
+  readonly path: string;
+  readonly startLine: number;
+  readonly endLine: number;
+}
 
-  const matches: { path: string; line: number }[] = [];
+const citations = (body: string, repoDir?: string): readonly Citation[] => {
+  const pattern =
+    /`(?<quotedPath>[^`\r\n]+?):(?<quotedStart>\d+)(?:[-–](?<quotedEnd>\d+)|:\d+)?`|(?:^|[\s([<"'])`?(?<barePath>[\w./~@%+-]+)`?:(?<bareStart>\d+)(?:[-–](?<bareEnd>\d+)|:\d+)?(?![\w/])/gu;
+
+  const matches: Citation[] = [];
 
   for (const citation of body.matchAll(pattern)) {
     const path = citation.groups?.quotedPath ?? citation.groups?.barePath;
 
     if (path !== undefined && path.length > 0) {
+      const startLine = Number(
+        citation.groups?.quotedStart ?? citation.groups?.bareStart
+      );
+
+      const rawEnd = citation.groups?.quotedEnd ?? citation.groups?.bareEnd;
+      const endLine = rawEnd === undefined ? startLine : Number(rawEnd);
+
       matches.push({
         path: normalizeReviewPath(path, repoDir),
-        line: Number(citation.groups?.quotedLine ?? citation.groups?.bareLine),
+        startLine: Math.min(startLine, endLine),
+        endLine: Math.max(startLine, endLine),
       });
     }
   }
 
   return matches;
+};
+
+const primaryCitations = (
+  body: string,
+  repoDir?: string
+): readonly Citation[] => {
+  const lines = body.split(/\r?\n/u);
+  const explicit: Citation[] = [];
+
+  for (const line of lines) {
+    if (locationMetadataLine.test(line)) {
+      explicit.push(...citations(line, repoDir));
+    }
+  }
+
+  if (explicit.length > 0) {
+    return explicit;
+  }
+
+  const firstLine = lines[0] ?? "";
+  const separator = /\s+(?:—|–|--)\s+|(?<![\w./~@%+-]):\s+/u.exec(firstLine);
+
+  if (separator !== null) {
+    const leadCitations = citations(
+      firstLine.slice(0, separator.index),
+      repoDir
+    );
+
+    if (leadCitations.length > 0) {
+      return leadCitations;
+    }
+  }
+
+  return citations(body, repoDir);
+};
+
+const matchesLocation = (
+  cited: readonly Citation[],
+  file: string,
+  lineRange: readonly [number, number]
+): boolean => {
+  const [start, end] = lineRange;
+
+  return cited.some(
+    ({ path, startLine, endLine }) =>
+      path === file && endLine >= start - 5 && startLine <= end + 5
+  );
 };
 
 export const defectMatchesFinding = (
@@ -232,16 +309,37 @@ export const defectMatchesFinding = (
   }
 
   const body = finding.body.toLowerCase();
-  const [start, end] = defect.lineRange;
 
-  return (
-    defect.conceptGroups.every((group) =>
-      group.some((concept) => body.includes(concept.toLowerCase()))
-    ) &&
-    Iterator.from(citations(finding.body, repoDir)).some(
-      ({ path, line }) =>
-        path === defect.file && line >= start - 5 && line <= end + 5
-    )
+  const conceptsMatched = defect.conceptGroups.every((group) =>
+    group.some((concept) => body.includes(concept.toLowerCase()))
+  );
+
+  if (!conceptsMatched) {
+    return false;
+  }
+
+  const cited = primaryCitations(finding.body, repoDir);
+
+  const locations = [
+    { file: defect.file, lineRange: defect.lineRange },
+    ...(defect.locations ?? []),
+  ];
+
+  if (defect.requireMultiFileCitation === true) {
+    const allCited = citations(finding.body, repoDir);
+
+    return (
+      locations.some(({ file, lineRange }) =>
+        matchesLocation(cited, file, lineRange)
+      ) &&
+      locations.every(({ file, lineRange }) =>
+        matchesLocation(allCited, file, lineRange)
+      )
+    );
+  }
+
+  return locations.some(({ file, lineRange }) =>
+    matchesLocation(cited, file, lineRange)
   );
 };
 
@@ -286,9 +384,33 @@ const matchDefects = (
     assign(defect, new Set());
   }
 
-  return new Map(
-    assigned.entries().map(([index, defect]) => [defect.id, index])
-  );
+  const result = new Map<string, number>();
+
+  for (const [index, defect] of assigned.entries()) {
+    result.set(defect.id, index);
+  }
+
+  for (const defect of defects) {
+    if (result.has(defect.id) || defect.allowBundledMatch !== true) {
+      continue;
+    }
+
+    const shared = (candidates.get(defect) ?? []).find((index) => {
+      const owner = assigned.get(index);
+
+      return (
+        owner !== undefined &&
+        owner.allowBundledMatch === true &&
+        owner.file === defect.file
+      );
+    });
+
+    if (shared !== undefined) {
+      result.set(defect.id, shared);
+    }
+  }
+
+  return result;
 };
 
 export const scopeNeeded = (text: string): boolean => {
@@ -303,7 +425,8 @@ export const statesNoFindings = (text: string): boolean =>
   Iterator.from(proseLines(text)).some((line) => noFindings.test(line));
 
 const listsMissingInputs = (text: string): boolean => {
-  const input = "\\b(?:range|base(?:line)?|files?|file[- ]list)\\b";
+  const input =
+    "\\b(?:range|base(?:line)?|files?|file[- ]list|commits?|revisions?|refs?|shas?|diffs?|branch(?:es)?|worktree|working[- ]tree|scope)\\b";
 
   const request =
     "\\b(?:provide|send|share|specify|supply|need|missing|omit(?:ted)?)\\b";
@@ -352,9 +475,23 @@ export const reviewGrade = (
   const checks: Record<string, boolean> = {};
   let falsePositiveP0P2 = 0;
   let nitpickP3 = 0;
+  let severityOverstated = 0;
 
   for (const defect of spec.defects) {
-    checks[`caught_${defect.id}`] = matches.has(defect.id);
+    const matchedIndex = matches.get(defect.id);
+    checks[`caught_${defect.id}`] = matchedIndex !== undefined;
+
+    if (matchedIndex !== undefined && defect.maxUrgency !== undefined) {
+      const matchedFinding = findings[matchedIndex];
+
+      if (
+        matchedFinding !== undefined &&
+        matchedFinding.severity !== null &&
+        matchedFinding.severity < defect.maxUrgency
+      ) {
+        severityOverstated += 1;
+      }
+    }
   }
 
   for (const [index, finding] of findings.entries()) {
@@ -418,6 +555,7 @@ export const reviewGrade = (
     timedOut: evidence.timedOut,
     falsePositiveP0P2,
     nitpickP3,
+    severityOverstated,
     pedantryFlags,
     defectRecall: spec.defects.length
       ? matches.size / spec.defects.length

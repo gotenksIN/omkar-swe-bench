@@ -420,7 +420,7 @@ test("requires a clean report or a scope request with a missing input, and rejec
       .states_no_findings
   ).toBe(false);
   expect(reviewGrade({ ...evidence, timedOut: true }, cleanSpec)).toMatchObject(
-    { passed: false, score: 1 }
+    { passed: false, score: 0 }
   );
   expect(
     reviewGrade(
@@ -473,7 +473,7 @@ test("requires a clean report or a scope request with a missing input, and rejec
   }
 });
 
-test("scores checks independently of timeout, exit status, and partial results", () => {
+test("zeroes score on timeout, non-zero exit status, and partial results", () => {
   expect(computeGradeResult({}, { timedOut: false })).toMatchObject({
     passed: false,
     score: 0,
@@ -485,12 +485,15 @@ test("scores checks independently of timeout, exit status, and partial results",
     computeGradeResult({ a: true }, { timedOut: false, exitCode: 0 })
   ).toMatchObject({ passed: true, score: 1 });
   expect(
+    computeGradeResult({ a: true }, { timedOut: true, exitCode: 0 })
+  ).toMatchObject({ passed: false, score: 0 });
+  expect(
     computeGradeResult({ a: true }, { timedOut: false, exitCode: null })
-  ).toMatchObject({ passed: false, score: 1 });
+  ).toMatchObject({ passed: false, score: 0 });
   expect(
     computeGradeResult({ a: true }, { timedOut: false, exitCode: 1 })
-  ).toMatchObject({ passed: false, score: 1 });
+  ).toMatchObject({ passed: false, score: 0 });
   expect(
     computeGradeResult({ a: true }, { timedOut: false, partial: true })
-  ).toMatchObject({ passed: false, score: 1 });
+  ).toMatchObject({ passed: false, score: 0 });
 });

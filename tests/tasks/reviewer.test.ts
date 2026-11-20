@@ -63,8 +63,9 @@ const cases: readonly ReviewCase[] = [
     id: "rev-missing-scope-true-bounce",
     language: "python",
     bounce: true,
-    committed: ["inventory.py"],
-    dirty: [],
+    commits: 4,
+    committed: ["cache.py", "http_retry.py", "parser.py", "table.py"],
+    dirty: ["storage.py"],
     defects: [],
   },
   {
@@ -84,13 +85,22 @@ const cases: readonly ReviewCase[] = [
           "[P1] `src/google.ts:13` — Following redirects forwards the API key header to a different origin.",
       },
       {
-        id: "decoder_standards",
+        id: "decoder_standards_cast",
         file: "src/types.ts",
-        range: [3, 10],
+        range: [3, 6],
         severity: 3,
-        needles: ["typeof title", "as SearchResponse"],
+        needles: ["as SearchResponse"],
         finding:
-          "[P3] `src/types.ts:6` — The runtime typeof and unannotated cast violate AGENTS.md.",
+          "[P3] `src/types.ts:4` — The unannotated `as SearchResponse` cast violates AGENTS.md.",
+      },
+      {
+        id: "decoder_standards_typeof",
+        file: "src/types.ts",
+        range: [5, 10],
+        severity: 3,
+        needles: ["typeof title"],
+        finding:
+          "[P3] `src/types.ts:6` — The runtime `typeof` check violates AGENTS.md.",
       },
     ],
   },
@@ -215,16 +225,24 @@ const cases: readonly ReviewCase[] = [
           "[P1] `src/models.ts:49` — `validateCatalogSpecs` matches `entry.wireModel` instead of `entry.id`, which conflicts with `toSessionModel`.",
       },
       {
-        id: "tautological_and_inverted_tests",
+        id: "tautological_literal_test",
         file: "tests/models.test.ts",
-        range: [17, 36],
+        range: [15, 28],
+        severity: 3,
+        needles: ["expect(DEFAULT_MODELS).toEqual(["],
+        finding:
+          "[P3] `tests/models.test.ts:18` — The test suite duplicates `DEFAULT_MODELS` verbatim as a tautological assertion violating AGENTS.md.",
+      },
+      {
+        id: "inverted_wiremodel_test",
+        file: "tests/models.test.ts",
+        range: [28, 38],
         severity: 3,
         needles: [
-          "expect(DEFAULT_MODELS).toEqual([",
           'validateCatalogSpecs(["openai/gpt-wire-v1#medium"], providers)',
         ],
         finding:
-          "[P2] `tests/models.test.ts:18` — The test suite duplicates `DEFAULT_MODELS` verbatim as a tautological assertion violating AGENTS.md and enshrines the inverted `wireModel` bug.",
+          "[P2] `tests/models.test.ts:34` — The test enshrines the inverted `wireModel` bug instead of asserting the public contract.",
       },
     ],
   },
@@ -377,7 +395,7 @@ for (const task of REVIEWER_TASKS) {
 
       if (reference.bounce) {
         expect(prompt).toBe(
-          `Review my recent refactor in ${repoDir} for regressions.`
+          `Review my refactor in ${repoDir} for regressions.`
         );
         expect(reviewDiff).toBe("");
       } else {
@@ -541,9 +559,8 @@ for (const task of REVIEWER_TASKS) {
 
         expect(missedTests.passed).toBe(false);
         expect(missedTests.checks.caught_catalog_id_mismatch).toBe(true);
-        expect(missedTests.checks.caught_tautological_and_inverted_tests).toBe(
-          false
-        );
+        expect(missedTests.checks.caught_tautological_literal_test).toBe(false);
+        expect(missedTests.checks.caught_inverted_wiremodel_test).toBe(false);
         expect(splitTestFindings.passed).toBe(true);
         expect(splitTestFindings.pedantryFlags).toBe(0);
       }
