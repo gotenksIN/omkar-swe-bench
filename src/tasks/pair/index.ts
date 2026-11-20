@@ -6,6 +6,7 @@ import {
   checkPythonDividePagesMinimal,
   checkPythonHasTestMethods,
 } from "../../ast/python.ts";
+import { analyzeTypeScriptRepo } from "../../ast/typescript.ts";
 import { isSafePairReviewerShellCommand } from "../../driver/session-runner.ts";
 import {
   defectMatchesFinding,
@@ -25,7 +26,11 @@ import type {
   Evidence,
   ShellRunTrace,
 } from "../../graders/types.ts";
-import { runHostRuffCheck } from "../../sandbox/tools.ts";
+import {
+  discoverTsCompilerDirs,
+  linkHostTsNodeModules,
+  runHostRuffCheck,
+} from "../../sandbox/tools.ts";
 import { isString } from "../../util/json.ts";
 import {
   PY_FILES,
@@ -33,6 +38,7 @@ import {
   pythonTestFiles,
   runFixtureCheck,
   setupCoderFixture,
+  TS_FILES,
   unittestRun,
 } from "../base.ts";
 import type { EvalTask, FixtureFiles } from "../base.ts";
@@ -60,6 +66,7 @@ interface PairEvidence {
 interface PairFixture {
   readonly id: string;
   readonly category: string;
+  readonly language?: "python" | "typescript";
   readonly timeoutSeconds: number;
   readonly maxAmendments?: number;
   readonly files: FixtureFiles;
@@ -120,7 +127,92 @@ const ruffPasses = async (dir: string): Promise<boolean> => {
   }
 };
 
-const unitTests = async (dir: string): Promise<boolean> => {
+const harnessRoot = nodePath.resolve(import.meta.dir, "../../..");
+
+const linkPairTsNodeModules = (dir: string): void => {
+  linkHostTsNodeModules(
+    nodePath.dirname(nodePath.resolve(dir)),
+    discoverTsCompilerDirs(harnessRoot)
+  );
+};
+
+const tsUnitTests = async (dir: string): Promise<boolean> => {
+  linkPairTsNodeModules(dir);
+
+  return await runFixtureCheck(dir, "bun", ["test"]);
+};
+
+const tsTypecheckPasses = async (dir: string): Promise<boolean> => {
+  try {
+    linkPairTsNodeModules(dir);
+
+    const compiler = Bun.spawn(
+      [
+        nodePath.join(harnessRoot, "node_modules/.bin/tsc"),
+        "--noEmit",
+        "-p",
+        "tsconfig.json",
+      ],
+      {
+        cwd: dir,
+        env: { PATH: process.env.PATH },
+        stdout: "ignore",
+        stderr: "ignore",
+        timeout: 15_000,
+        killSignal: "SIGKILL",
+      }
+    );
+
+    return (await compiler.exited) === 0;
+  } catch {
+    return false;
+  }
+};
+
+const tsHygienePasses = (dir: string): boolean => {
+  try {
+    return analyzeTypeScriptRepo(dir).passed;
+  } catch {
+    return false;
+  }
+};
+
+const tsProbe = async (
+  dir: string,
+  script: string,
+  expectEdge = true
+): Promise<boolean> => {
+  linkPairTsNodeModules(dir);
+
+  return await runFixtureCheck(
+    dir,
+    "bun",
+    ["--no-env-file", "run", "-"],
+    `
+const runCheck = async () => {
+${script}
+};
+let failed = false;
+try {
+  await runCheck();
+} catch {
+  failed = true;
+}
+if (${expectEdge ? "failed" : "!failed"}) {
+  process.exit(1);
+}
+`
+  );
+};
+
+const unitTests = async (
+  dir: string,
+  language: "python" | "typescript" = "python"
+): Promise<boolean> => {
+  if (language === "typescript") {
+    return await tsUnitTests(dir);
+  }
+
   const files = await pythonTestFiles(dir);
 
   return (
@@ -144,10 +236,15 @@ raise SystemExit(not (result.testsRun > 0 and result.wasSuccessful()))
 const probe = async (
   dir: string,
   script: string,
-  expectEdge = true
-): Promise<boolean> =>
+  expectEdge = true,
+  language: "python" | "typescript" = "python"
+): Promise<boolean> => {
+  if (language === "typescript") {
+    return await tsProbe(dir, script, expectEdge);
+  }
+
   // Confirm the probe ran even when the edge fails; a sandbox failure must not count as evidence.
-  await runFixtureCheck(
+  return await runFixtureCheck(
     dir,
     "python3",
     ["-"],
@@ -167,6 +264,7 @@ else:
     assert ${expectEdge ? "True" : "False"}
 `
   );
+};
 
 const reviewerMutatingTools = new Set(["edit", "write", "patch", "execute"]);
 
@@ -346,161 +444,176 @@ const separateCommits = async (
   return checks.every(Boolean);
 };
 
-const pairTask = (fixture: PairFixture): EvalTask => ({
-  id: fixture.id,
-  category: fixture.category,
-  timeoutSeconds: fixture.timeoutSeconds,
-  role: "pair",
-  language: "python",
-  commitGuard: true,
-  readOnlyRepo: false,
-  needsRuff: true,
-  needsTsCompiler: false,
-  async setupRepo(repoDir) {
-    const setup = await setupCoderFixture(
-      repoDir,
-      { ...PY_FILES, ...fixture.files },
-      fixture.prompt
-    );
+const pairTask = (fixture: PairFixture): EvalTask => {
+  const language = fixture.language ?? "python";
 
-    const allowedSigners = await setupSshSigning(repoDir);
+  return {
+    id: fixture.id,
+    category: fixture.category,
+    timeoutSeconds: fixture.timeoutSeconds,
+    role: "pair",
+    language,
+    commitGuard: true,
+    readOnlyRepo: false,
+    needsRuff: language === "python",
+    needsTsCompiler: language === "typescript",
+    async setupRepo(repoDir) {
+      const baseFiles = language === "typescript" ? TS_FILES : PY_FILES;
 
-    return {
-      ...setup,
-      prompt: setup.prompt.replaceAll("{baseline}", setup.baselineHead),
-      seededDefects: [fixture.defect],
-      reviewRequirements: fixture.requirements,
-      reviewerBrief: fixture.brief,
-      allowedSigners,
-    };
-  },
-  async grade(ev, setup) {
-    let signOptions: SignedCommitOptions = { amended: true };
-
-    if (fixture.maxAmendments !== undefined) {
-      signOptions = { ...signOptions, maxAmendments: fixture.maxAmendments };
-    }
-
-    if (setup.allowedSigners !== undefined) {
-      signOptions = { ...signOptions, allowedSigners: setup.allowedSigners };
-    }
-
-    const signed = await signedCommitChecks(ev, fixture.scopes, signOptions);
-
-    const {
-      baselineHead,
-      repoDir,
-      afterGit: { head },
-    } = ev;
-
-    const [first] = ev.reviewHandoffs;
-    const end = first?.resolvedEndCommit ?? null;
-
-    const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some(
-      (finding) => defectMatchesFinding(fixture.defect, finding, repoDir)
-    );
-
-    return await withPairHistory(repoDir, head, async (read) => {
-      const { created, preAmendHead, postAmendHead } = await pairReflog(
-        read,
-        baselineHead
+      const setup = await setupCoderFixture(
+        repoDir,
+        { ...baseFiles, ...fixture.files },
+        fixture.prompt
       );
 
-      const reviewDiff =
-        end === null
-          ? null
-          : await read(
-              "diff",
-              "--no-ext-diff",
-              "--no-textconv",
-              `${baselineHead}..${end}`,
-              "--"
-            );
+      const allowedSigners = await setupSshSigning(repoDir);
 
-      const separate = await separateCommits(
-        read,
-        baselineHead,
-        head,
-        fixture.pathsByCommit
-      );
-
-      const parent = async (sha: string) => {
-        const rawParent = await read("show", "-s", "--format=%P", sha);
-
-        return rawParent.trim();
+      return {
+        ...setup,
+        prompt: setup.prompt.replaceAll("{baseline}", setup.baselineHead),
+        seededDefects: [fixture.defect],
+        reviewRequirements: fixture.requirements,
+        reviewerBrief: fixture.brief,
+        allowedSigners,
       };
+    },
+    async grade(ev, setup) {
+      let signOptions: SignedCommitOptions = { amended: true };
 
-      const allowed = new Set(fixture.pathsByCommit.flat());
+      if (fixture.maxAmendments !== undefined) {
+        signOptions = { ...signOptions, maxAmendments: fixture.maxAmendments };
+      }
 
-      const reviewedPaths =
-        end === null ? null : await changedPaths(read, baselineHead, end);
+      if (setup.allowedSigners !== undefined) {
+        signOptions = { ...signOptions, allowedSigners: setup.allowedSigners };
+      }
 
-      const reviewedScope =
-        reviewedPaths !== null &&
-        reviewedPaths.every((path) => allowed.has(path));
+      const signed = await signedCommitChecks(ev, fixture.scopes, signOptions);
 
-      const originalParentPreserved =
-        separate &&
-        fixture.scopes.length === 2 &&
-        preAmendHead !== null &&
-        postAmendHead === head &&
-        end === preAmendHead &&
-        (await parent(end)) === created[0] &&
-        (await parent(head)) === created[0];
+      const {
+        baselineHead,
+        repoDir,
+        afterGit: { head },
+      } = ev;
 
-      const reviewed =
-        end !== null &&
-        end === preAmendHead &&
-        end !== head &&
-        postAmendHead === head &&
-        (await withCommitSnapshot(
-          ev,
+      const [first] = ev.reviewHandoffs;
+      const end = first?.resolvedEndCommit ?? null;
+
+      const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some(
+        (finding) => defectMatchesFinding(fixture.defect, finding, repoDir)
+      );
+
+      return await withPairHistory(repoDir, head, async (read) => {
+        const { created, preAmendHead, postAmendHead } = await pairReflog(
           read,
-          end,
-          async (dir) =>
-            (await unitTests(dir)) &&
-            (await probe(dir, fixture.ordinaryProbe)) &&
-            (await probe(dir, fixture.edgeProbe, false))
-        ).catch(() => false));
+          baselineHead
+        );
 
-      const checkFinal = async (dir: string | null) => {
-        const [testsPass, ordinaryPass, edgePass, ruffPass] =
-          dir === null
-            ? [false, false, false, false]
-            : await Promise.all([
-                unitTests(dir),
-                probe(dir, fixture.ordinaryProbe),
-                probe(dir, fixture.edgeProbe),
-                ruffPasses(dir),
-              ]);
+        const reviewDiff =
+          end === null
+            ? null
+            : await read(
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                `${baselineHead}..${end}`,
+                "--"
+              );
 
-        const results = {
-          reviewed,
-          testsPass,
-          ordinaryPass,
-          edgePass,
-          caughtEdge,
-          separate,
-          reviewedScope,
-          originalParentPreserved,
+        const separate = await separateCommits(
+          read,
+          baselineHead,
+          head,
+          fixture.pathsByCommit
+        );
+
+        const parent = async (sha: string) => {
+          const rawParent = await read("show", "-s", "--format=%P", sha);
+
+          return rawParent.trim();
         };
 
-        return computeGradeResult(
-          {
-            ...signed,
-            ruff_check_passes: ruffPass,
-            ...(await fixture.checks(ev, results, dir)),
-          },
-          { timedOut: ev.timedOut, reviewDiff }
-        );
-      };
+        const allowed = new Set(fixture.pathsByCommit.flat());
 
-      return await withCommitSnapshot(ev, read, head, checkFinal).catch(
-        async () => await checkFinal(null)
-      );
-    });
-  },
-});
+        const reviewedPaths =
+          end === null ? null : await changedPaths(read, baselineHead, end);
+
+        const reviewedScope =
+          reviewedPaths !== null &&
+          reviewedPaths.every((path) => allowed.has(path));
+
+        const originalParentPreserved =
+          separate &&
+          fixture.scopes.length === 2 &&
+          preAmendHead !== null &&
+          postAmendHead === head &&
+          end === preAmendHead &&
+          (await parent(end)) === created[0] &&
+          (await parent(head)) === created[0];
+
+        const reviewed =
+          end !== null &&
+          end === preAmendHead &&
+          end !== head &&
+          postAmendHead === head &&
+          (await withCommitSnapshot(
+            ev,
+            read,
+            end,
+            async (dir) =>
+              (await unitTests(dir, language)) &&
+              (await probe(dir, fixture.ordinaryProbe, true, language)) &&
+              (await probe(dir, fixture.edgeProbe, false, language))
+          ).catch(() => false));
+
+        const checkFinal = async (dir: string | null) => {
+          const [testsPass, ordinaryPass, edgePass] =
+            dir === null
+              ? [false, false, false]
+              : await Promise.all([
+                  unitTests(dir, language),
+                  probe(dir, fixture.ordinaryProbe, true, language),
+                  probe(dir, fixture.edgeProbe, true, language),
+                ]);
+
+          const staticChecks: CheckOutcomes =
+            language === "typescript"
+              ? {
+                  tsc_passes: dir !== null && (await tsTypecheckPasses(dir)),
+                  ts_ast_hygiene: dir !== null && tsHygienePasses(dir),
+                }
+              : {
+                  ruff_check_passes: dir !== null && (await ruffPasses(dir)),
+                };
+
+          const results = {
+            reviewed,
+            testsPass,
+            ordinaryPass,
+            edgePass,
+            caughtEdge,
+            separate,
+            reviewedScope,
+            originalParentPreserved,
+          };
+
+          return computeGradeResult(
+            {
+              ...signed,
+              ...staticChecks,
+              ...(await fixture.checks(ev, results, dir)),
+            },
+            { timedOut: ev.timedOut, reviewDiff }
+          );
+        };
+
+        return await withCommitSnapshot(ev, read, head, checkFinal).catch(
+          async () => await checkFinal(null)
+        );
+      });
+    },
+  };
+};
 
 const missingMean: Defect = {
   id: "missing_mean",
@@ -937,9 +1050,296 @@ assert result.returncode == 2 and "usage:" in result.stderr and "--limit" in res
   },
 };
 
+const tsSignedPrompt = `Capture the commit context before the first commit. Format each commit subject as \`<scope>: <Capitalized summary>\` (at most 72 characters, no trailing period), sign with the configured SSH signing key, and sign off with \`-s\`. Run each \`git commit\` as a standalone or final \`&&\`-chained command without trailing commands.
+For each task, run \`bun test\` and \`tsc --noEmit\` before committing.
+Keep the index and working tree clean after committing. Do not push.`;
+
+const tsReviewPrompt = `Delegate a static review to \`code-reviewer\`. Provide the absolute repository path, the commit range from {baseline} to HEAD as \`{baseline}..HEAD\`, and the changed files. Ask the reviewer to apply its acceptance requirements and report prioritized findings with file:line citations under "## Findings". Do not ask it to edit, run tests, or delegate.
+Say "Review pending" while waiting for the review. \`code-reviewer\` holds additional acceptance requirements not listed above: implement findings on HEAD that are compatible with \`AGENTS.md\` and explicit contracts here, rerun \`bun test\` and \`tsc --noEmit\`, and amend HEAD with \`git commit --amend --no-edit\`. Do not rewrite older commits. Decline findings that contradict \`AGENTS.md\` or explicit contracts, and explain why.`;
+
+const tsInverseTriage: PairFixture = {
+  id: "pair-ts-inverse-triage-and-antislop",
+  category: "pair-calibration",
+  language: "typescript",
+  timeoutSeconds: 600,
+  scopes: ["config", "models"],
+  pathsByCommit: [
+    ["src/config.ts", "tests/config.test.ts"],
+    ["src/models.ts", "tests/models.test.ts"],
+  ],
+  files: {
+    "AGENTS.md": `${TS_FILES["AGENTS.md"]}Do not write tautological or change-detector tests that duplicate exported constants verbatim.\n`,
+    "src/config.ts": `export interface ModelSpec {
+  readonly providerID: string;
+  readonly modelID: string;
+  readonly variant?: string;
+}
+
+export function parseModelSpec(spec: string): ModelSpec {
+  const [providerID, rest] = spec.split("/");
+  if (!providerID || !rest) {
+    throw new Error(\`Invalid model spec: \${spec}\`);
+  }
+  const [modelID, variant] = rest.split("#");
+  if (!modelID) {
+    throw new Error(\`Invalid model spec: \${spec}\`);
+  }
+  return variant ? { providerID, modelID, variant } : { providerID, modelID };
+}
+`,
+    "src/models.ts": `import { parseModelSpec } from "./config.ts";
+
+export interface CatalogModel {
+  readonly id: string;
+  readonly wireModel: string;
+  readonly enabled: boolean;
+  readonly variants: readonly string[];
+}
+
+export interface CatalogProvider {
+  readonly id: string;
+  readonly models: readonly CatalogModel[];
+}
+
+export const DEFAULT_MODELS = [
+  "openai/gpt-fast#medium",
+  "openrouter/anthropic/claude-core#high",
+] as const;
+
+export function validateModels(
+  specs: readonly string[],
+  providers: readonly CatalogProvider[]
+): void {
+  const byProvider = new Map(providers.map((p) => [p.id, p]));
+  for (const spec of specs) {
+    const parsed = parseModelSpec(spec);
+    const provider = byProvider.get(parsed.providerID);
+    if (provider === undefined) {
+      throw new Error(\`Unknown provider: \${parsed.providerID}\`);
+    }
+    const entry = provider.models.find((m) => m.wireModel === parsed.modelID);
+    if (entry === undefined) {
+      throw new Error(\`Unknown model: \${parsed.modelID}\`);
+    }
+  }
+}
+`,
+    "tests/config.test.ts": `import { expect, test } from "bun:test";
+import { parseModelSpec } from "../src/config.ts";
+
+test("parses provider and model", () => {
+  expect(parseModelSpec("openai/gpt-fast#medium")).toEqual({
+    providerID: "openai",
+    modelID: "gpt-fast",
+    variant: "medium",
+  });
+});
+`,
+    "tests/models.test.ts": `import { expect, test } from "bun:test";
+import { validateModels } from "../src/models.ts";
+
+test("rejects unknown provider", () => {
+  expect(() => validateModels(["missing/gpt"], [])).toThrow(/Unknown provider:/u);
+});
+`,
+  },
+  prompt: `Complete these two tasks in order:
+1. Update \`parseModelSpec(spec)\` in \`src/config.ts\` to support multi-slash model IDs (for example \`openrouter/anthropic/claude-core#high\` -> \`providerID: "openrouter"\`, \`modelID: "anthropic/claude-core"\`, \`variant: "high"\`) and reject malformed specs (empty provider/model/variant or extra \`#\`). Commit under \`config\`; you may also edit \`tests/config.test.ts\`.
+2. Update \`validateModels(specs, providers)\` in \`src/models.ts\` to match catalog entries by \`entry.id\` (not \`entry.wireModel\`) and verify that any requested \`variant\` is in \`entry.variants\`. Commit under \`models\`; you may also edit \`tests/models.test.ts\`.
+${tsSignedPrompt}
+${tsReviewPrompt}
+Use at most three reviewer handoffs. Do not rewrite the config commit.`,
+  defect: {
+    id: "disabled_model_allowed",
+    file: "src/models.ts",
+    lineRange: [18, 42],
+    minSeverity: 2,
+    conceptGroups: [
+      ["disabled", "enabled"],
+      ["model", "reject", "throw", "error", "entry"],
+    ],
+    description:
+      "validateModels must reject catalog models where entry.enabled is false.",
+  },
+  requirements:
+    "validateModels in src/models.ts must reject models with entry.enabled === false by throwing an Error whose message includes `Disabled model:`.",
+  brief:
+    'Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n- **[P3]** `tests/models.test.ts:1` — Add a unit test asserting `expect(DEFAULT_MODELS).toEqual(["openai/gpt-fast#medium", "openrouter/anthropic/claude-core#high"])` so the literal list cannot drift.',
+  ordinaryProbe: `
+import assert from "node:assert/strict";
+import { parseModelSpec } from "./src/config.ts";
+import { validateModels } from "./src/models.ts";
+
+assert.deepEqual(parseModelSpec("openrouter/anthropic/claude-core#high"), {
+  providerID: "openrouter",
+  modelID: "anthropic/claude-core",
+  variant: "high",
+});
+
+const providers = [
+  {
+    id: "openai",
+    models: [
+      { id: "gpt-fast", wireModel: "wire-1", enabled: true, variants: ["medium"] },
+    ],
+  },
+  {
+    id: "openrouter",
+    models: [
+      { id: "anthropic/claude-core", wireModel: "wire-2", enabled: true, variants: ["high"] },
+    ],
+  },
+];
+
+validateModels(["openai/gpt-fast#medium", "openrouter/anthropic/claude-core#high"], providers);
+assert.throws(() => validateModels(["openai/wire-1#medium"], providers), /Unknown model:/u);
+assert.throws(() => validateModels(["openai/gpt-fast#low"], providers), /Unknown variant:|variant/iu);
+`,
+  edgeProbe: `
+import assert from "node:assert/strict";
+import { validateModels } from "./src/models.ts";
+
+const providers = [
+  {
+    id: "openai",
+    models: [
+      { id: "gpt-old", wireModel: "wire-old", enabled: false, variants: ["medium"] },
+    ],
+  },
+];
+
+assert.throws(() => validateModels(["openai/gpt-old#medium"], providers), /Disabled model:/u);
+`,
+  async checks(ev, result, finalDir) {
+    const handoffs = ev.reviewHandoffs;
+    const plantedNeedle = /DEFAULT_MODELS|toEqual\(\[/u;
+
+    const declinedSubject =
+      /DEFAULT_MODELS|tautolog|literal|change-detector|constant/iu;
+
+    const declinedReason = /AGENTS\.md|tautolog|change-detector|duplicat/iu;
+
+    const noTautologicalTest =
+      finalDir !== null &&
+      !(await readFile(nodePath.join(finalDir, "tests/models.test.ts"), "utf-8")
+        .then((text) =>
+          /expect\(\s*DEFAULT_MODELS\s*\)\.toEqual\(\s*\[/u.test(text)
+        )
+        .catch(() => true));
+
+    return {
+      bounded_reviews: handoffs.length >= 1 && reviewerInvocations(ev) <= 3,
+      reviewer_caught_disabled_model: result.caughtEdge,
+      reviewer_emitted_tautological_nitpick: parseFindings(
+        handoffs[0]?.reviewerFinalText ?? ""
+      ).some(
+        ({ body, severity }) => severity === 3 && plantedNeedle.test(body)
+      ),
+      reviewed_commit_needs_fix: result.reviewed,
+      nonhead_config_untouched: result.originalParentPreserved,
+      no_tautological_tests: noTautologicalTest,
+      declined_tautological_nitpick_with_reason: declinesInTranscript(
+        ev,
+        declinedSubject,
+        declinedReason
+      ),
+      final_behavior_passes:
+        result.testsPass && result.ordinaryPass && result.edgePass,
+    };
+  },
+};
+
+const twoRoundAmendment: PairFixture = {
+  id: "pair-two-round-amendment-regression",
+  category: "pair-workflow",
+  timeoutSeconds: 600,
+  maxAmendments: 2,
+  scopes: ["diff"],
+  pathsByCommit: [["diff_sections.py", "tests/test_diff_sections.py"]],
+  files: {
+    "AGENTS.md":
+      "# Diff parser contract\n\nKeep split_sections pure and return a dict with committed, staged, and unstaged keys.\nTest public functions with unittest.\n",
+    "diff_sections.py": `def split_sections(raw: str) -> dict[str, str]:
+    return {"committed": raw, "staged": "", "unstaged": ""}
+`,
+    "tests/test_diff_sections.py": `import unittest
+
+from diff_sections import split_sections
+
+
+class DiffSectionTests(unittest.TestCase):
+    def test_empty(self):
+        self.assertEqual(split_sections(""), {"committed": "", "staged": "", "unstaged": ""})
+`,
+  },
+  prompt: `Implement \`split_sections(raw)\` in \`diff_sections.py\` to split concatenated \`## Committed\`, \`## Staged\`, and \`## Unstaged\` diff sections into \`{"committed": ..., "staged": ..., "unstaged": ...}\` (joining each section's lines with \`"\\n"\`).
+Add unittest coverage in \`tests/test_diff_sections.py\`. Commit under \`diff\`.
+${signedPrompt}
+${reviewPrompt}
+After amending HEAD, request a verification review of \`{baseline}..HEAD\` so the reviewer confirms \`No actionable findings.\`. Use at most three reviewer handoffs.`,
+  defect: {
+    id: "untracked_and_crlf",
+    file: "diff_sections.py",
+    lineRange: [1, 30],
+    minSeverity: 2,
+    conceptGroups: [
+      ["untracked", "crlf", "\\r\\n", "carriage"],
+      ["prefix", "startswith", "strip", "leak", "line", "section", "normalize"],
+    ],
+    description:
+      'split_sections must drop `Untracked: "<path>" (<oid>)` lines (matching prefix `Untracked: `) and normalize CRLF (`\\r\\n`) line endings.',
+  },
+  requirements:
+    'split_sections(raw) must stop capturing into the active section when it encounters any line starting with `Untracked: ` (such as `Untracked: "notes.txt" (deadbeef)`), and must normalize CRLF (`\\r\\n`) line endings so `\\r` never breaks header matching or leaks into returned sections.',
+  brief: "",
+  ordinaryProbe: `
+from diff_sections import split_sections
+
+raw = "## Committed\\n+a\\n## Staged\\n+b\\n## Unstaged\\n+c"
+assert split_sections(raw) == {"committed": "+a", "staged": "+b", "unstaged": "+c"}
+`,
+  edgeProbe: `
+from diff_sections import split_sections
+
+raw = (
+    "## Committed\\r\\n+a\\r\\n"
+    "## Unstaged\\r\\n+c\\r\\n"
+    'Untracked: "notes.txt" (deadbeef)\\r\\n'
+    'Untracked: "extra.py" (cafebabe)\\r\\n'
+)
+out = split_sections(raw)
+assert out == {"committed": "+a", "staged": "", "unstaged": "+c"}, out
+`,
+  checks(ev, result) {
+    const handoffs = ev.reviewHandoffs;
+    const last = handoffs.at(-1);
+
+    return {
+      bounded_reviews: handoffs.length >= 2 && reviewerInvocations(ev) <= 3,
+      reviewer_caught_edge: result.caughtEdge,
+      reviewed_commit_needs_fix: result.reviewed,
+      final_review_clean:
+        last !== undefined &&
+        last.resolvedEndCommit === ev.afterGit.head &&
+        statesNoFindings(last.reviewerFinalText) &&
+        parseFindings(last.reviewerFinalText).length === 0,
+      tests_rerun_before_amend: testsRerunBeforeAmend(ev),
+      scope_preserved: scopePreserved(
+        ev,
+        twoRoundAmendment,
+        result.reviewedScope
+      ),
+      final_behavior_passes:
+        result.testsPass && result.ordinaryPass && result.edgePass,
+    };
+  },
+};
+
 export const PAIR_TASKS: readonly EvalTask[] = [
   reportTask(false),
   reportTask(true),
   pairTask(multitask),
   pairTask(pagination),
+  pairTask(tsInverseTriage),
+  pairTask(twoRoundAmendment),
 ];

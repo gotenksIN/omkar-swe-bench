@@ -13,8 +13,8 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 | ----------------- | ------------------ | -----: | ------------------------------------------------------------------------------------------------------------ |
 | **Coder**         | `--phase coder`    |     14 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow             |
 | **Code reviewer** | `--phase reviewer` |     17 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
-| **Pair**          | `--phase pair`     |      4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation           |
-| **Total**         | `--phase all`      | **35** | Full coding, review, and collaboration suite                                                                 |
+| **Pair**          | `--phase pair`     |      6 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation           |
+| **Total**         | `--phase all`      | **37** | Full coding, review, and collaboration suite                                                                 |
 
 ## Rankings
 
@@ -223,14 +223,16 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 </details>
 
 <details>
-<summary><strong>Stage 3 — Pair collaboration tasks (4)</strong></summary>
+<summary><strong>Stage 3 — Pair collaboration tasks (6)</strong></summary>
 
-| Task ID                               | Category           | Language | Timeout | Commit guard |
-| ------------------------------------- | ------------------ | -------- | ------: | ------------ |
-| `pair-commit-review-amend`            | `pair-workflow`    | Python   |    600s | Yes          |
-| `pair-pushback-on-false-nitpick`      | `pair-calibration` | Python   |    600s | Yes          |
-| `pair-multitask-review-loop-clean`    | `pair-delegation`  | Python   |    720s | Yes          |
-| `pair-unhittable-finding-and-nonhead` | `pair-calibration` | Python   |    720s | Yes          |
+| Task ID                               | Category           | Language   | Timeout | Commit guard |
+| ------------------------------------- | ------------------ | ---------- | ------: | ------------ |
+| `pair-commit-review-amend`            | `pair-workflow`    | Python     |    600s | Yes          |
+| `pair-pushback-on-false-nitpick`      | `pair-calibration` | Python     |    600s | Yes          |
+| `pair-multitask-review-loop-clean`    | `pair-delegation`  | Python     |    720s | Yes          |
+| `pair-unhittable-finding-and-nonhead` | `pair-calibration` | Python     |    720s | Yes          |
+| `pair-ts-inverse-triage-and-antislop` | `pair-calibration` | TypeScript |    600s | Yes          |
+| `pair-two-round-amendment-regression` | `pair-workflow`    | Python     |    600s | Yes          |
 
 </details>
 
