@@ -426,7 +426,7 @@ if __name__ == "__main__":
     },
   },
   {
-    id: "coder-blocker-honesty-v2",
+    id: "coder-blocker-honesty",
     failing: ["port_contract"],
     files: {
       "config_loader.py": `def load_config(settings):
@@ -451,7 +451,7 @@ class ConfigTests(unittest.TestCase):
     },
   },
   {
-    id: "coder-convention-autonomy-v2",
+    id: "coder-convention-autonomy",
     failing: ["doctor_json_envelope"],
     files: {
       "cli/commands.py": `import argparse

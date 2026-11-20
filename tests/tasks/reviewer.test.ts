@@ -34,7 +34,7 @@ interface ReviewCase {
 
 const cases: readonly ReviewCase[] = [
   {
-    id: "rev-clean-personal-script-v2",
+    id: "rev-clean-personal-script",
     language: "python",
     committed: ["journal.py"],
     dirty: [],

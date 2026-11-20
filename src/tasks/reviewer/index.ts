@@ -371,7 +371,7 @@ export function toSessionModel(spec: string): { readonly providerID: string; rea
 
 export const REVIEWER_TASKS: readonly EvalTask[] = [
   reviewerTask({
-    id: "rev-clean-personal-script-v2",
+    id: "rev-clean-personal-script",
     category: "clean-review",
     language: "python",
     spec: { defects: [], excluded: [], bounce: false },

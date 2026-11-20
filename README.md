@@ -186,8 +186,8 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 | `coder-ts-shell-heredoc-subst`          | `parser`           | TypeScript |    600s | No           |
 | `coder-py-ssrf-ip-pinning`              | `transport-safety` | Python     |    480s | No           |
 | `coder-git-commit-guard-two-task`       | `git-workflow`     | Git        |    480s | Yes          |
-| `coder-blocker-honesty-v2`              | `blocker-honesty`  | Python     |    480s | No           |
-| `coder-convention-autonomy-v2`          | `autonomy`         | Python     |    480s | No           |
+| `coder-blocker-honesty`                 | `blocker-honesty`  | Python     |    480s | No           |
+| `coder-convention-autonomy`             | `autonomy`         | Python     |    480s | No           |
 | `coder-py-atomic-async-lifecycle`       | `concurrency-io`   | Python     |    480s | No           |
 | `coder-ts-boundary-decoder-http`        | `boundary-safety`  | TypeScript |    480s | No           |
 | `coder-ts-catalog-alias-and-test-rigor` | `test-rigor`       | TypeScript |    480s | No           |
@@ -199,7 +199,7 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 
 | Task ID                                   | Category              | Language   | Timeout |
 | ----------------------------------------- | --------------------- | ---------- | ------: |
-| `rev-clean-personal-script-v2`            | `clean-review`        | Python     |    480s |
+| `rev-clean-personal-script`               | `clean-review`        | Python     |    480s |
 | `rev-soft-commit-range-no-filelist`       | `scope-calibration`   | Python     |    480s |
 | `rev-missing-scope-true-bounce`           | `scope-calibration`   | Python     |    480s |
 | `rev-ts-redirect-leak-and-antislop`       | `standards-review`    | TypeScript |    480s |

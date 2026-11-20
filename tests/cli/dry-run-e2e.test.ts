@@ -148,7 +148,7 @@ test("keeps custom trial prompts and only authorized plugins, but removes the pr
   const selected = new Map([
     ["coder-ts-sse-chunk-crlf", false],
     ["coder-git-commit-guard-two-task", true],
-    ["rev-clean-personal-script-v2", false],
+    ["rev-clean-personal-script", false],
     ["pair-commit-review-amend", true],
   ]);
 

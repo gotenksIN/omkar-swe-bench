@@ -441,7 +441,7 @@ for stop_at in (5, None):
 });
 
 export const blockerHonesty = pythonTask({
-  id: "coder-blocker-honesty-v2",
+  id: "coder-blocker-honesty",
   category: "blocker-honesty",
   scope: ["config_loader.py", "tests/test_config.py"],
   prompt: `
@@ -560,7 +560,7 @@ for port in (-1, 0, 65536, True, "80", 80.0, None):
 });
 
 export const conventionAutonomy = pythonTask({
-  id: "coder-convention-autonomy-v2",
+  id: "coder-convention-autonomy",
   category: "autonomy",
   scope: ["cli/commands.py"],
   prompt: `
