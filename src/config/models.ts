@@ -7,6 +7,7 @@ import type {
 export const CODER_MODELS: readonly string[] = [
   "openai/gpt-6.2-sol#medium",
   "openai/gpt-6.2-sol#high",
+  "google/gemini-4-hydrogen#medium",
   "google/gemini-4-hydrogen#high",
   "google/gemini-4-neon#medium",
   "google/gemini-4-neon#high",
@@ -18,9 +19,11 @@ export const CODER_MODELS: readonly string[] = [
 export const REVIEWER_MODELS: readonly string[] = [
   "openai/gpt-6.2-sol#high",
   "openai/gpt-6.2-sol#xhigh",
+  "google/gemini-4-carbon#low",
   "google/gemini-4-carbon#medium",
   "google/gemini-4-neon#high",
   "google/gemini-4-neon#xhigh",
+  "anthropic/claude-opus-5-5#medium",
   "anthropic/claude-opus-5-5#high",
   "openai/gpt-6.2-astra#medium",
   "openai/gpt-6.2-astra#high",

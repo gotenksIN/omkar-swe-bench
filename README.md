@@ -157,17 +157,19 @@ Results tag the run profile as `file:<basename>`.
 Model matrices live in [`src/config/models.ts`](src/config/models.ts).
 Repeat `--coder-model` or `--reviewer-model` on the CLI to override either list.
 
-| Default `coder` models (8)         | Default `code-reviewer` models (9) |
-| ---------------------------------- | ---------------------------------- |
-| `openai/gpt-6.2-sol#medium`        | `openai/gpt-6.2-sol#high`          |
-| `openai/gpt-6.2-sol#high`          | `openai/gpt-6.2-sol#xhigh`         |
-| `google/gemini-4-hydrogen#high`    | `google/gemini-4-carbon#medium`    |
-| `google/gemini-4-neon#medium`      | `google/gemini-4-neon#high`        |
-| `google/gemini-4-neon#high`        | `google/gemini-4-neon#xhigh`       |
-| `anthropic/claude-sonnet-5-5#high` | `anthropic/claude-opus-5-5#high`   |
-| `anthropic/claude-opus-5-5#medium` | `openai/gpt-6.2-astra#medium`      |
-| `deepseek/deepseek-flash#high`     | `openai/gpt-6.2-astra#high`        |
-|                                    | `anthropic/claude-fable-5-2#high`  |
+| Default `coder` models (9)         | Default `code-reviewer` models (11) |
+| ---------------------------------- | ----------------------------------- |
+| `openai/gpt-6.2-sol#medium`        | `openai/gpt-6.2-sol#high`           |
+| `openai/gpt-6.2-sol#high`          | `openai/gpt-6.2-sol#xhigh`          |
+| `google/gemini-4-hydrogen#medium`  | `google/gemini-4-carbon#low`        |
+| `google/gemini-4-hydrogen#high`    | `google/gemini-4-carbon#medium`     |
+| `google/gemini-4-neon#medium`      | `google/gemini-4-neon#high`         |
+| `google/gemini-4-neon#high`        | `google/gemini-4-neon#xhigh`        |
+| `anthropic/claude-sonnet-5-5#high` | `anthropic/claude-opus-5-5#medium`  |
+| `anthropic/claude-opus-5-5#medium` | `anthropic/claude-opus-5-5#high`    |
+| `deepseek/deepseek-flash#high`     | `openai/gpt-6.2-astra#medium`       |
+|                                    | `openai/gpt-6.2-astra#high`         |
+|                                    | `anthropic/claude-fable-5-2#high`   |
 
 ## Task suite
 
@@ -250,24 +252,24 @@ The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in 
 <details>
 <summary><strong>All <code>run</code> options and defaults</strong></summary>
 
-| Option                                        | Default and behavior                                                                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--phase <all\|coder\|reviewer\|pair>`        | `all`; select a stage or run all stages                                                                                                           |
-| `--task <id>`                                 | All tasks in the selected phase; repeat to filter specific task IDs                                                                               |
-| `--coder-model <provider/model[#variant]>`    | The 8 coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the list                                                   |
-| `--reviewer-model <provider/model[#variant]>` | All 9 reviewer specs for solo review, and `openai/gpt-6.2-astra#medium` + `google/gemini-4-carbon#medium` for pairs; repeat to replace both lists |
-| `--all-pairs`                                 | Off; pair each selected coder model with all default reviewer models unless you pass `--reviewer-model`                                           |
-| `--trials-per-cell <n>`                       | `1`; positive integer repetitions per task and model or model pair                                                                                |
-| `--workers <n>`                               | `4`; positive integer maximum concurrent trials (capped at 2 concurrent trials per provider by default)                                           |
-| `--api-retries <n>`                           | `3`; non-negative integer outer retries after transient API or startup failures                                                                   |
-| `--sandbox <require\|auto\|off>`              | `require`; fails if `bwrap` is unavailable. `auto` warns and falls back only for read-only reviewer runs. `off` skips sandboxing for OpenCode     |
-| `--providers-file <path>`                     | Defaults to `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`                                                                           |
-| `--agents-file <path>`                        | Neutral role prompts; pass JSON/JSONC to test custom `coder` and `code-reviewer` definitions                                                      |
-| `--out <dir>`                                 | `./artifacts/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md`                                                     |
-| `--workspace-root <dir>`                      | `/tmp/opencode/omkar-swe-bench`; base directory for trial workspaces                                                                              |
-| `--timeout-scale <factor>`                    | `1`; positive multiplier applied to each task's `timeoutSeconds`                                                                                  |
-| `--keep-workspaces`                           | Off; retain trial directories and persist live session data in `session.db` instead of memory                                                     |
-| `--dry-run`                                   | Off; prepare fixtures and validate mount plans without starting OpenCode or calling providers                                                     |
+| Option                                        | Default and behavior                                                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--phase <all\|coder\|reviewer\|pair>`        | `all`; select a stage or run all stages                                                                                                            |
+| `--task <id>`                                 | All tasks in the selected phase; repeat to filter specific task IDs                                                                                |
+| `--coder-model <provider/model[#variant]>`    | The 9 coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the list                                                    |
+| `--reviewer-model <provider/model[#variant]>` | All 11 reviewer specs for solo review, and `openai/gpt-6.2-astra#medium` + `google/gemini-4-carbon#medium` for pairs; repeat to replace both lists |
+| `--all-pairs`                                 | Off; pair each selected coder model with all default reviewer models unless you pass `--reviewer-model`                                            |
+| `--trials-per-cell <n>`                       | `1`; positive integer repetitions per task and model or model pair                                                                                 |
+| `--workers <n>`                               | `4`; positive integer maximum concurrent trials (capped at 2 concurrent trials per provider by default)                                            |
+| `--api-retries <n>`                           | `3`; non-negative integer outer retries after transient API or startup failures                                                                    |
+| `--sandbox <require\|auto\|off>`              | `require`; fails if `bwrap` is unavailable. `auto` warns and falls back only for read-only reviewer runs. `off` skips sandboxing for OpenCode      |
+| `--providers-file <path>`                     | Defaults to `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`                                                                            |
+| `--agents-file <path>`                        | Neutral role prompts; pass JSON/JSONC to test custom `coder` and `code-reviewer` definitions                                                       |
+| `--out <dir>`                                 | `./artifacts/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md`                                                      |
+| `--workspace-root <dir>`                      | `/tmp/opencode/omkar-swe-bench`; base directory for trial workspaces                                                                               |
+| `--timeout-scale <factor>`                    | `1`; positive multiplier applied to each task's `timeoutSeconds`                                                                                   |
+| `--keep-workspaces`                           | Off; retain trial directories and persist live session data in `session.db` instead of memory                                                      |
+| `--dry-run`                                   | Off; prepare fixtures and validate mount plans without starting OpenCode or calling providers                                                      |
 
 </details>
 
