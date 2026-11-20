@@ -445,7 +445,7 @@ const run = async (args: string[]): Promise<number> => {
     const runId = `${timestamp}-${randomBytes(4).toString("hex")}`;
 
     const out = nodePath.resolve(
-      values.out ?? nodePath.join("results", timestamp)
+      values.out ?? nodePath.join("artifacts", timestamp)
     );
 
     const options = buildRunConfig(

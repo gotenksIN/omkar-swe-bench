@@ -1,5 +1,5 @@
 node_modules/
-results/
+artifacts/
 .DS_Store
 *.db
 *.db-wal

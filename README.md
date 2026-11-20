@@ -19,7 +19,7 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 ## Rankings
 
 Models are ranked by **Low-Steering Autonomy Score (`LSAS`, 0–100)**—how rarely you must intervene, debug, nudge static compliance, or fight stubborn review refusals—with cost and wall-clock time on separate Pareto axes.
-See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/2026-11-19/summary.md)** or open the **[interactive HTML dashboard](docs/benchmarks/2026-11-19/report.html)** (`neutral` profile, `--sandbox require`, OpenCode `2.3.2`, `$37.74` total API spend).
+See the **[full scores, methodology, and 251-trial breakdown](results/summary.md)** or open the **[interactive HTML dashboard](results/report.html)** (`neutral` profile, `--sandbox require`, OpenCode `2.3.2`, `$37.74` total API spend).
 
 ### Autonomous Coders (`ACI` across 19 Solo + Pair trials)
 
@@ -34,9 +34,9 @@ See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/20
 |    7 | `openai/gpt-6.2-sol#high`          | **91.3** |  89.5% |  16/19 |         $1.98 |      1678s |
 |    8 | `openai/gpt-6.2-sol#medium`        | **89.8** |  84.2% |  16/19 |         $1.65 |      1405s |
 
-![Coder Autonomy vs. Cost Pareto Frontier](docs/benchmarks/2026-11-19/charts/coder-cost-pareto.svg)
+![Coder Autonomy vs. Cost Pareto Frontier](results/charts/coder-cost-pareto.svg)
 
-![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](docs/benchmarks/2026-11-19/charts/coder-speed-pareto.svg)
+![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](results/charts/coder-speed-pareto.svg)
 
 ### Code Reviewers (`LSAS` across 10 calibrated tasks)
 
@@ -52,15 +52,15 @@ See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/20
 |    8 | `anthropic/claude-fable-5-2#high` |  **87.0** |   7/10 | 100.0% |         3 |       2 |      $1.33 |     19.6s |
 |    9 | `openai/gpt-6.2-sol#xhigh`        |  **87.0** |   7/10 |  85.7% |         2 |       2 |      $0.24 |     23.2s |
 
-![Code Reviewer Calibration Quadrant](docs/benchmarks/2026-11-19/charts/reviewer-calibration.svg)
+![Code Reviewer Calibration Quadrant](results/charts/reviewer-calibration.svg)
 
 ### Pair Collaboration & Babysitting Diagnostics
 
-![Phase 3 Coder × Reviewer Synergy Matrix](docs/benchmarks/2026-11-19/charts/pair-synergy-matrix.svg)
+![Phase 3 Coder × Reviewer Synergy Matrix](results/charts/pair-synergy-matrix.svg)
 
-![Low-Steering Babysitting & Failure Taxonomy](docs/benchmarks/2026-11-19/charts/failure-taxonomy.svg)
+![Low-Steering Babysitting & Failure Taxonomy](results/charts/failure-taxonomy.svg)
 
-Full per-stage tables, inference overhead & diff discipline charts, and all 251 trial rows live in **[`docs/benchmarks/2026-11-19/summary.md`](docs/benchmarks/2026-11-19/summary.md)**.
+Full per-stage tables, inference overhead & diff discipline charts, and all 251 trial rows live in **[`results/summary.md`](results/summary.md)**.
 
 ## How it works
 
@@ -115,12 +115,12 @@ printf '%s\n' '{"providers":{"stub":{}}}' > /tmp/opencode/providers.stub.jsonc
 bun ./src/cli.ts run --dry-run --sandbox off \
   --providers-file /tmp/opencode/providers.stub.jsonc \
   --coder-model stub/coder --reviewer-model stub/reviewer \
-  --out results/dry-run
+  --out artifacts/dry-run
 ```
 
 ### 3. Run live evaluations
 
-By default, `run` enforces `--sandbox require`, runs `4` total workers capped at `2` concurrent trials per provider, reads credentials from `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`, and writes `results.json` plus `summary.md` under `results/<timestamp>/`.
+By default, `run` enforces `--sandbox require`, runs `4` total workers capped at `2` concurrent trials per provider, reads credentials from `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`, and writes `results.json` plus `summary.md` under `artifacts/<timestamp>/`.
 
 ```sh
 # Stage 1: standalone coder (88 trials across 8 default models)
@@ -258,7 +258,7 @@ The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in 
 | `--sandbox <require\|auto\|off>`              | `require`; fails if `bwrap` is unavailable. `auto` warns and falls back only for read-only reviewer runs. `off` skips sandboxing for OpenCode     |
 | `--providers-file <path>`                     | Defaults to `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`                                                                           |
 | `--agents-file <path>`                        | Neutral role prompts; pass JSON/JSONC to test custom `coder` and `code-reviewer` definitions                                                      |
-| `--out <dir>`                                 | `./results/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md`                                                       |
+| `--out <dir>`                                 | `./artifacts/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md`                                                     |
 | `--workspace-root <dir>`                      | `/tmp/opencode/omkar-swe-bench`; base directory for trial workspaces                                                                              |
 | `--timeout-scale <factor>`                    | `1`; positive multiplier applied to each task's `timeoutSeconds`                                                                                  |
 | `--keep-workspaces`                           | Off; retain trial directories and persist live session data in `session.db` instead of memory                                                     |
@@ -284,14 +284,14 @@ The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in 
 Export anonymized blind-judging packets from completed reviewer or pair runs:
 
 ```sh
-bun ./src/cli.ts judge --input results/pair/results.json --out packet.json
+bun ./src/cli.ts judge --input artifacts/pair/results.json --out packet.json
 ```
 
 The exporter keeps non-partial, non-dry-run results with review text (and a reviewed diff for pairs), deduplicates equivalent evidence, removes model and profile labels, and redacts recognized workspace paths.
 Copy the top-level `answers` object into `answers.json`, replace every `null` with `true` or `false` without changing keys, and validate:
 
 ```sh
-bun ./src/cli.ts judge --input results/pair/results.json \
+bun ./src/cli.ts judge --input artifacts/pair/results.json \
   --answers answers.json --out judgments.json
 ```
 

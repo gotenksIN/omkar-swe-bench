@@ -6,7 +6,7 @@ export default defineConfig({
   proseWrap: "preserve",
   ignorePatterns: [
     ...(ultracite.ignorePatterns ?? []),
-    "docs/**",
+    "artifacts/**",
     "results/**",
   ],
 });

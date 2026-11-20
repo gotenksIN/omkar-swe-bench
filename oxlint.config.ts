@@ -21,7 +21,7 @@ export default defineConfig({
     ".pi/**",
     ".roo/**",
     ".windsurf/**",
-    "docs/**",
+    "artifacts/**",
     "results/**",
   ],
   rules: {
