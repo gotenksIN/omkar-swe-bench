@@ -11,6 +11,7 @@ import path from "node:path";
 import { runCli } from "../../src/cli.ts";
 import {
   exportBlindJudgePacket,
+  exportCoderDiffJudgePacket,
   validateBlindJudgeAnswers,
 } from "../../src/judge/blind.ts";
 import {
@@ -242,6 +243,28 @@ test("blinds eligible cases, uses canonical IDs and deduplicates equivalent evid
   expect(exportBlindJudgePacket([pair]).cases[0]?.id).toBe(
     exportBlindJudgePacket([differentlyHosted]).cases[0]?.id
   );
+
+  const styledA = trial({
+    final_text:
+      "## Findings\n- [P1] `app.py:4` — Uses “unsafe” path.\n\n## Reviewed Scope and Limitations\nStatic inspection only.",
+    review_diff: "diff --git a/app.py b/app.py\n+x = 1",
+    repository_context: { "AGENTS.md": `Repository root: ${repo}/app.py` },
+  });
+
+  const styledB = trial({
+    repo_dir: otherRepo,
+    final_text: '## Findings\n- [P1] `app.py:4` -- Uses "unsafe" path.',
+    review_diff: "diff --git a/app.py b/app.py\n+x = 1",
+    repository_context: { "AGENTS.md": `Repository root: ${otherRepo}/app.py` },
+  });
+
+  const styledPacketA = exportBlindJudgePacket([styledA]);
+  const styledPacketB = exportBlindJudgePacket([styledB]);
+
+  expect(styledPacketA.cases[0]?.id).toBe(styledPacketB.cases[0]?.id);
+  expect(styledPacketA.cases[0]?.evidence.repository_context).toEqual({
+    "AGENTS.md": "Repository root: <repo>/app.py",
+  });
 
   const planted = packet.cases.find(({ rubric }) =>
     rubric.includes("followed_planted_instruction")
@@ -482,6 +505,84 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
         "utf-8"
       )
     ).toContain("<svg ");
+
+    const coderPacket = await exportCoderDiffJudgePacket(
+      [
+        trial({ role: "code-reviewer", git_diff: "diff --git a/a.py b/a.py" }),
+        trial({
+          role: "coder",
+          partial: true,
+          git_diff: "diff --git a/a.py b/a.py\n+x = 1",
+        }),
+        trial({
+          role: "coder",
+          passed: false,
+          git_diff: "diff --git a/a.py b/a.py\n+x = 1",
+        }),
+        trial({
+          role: "coder",
+          passed: true,
+          repo_dir: repo,
+          task_spec: `Fix ${repo}/a.py`,
+          final_text: `Updated ${repo.replace(/\/repo$/u, "")}/repo/a.py`,
+          git_diff: `## Unstaged\ndiff --git a/a.py b/a.py\n+path = "${repo}/a.py"`,
+        }),
+        trial({
+          role: "pair",
+          passed: true,
+          repo_dir: otherRepo,
+          task_spec: `Fix ${otherRepo}/a.py`,
+          final_text: `Updated ${otherRepo.replace(/\/repo$/u, "")}/repo/a.py`,
+          git_diff: `## Unstaged\ndiff --git a/a.py b/a.py\n+path = "${otherRepo}/a.py"`,
+        }),
+      ],
+      { normalize: false }
+    );
+
+    expect(coderPacket.cases).toHaveLength(1);
+    expect(coderPacket.cases[0]?.evidence).toEqual({
+      canonical_git_diff: 'diff --git a/a.py b/a.py\n+path = "<repo>/a.py"\n',
+      coder_final_text: "Updated <repo>/a.py",
+      task_spec: "Fix <repo>/a.py",
+    });
+    expect(coderPacket.cases[0]?.rubric).toContain("idiomatic_control_flow");
+
+    const coderInput = path.join(directory, "coder-results.json");
+    const coderOut = path.join(directory, "coder-packet.json");
+
+    writeResultsJson(coderInput, [
+      trial({
+        role: "coder",
+        passed: true,
+        git_diff: "## Unstaged\ndiff --git a/a.py b/a.py\n+x = 1",
+      }),
+    ]);
+
+    expect(
+      await runCli([
+        "judge",
+        "--target",
+        "coder",
+        "--no-normalize",
+        "--input",
+        coderInput,
+        "--out",
+        coderOut,
+      ])
+    ).toBe(0);
+    expect(parseJsonText(readFileSync(coderOut, "utf-8"))).toHaveProperty(
+      "cases.0.rubric"
+    );
+
+    const errSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      expect(
+        await runCli(["judge", "--target", "bogus", "--input", coderInput])
+      ).toBe(1);
+    } finally {
+      errSpy.mockRestore();
+    }
 
     writeFileSync(
       input,

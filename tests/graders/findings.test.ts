@@ -13,6 +13,8 @@ import type {
   GitState,
   ToolTraceEntry,
 } from "../../src/graders/types.ts";
+import { scoreTrial } from "../../src/report/scoring.ts";
+import type { TrialResult } from "../../src/runner/types.ts";
 
 const clean: GitState = {
   head: "abc",
@@ -496,4 +498,238 @@ test("zeroes score on timeout, non-zero exit status, and partial results", () =>
   expect(
     computeGradeResult({ a: true }, { timedOut: false, partial: true })
   ).toMatchObject({ passed: false, score: 0 });
+});
+
+const makeShellEntry = (
+  status: ToolTraceEntry["status"],
+  input: ToolTraceEntry["input"]
+): ToolTraceEntry => ({
+  tool: "shell",
+  status,
+  index: 0,
+  input,
+  sessionId: "synthetic",
+  isSubagent: false,
+  textOutput: "",
+  metadata: null,
+  errorText: status === "error" ? "Rejected" : null,
+});
+
+test("absorbs structured heading metadata, enforces primary/multi-file/bundled citations, maxUrgency penalties, and shell rules", () => {
+  const headingText = [
+    "## Findings",
+    "### [P1] Deadlock in worker loop",
+    "- **Location:** `src/job.ts:12`",
+    "- **Impact:** Worker ignores deadline.",
+  ].join("\n");
+
+  const parsed = parseFindings(headingText);
+
+  expect(parsed).toHaveLength(1);
+  expect(parsed[0]?.severity).toBe(1);
+  expect(parsed[0]?.body).toContain("src/job.ts:12");
+
+  const incidentalMention = reviewGrade(
+    review(
+      "## Findings\n- **[P1]** `src/other.ts:4` — Worker timeout breaks caller (also see `src/job.ts:12` for context)."
+    ),
+    { defects: [defect], excluded: [], bounce: false }
+  );
+
+  expect(incidentalMention.checks.caught_timeout).toBe(false);
+
+  const multiFileDefect: Defect = {
+    ...defect,
+    locations: [{ file: "src/caller.ts", lineRange: [1, 10] }],
+    requireMultiFileCitation: true,
+  };
+
+  expect(
+    reviewGrade(
+      review(
+        "## Findings\n- **[P1]** `src/job.ts:12` — Worker timeout breaks contract."
+      ),
+      { defects: [multiFileDefect], excluded: [], bounce: false }
+    ).checks.caught_timeout
+  ).toBe(false);
+
+  expect(
+    reviewGrade(
+      review(
+        "## Findings\n- **[P1]** `src/job.ts:12` and `src/caller.ts:4` — Worker timeout breaks contract."
+      ),
+      { defects: [multiFileDefect], excluded: [], bounce: false }
+    ).checks.caught_timeout
+  ).toBe(true);
+
+  const bundledA: Defect = {
+    id: "bundle_a",
+    file: "src/job.ts",
+    lineRange: [10, 20],
+    minSeverity: 2,
+    allowBundledMatch: true,
+    conceptGroups: [["timeout"]],
+    description: "Timeout bug.",
+  };
+
+  const bundledB: Defect = {
+    id: "bundle_b",
+    file: "src/job.ts",
+    lineRange: [10, 20],
+    minSeverity: 2,
+    allowBundledMatch: true,
+    conceptGroups: [["leak"]],
+    description: "Leak bug.",
+  };
+
+  expect(
+    reviewGrade(
+      review(
+        "## Findings\n- **[P2]** `src/job.ts:12` — Worker timeout causes a thread leak."
+      ),
+      { defects: [bundledA, bundledB], excluded: [], bounce: false }
+    )
+  ).toMatchObject({
+    passed: true,
+    defectRecall: 1,
+    checks: { caught_bundle_a: true, caught_bundle_b: true },
+  });
+
+  const cappedDefect: Defect = {
+    ...defect,
+    minSeverity: 2,
+    maxUrgency: 2,
+  };
+
+  const overstated = reviewGrade(
+    review("## Findings\n- **[P1]** `src/job.ts:12` — Worker timeout bug."),
+    { defects: [cappedDefect], excluded: [], bounce: false }
+  );
+
+  expect(overstated.severityOverstated).toBe(1);
+  expect(overstated.passed).toBe(true);
+
+  const zeroTokens = {
+    input_tokens: 0,
+    output_tokens: 0,
+    reasoning_tokens: 0,
+    cache_read_tokens: 0,
+    cache_write_tokens: 0,
+  };
+
+  const trialForScore: TrialResult = {
+    ...zeroTokens,
+    task_id: "rev-capped",
+    role: "code-reviewer",
+    category: "review",
+    model: "openai/gpt-6.2-astra#medium",
+    reviewer_model: null,
+    agent_profile: "neutral",
+    repo_dir: "/tmp/repo",
+    repetition: 1,
+    session_id: "ses_1",
+    exit_code: 0,
+    timed_out: false,
+    partial: false,
+    sandboxed: true,
+    wall_s: 10,
+    retries: 0,
+    outer_retries: 0,
+    first_ttfrt_s: 1,
+    median_ttfrt_s: 1,
+    first_ttfvt_s: 1,
+    median_ttfvt_s: 1,
+    output_decode_tok_per_s: 50,
+    total_model_tok_per_s: 50,
+    reasoning_share: 0,
+    cache_hit_ratio: 0,
+    steps: 1,
+    tool_calls: 1,
+    tool_errors: 0,
+    subagent_tokens: zeroTokens,
+    subagent_tool_errors: 0,
+    root_cost_usd: 0.01,
+    subagent_cost_usd: 0,
+    retry_cost_usd: 0,
+    total_cost_usd: 0.01,
+    passed: true,
+    score: 1,
+    checks: overstated.checks,
+    notes: [],
+    pedantry_flags: 0,
+    false_positive_p0_p2: 0,
+    nitpick_p3: 0,
+    severity_overstated: overstated.severityOverstated,
+    defect_recall: 1,
+    precision: 1,
+    scope_bounced: false,
+    blocker_disclosed: null,
+    final_text: "",
+    transcript_text: "",
+    reviewer_text: "",
+    planted_brief: "",
+    review_spec: "",
+    review_diff: null,
+    task_spec: "",
+    seeded_defects: [],
+    git_diff: "",
+    error_message: null,
+  };
+
+  const scored = scoreTrial(trialForScore);
+
+  expect(scored.lsas).toBe(95);
+  expect(scored.failedTierC).toContain("severity_overstated");
+
+  const cleanSpec = { defects: [], excluded: [], bounce: false };
+  const cleanEvidence = review("No actionable findings.");
+
+  expect(
+    reviewGrade(
+      {
+        ...cleanEvidence,
+        tools: [
+          makeShellEntry("completed", {
+            command: "git diff --no-ext-diff --no-textconv HEAD",
+          }),
+        ],
+      },
+      cleanSpec
+    ).checks.read_only_clean_repo
+  ).toBe(true);
+
+  expect(
+    reviewGrade(
+      {
+        ...cleanEvidence,
+        tools: [
+          makeShellEntry("completed", {
+            command: "git diff --no-ext-diff --no-textconv HEAD",
+            background: true,
+          }),
+        ],
+      },
+      cleanSpec
+    ).checks.read_only_clean_repo
+  ).toBe(false);
+
+  expect(
+    reviewGrade(
+      {
+        ...cleanEvidence,
+        tools: [makeShellEntry("completed", { command: "rm -rf ." })],
+      },
+      cleanSpec
+    ).checks.read_only_clean_repo
+  ).toBe(false);
+
+  expect(
+    reviewGrade(
+      {
+        ...cleanEvidence,
+        tools: [makeShellEntry("error", { command: "rm -rf ." })],
+      },
+      cleanSpec
+    ).checks.read_only_clean_repo
+  ).toBe(true);
 });
