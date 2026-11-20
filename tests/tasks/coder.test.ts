@@ -1305,7 +1305,7 @@ test("runs tsc grading inside bwrap and blocks incremental writes outside the re
 const referencesById = new Map(references.map((entry) => [entry.id, entry]));
 
 for (const task of CODER_TASKS) {
-  test(`${task.id}: rejects the baseline and accepts a reference fix`, async () => {
+  test.concurrent(`${task.id}: rejects the baseline and accepts a reference fix`, async () => {
     const reference = referencesById.get(task.id);
 
     if (!reference) {
@@ -1491,161 +1491,7 @@ test("passes at runtime", () => { const value: any = true; expect(value).toBe(tr
         }
 
         case "test-rigor": {
-          const modelsPath = nodePath.join(ev.repoDir, "src/models.ts");
-          const testPath = nodePath.join(ev.repoDir, "tests/models.test.ts");
-          const goodModels = await readFile(modelsPath, "utf-8");
-          const goodTests = await readFile(testPath, "utf-8");
-
-          await writeFile(
-            testPath,
-            `${goodTests}
-test("mirrors constants via as const", () => {
-  const expected = [
-    "openai/gpt-fast#medium",
-    "openrouter/anthropic/claude-core#high",
-    "google/gemini-pro#medium",
-  ] as const;
-
-  expect(DEFAULT_MODELS).toEqual(expected);
-});
-`
-          );
-
-          const tautologicalAsConst = await grade(patched);
-
-          expect(tautologicalAsConst.checks.no_tautological_tests).toBe(false);
-          expect(tautologicalAsConst.passed).toBe(false);
-
-          await writeFile(
-            testPath,
-            `${goodTests}
-test("mirrors constants via toContain", () => {
-  expect(DEFAULT_MODELS).toContain("openai/gpt-fast#medium");
-  expect(DEFAULT_MODELS).toContain("google/gemini-pro#medium");
-});
-`
-          );
-
-          const tautologicalContain = await grade(patched);
-
-          expect(tautologicalContain.checks.no_tautological_tests).toBe(false);
-          expect(tautologicalContain.passed).toBe(false);
-
-          await writeFile(
-            testPath,
-            `${goodTests}
-test("validates DEFAULT_MODELS and parses example specs in one behavioral test", () => {
-  expect(parseModelSpec("openai/gpt-fast#medium").modelID).toBe("gpt-fast");
-  expect(parseModelSpec("openrouter/anthropic/claude-core#high").modelID).toBe("anthropic/claude-core");
-  expect(parseModelSpec("google/gemini-pro#medium").modelID).toBe("gemini-pro");
-  expect(DEFAULT_MODELS.length).toBeGreaterThan(0);
-});
-`
-          );
-
-          const validCoOccurrence = await grade(patched);
-
-          expect(validCoOccurrence.checks.no_tautological_tests).toBe(true);
-          expect(validCoOccurrence.passed).toBe(true);
-
-          await writeFile(
-            modelsPath,
-            goodModels.replace(
-              "if (!model.enabled) throw new Error(`Disabled model: $" +
-                "{parsed.providerID}/$" +
-                "{parsed.modelID}`);",
-              "if (!model.enabled) throw new Error(`Disabled model: $" +
-                "{spec}`);"
-            )
-          );
-          await writeFile(
-            testPath,
-            goodTests.replace(
-              '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);',
-              '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow("Disabled model: openai/gpt-old#medium");'
-            )
-          );
-
-          const customDisabledSuffix = await grade(patched);
-
-          expect(customDisabledSuffix.checks.tests_kill_mutants).toBe(true);
-          expect(customDisabledSuffix.passed).toBe(true);
-
-          await writeFile(modelsPath, goodModels);
-          await writeFile(
-            testPath,
-            goodTests.replace(
-              '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);\n',
-              ""
-            )
-          );
-
-          const missedDisabledMutant = await grade(patched);
-
-          expect(missedDisabledMutant.checks.bun_tests_pass).toBe(true);
-          expect(missedDisabledMutant.checks.catalog_contract).toBe(true);
-          expect(missedDisabledMutant.checks.tests_kill_mutants).toBe(false);
-          expect(missedDisabledMutant.passed).toBe(false);
-
-          await writeFile(
-            testPath,
-            goodTests
-              .replace('wireModel: "gpt-wire-v1"', 'wireModel: "gpt-fast"')
-              .replace('wireModel: "gpt-old-wire"', 'wireModel: "gpt-old"')
-              .replace(
-                '  expect(() => validateModels(["openai/gpt-wire-v1#medium"], providers)).toThrow(/Unknown model:/u);\n',
-                ""
-              )
-          );
-
-          const missedAliasMutant = await grade(patched);
-
-          expect(missedAliasMutant.checks.tests_kill_mutants).toBe(false);
-          expect(missedAliasMutant.passed).toBe(false);
-
-          await writeFile(
-            testPath,
-            goodTests
-              .replace(
-                "openrouter/anthropic/claude-core#high",
-                "openrouter/claude-core#high"
-              )
-              .replace(
-                "openrouter/anthropic/claude-core#high",
-                "openrouter/claude-core#high"
-              )
-              .replace(
-                'modelID: "anthropic/claude-core"',
-                'modelID: "claude-core"'
-              )
-              .replace(
-                'modelID: "anthropic/claude-core"',
-                'modelID: "claude-core"'
-              )
-              .replace(
-                /for \(const spec of DEFAULT_MODELS\)[\s\S]*?\n {2}\}/u,
-                ""
-              )
-          );
-
-          const missedMultiSlashMutant = await grade(patched);
-
-          expect(missedMultiSlashMutant.checks.tests_kill_mutants).toBe(false);
-          expect(missedMultiSlashMutant.passed).toBe(false);
-
-          await writeFile(
-            testPath,
-            goodTests.replace(
-              '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);',
-              '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow("Unrelated custom message");'
-            )
-          );
-
-          const failingTests = await grade(patched);
-
-          expect(failingTests.checks.bun_tests_pass).toBe(false);
-          expect(failingTests.checks.tests_kill_mutants).toBe(false);
-          expect(failingTests.passed).toBe(false);
+          // Detailed tautology and mutation-killing edge cases run concurrently below.
           break;
         }
 
@@ -1655,4 +1501,188 @@ test("validates DEFAULT_MODELS and parses example specs in one behavioral test",
       }
     });
   }, 30_000);
+}
+
+const testRigorTask = CODER_TASKS.find(
+  (task) => task.id === "coder-ts-catalog-alias-and-test-rigor"
+);
+
+const testRigorRef = referencesById.get(
+  "coder-ts-catalog-alias-and-test-rigor"
+);
+
+const testRigorVariants: readonly {
+  readonly name: string;
+  readonly mutate: (
+    goodModels: string,
+    goodTests: string
+  ) => { readonly models?: string; readonly tests: string };
+  readonly assert: (grade: Awaited<ReturnType<EvalTask["grade"]>>) => void;
+}[] = [
+  {
+    name: "rejects tautological as const mirror",
+    mutate: (_goodModels, goodTests) => ({
+      tests: `${goodTests}
+test("mirrors constants via as const", () => {
+  const expected = [
+    "openai/gpt-fast#medium",
+    "openrouter/anthropic/claude-core#high",
+    "google/gemini-pro#medium",
+  ] as const;
+
+  expect(DEFAULT_MODELS).toEqual(expected);
+});
+`,
+    }),
+    assert: (grade) => {
+      expect(grade.checks.no_tautological_tests).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+  {
+    name: "rejects tautological toContain mirror",
+    mutate: (_goodModels, goodTests) => ({
+      tests: `${goodTests}
+test("mirrors constants via toContain", () => {
+  expect(DEFAULT_MODELS).toContain("openai/gpt-fast#medium");
+  expect(DEFAULT_MODELS).toContain("google/gemini-pro#medium");
+});
+`,
+    }),
+    assert: (grade) => {
+      expect(grade.checks.no_tautological_tests).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+  {
+    name: "accepts behavioral co-occurrence with DEFAULT_MODELS",
+    mutate: (_goodModels, goodTests) => ({
+      tests: `${goodTests}
+test("validates DEFAULT_MODELS and parses example specs in one behavioral test", () => {
+  expect(parseModelSpec("openai/gpt-fast#medium").modelID).toBe("gpt-fast");
+  expect(parseModelSpec("openrouter/anthropic/claude-core#high").modelID).toBe("anthropic/claude-core");
+  expect(parseModelSpec("google/gemini-pro#medium").modelID).toBe("gemini-pro");
+  expect(DEFAULT_MODELS.length).toBeGreaterThan(0);
+});
+`,
+    }),
+    assert: (grade) => {
+      expect(grade.checks.no_tautological_tests).toBe(true);
+      expect(grade.passed).toBe(true);
+    },
+  },
+  {
+    name: "kills mutants with custom disabled error suffix",
+    mutate: (goodModels, goodTests) => ({
+      models: goodModels.replace(
+        "if (!model.enabled) throw new Error(`Disabled model: $" +
+          "{parsed.providerID}/$" +
+          "{parsed.modelID}`);",
+        `if (!model.enabled) throw new Error(\`Disabled model: \${spec}\`);`
+      ),
+      tests: goodTests.replace(
+        '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);',
+        '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow("Disabled model: openai/gpt-old#medium");'
+      ),
+    }),
+    assert: (grade) => {
+      expect(grade.checks.tests_kill_mutants).toBe(true);
+      expect(grade.passed).toBe(true);
+    },
+  },
+  {
+    name: "detects missed disabled-model mutant",
+    mutate: (_goodModels, goodTests) => ({
+      tests: goodTests.replace(
+        '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);\n',
+        ""
+      ),
+    }),
+    assert: (grade) => {
+      expect(grade.checks.bun_tests_pass).toBe(true);
+      expect(grade.checks.catalog_contract).toBe(true);
+      expect(grade.checks.tests_kill_mutants).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+  {
+    name: "detects missed wireModel alias mutant",
+    mutate: (_goodModels, goodTests) => ({
+      tests: goodTests
+        .replace('wireModel: "gpt-wire-v1"', 'wireModel: "gpt-fast"')
+        .replace('wireModel: "gpt-old-wire"', 'wireModel: "gpt-old"')
+        .replace(
+          '  expect(() => validateModels(["openai/gpt-wire-v1#medium"], providers)).toThrow(/Unknown model:/u);\n',
+          ""
+        ),
+    }),
+    assert: (grade) => {
+      expect(grade.checks.tests_kill_mutants).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+  {
+    name: "detects missed multi-slash mutant",
+    mutate: (_goodModels, goodTests) => ({
+      tests: goodTests
+        .replace(
+          "openrouter/anthropic/claude-core#high",
+          "openrouter/claude-core#high"
+        )
+        .replace(
+          "openrouter/anthropic/claude-core#high",
+          "openrouter/claude-core#high"
+        )
+        .replace('modelID: "anthropic/claude-core"', 'modelID: "claude-core"')
+        .replace('modelID: "anthropic/claude-core"', 'modelID: "claude-core"')
+        .replace(/for \(const spec of DEFAULT_MODELS\)[\s\S]*?\n {2}\}/u, ""),
+    }),
+    assert: (grade) => {
+      expect(grade.checks.tests_kill_mutants).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+  {
+    name: "fails when unit tests fail on unmutated implementation",
+    mutate: (_goodModels, goodTests) => ({
+      tests: goodTests.replace(
+        '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow(/Disabled model:/u);',
+        '  expect(() => validateModels(["openai/gpt-old#medium"], providers)).toThrow("Unrelated custom message");'
+      ),
+    }),
+    assert: (grade) => {
+      expect(grade.checks.bun_tests_pass).toBe(false);
+      expect(grade.checks.tests_kill_mutants).toBe(false);
+      expect(grade.passed).toBe(false);
+    },
+  },
+];
+
+if (testRigorTask !== undefined && testRigorRef !== undefined) {
+  test.concurrent.each(testRigorVariants)(
+    "coder-ts-catalog-alias-and-test-rigor: $name",
+    async ({ mutate, assert }) => {
+      await withFixture(testRigorTask, async (ev, setup) => {
+        const patched = await patchedEvidence(
+          testRigorTask,
+          ev,
+          testRigorRef.files
+        );
+
+        const modelsPath = nodePath.join(ev.repoDir, "src/models.ts");
+        const testPath = nodePath.join(ev.repoDir, "tests/models.test.ts");
+        const goodModels = await readFile(modelsPath, "utf-8");
+        const goodTests = await readFile(testPath, "utf-8");
+        const next = mutate(goodModels, goodTests);
+
+        if (next.models !== undefined) {
+          await writeFile(modelsPath, next.models);
+        }
+
+        await writeFile(testPath, next.tests);
+        assert(await testRigorTask.grade(patched, setup));
+      });
+    },
+    30_000
+  );
 }

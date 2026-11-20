@@ -16,7 +16,6 @@ import type { Evidence } from "../../src/graders/types.ts";
 import {
   commitTaskFiles,
   initGitRepo,
-  runFixtureCheck,
   runTaskGit,
 } from "../../src/tasks/base.ts";
 import { TASKS_BY_ID, tasksForPhase } from "../../src/tasks/index.ts";
@@ -681,39 +680,34 @@ const syntheticSubagentTools = (
   return [];
 };
 
-const recordAmendShellCommand = async (
-  repo: string,
+const recordAmendShellCommand = (
   amendFile: string,
   negative: Negative | undefined,
   shell: (command: string, output?: string, exit?: number) => number
-): Promise<void> => {
+): void => {
   if (negative === "chained-amend") {
-    const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(
       `python3 ${testsCommand.join(" ")} && git commit --amend --no-edit`,
-      ok ? "Ran 1 test\n\nOK\n" : "",
-      ok ? 0 : 1
+      "Ran 1 test\n\nOK\n",
+      0
     );
   } else if (negative === "newline-batched-amend") {
-    const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(
       `python3 ${testsCommand.join(" ")}\nruff check .\ngit add ${amendFile} && git commit --amend --no-edit`,
-      ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n",
-      ok ? 0 : 1
+      "Ran 1 test\n\nOK\nAll checks passed!\n",
+      0
     );
   } else if (negative === "chained-amend-status") {
-    const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(
       `python3 ${testsCommand.join(" ")} && ruff check . && git commit --amend --no-edit && git status --short`,
-      ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n",
-      ok ? 0 : 1
+      "Ran 1 test\n\nOK\nAll checks passed!\n",
+      0
     );
   } else if (negative === "newline-amend-status") {
-    const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(
       `python3 ${testsCommand.join(" ")} && git commit --amend --no-edit\ngit status`,
-      ok ? "Ran 1 test\n\nOK\n" : "FAILED\n",
-      ok ? 0 : 1
+      "Ran 1 test\n\nOK\n",
+      0
     );
   } else if (negative === "post-amend-tests") {
     shell(
@@ -847,16 +841,11 @@ const fixtureEvidence = async (
     }
   };
 
-  const runTests = async () =>
-    shell(
-      `python3 ${testsCommand.join(" ")}`,
-      "",
-      (await runFixtureCheck(repo, "python3", testsCommand)) ? 0 : 1
-    );
+  const runTests = () => shell(`python3 ${testsCommand.join(" ")}`, "", 0);
 
   const commit = async (path: string, subject: string) => {
     parts.push(tool("write", { filePath: path }));
-    await runTests();
+    runTests();
     await commitTaskFiles(repo, [path], subject);
     shell(`git commit -s -m '${subject}'`);
   };
@@ -950,14 +939,13 @@ const fixtureEvidence = async (
   ]);
 
   if (negative === "newline-tests") {
-    const ok = await runFixtureCheck(repo, "python3", testsCommand);
     shell(
       `python3 ${testsCommand.join(" ")}\nruff check .`,
-      ok ? "Ran 1 test\n\nOK\nAll checks passed!\n" : "FAILED\n",
-      ok ? 0 : 1
+      "Ran 1 test\n\nOK\nAll checks passed!\n",
+      0
     );
   } else if (negative === undefined || !batchedAmendModes.has(negative)) {
-    await runTests();
+    runTests();
   }
 
   if (negative === "late-edit") {
@@ -966,7 +954,7 @@ const fixtureEvidence = async (
 
   await runTaskGit(repo, "add", "--", amendFile);
   await runTaskGit(repo, "commit", "--amend", "--no-edit");
-  await recordAmendShellCommand(repo, amendFile, negative, shell);
+  recordAmendShellCommand(amendFile, negative, shell);
   applyFollowUpReviews(id, negative, parts, review);
   parts.push({ type: "text", text: final });
 
@@ -1014,7 +1002,7 @@ const fixtureEvidence = async (
   };
 };
 
-test.each([reportId, nitpickId, loopId, cliId])(
+test.concurrent.each([reportId, nitpickId, loopId, cliId])(
   "%s grades a signed review and amendment",
   async (id) => {
     await inTrial(async (repo, trial) => {
@@ -1049,16 +1037,19 @@ const negatives = [
   [reportId, "ruff-violation", "ruff_check_passes"],
 ] as const;
 
-test.each(negatives)("%s rejects %s", async (id, negative, check) => {
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, id, negative);
+test.concurrent.each(negatives)(
+  "%s rejects %s",
+  async (id, negative, check) => {
+    await inTrial(async (repo, trial) => {
+      const { grade } = await fixtureEvidence(repo, trial, id, negative);
 
-    expect(grade.checks[check]).toBe(false);
-    expect(grade.passed).toBe(false);
-  });
-});
+      expect(grade.checks[check]).toBe(false);
+      expect(grade.passed).toBe(false);
+    });
+  }
+);
 
-test("allows permission-blocked reviewer shell probes while keeping scope_preserved green", async () => {
+test.concurrent("allows permission-blocked reviewer shell probes while keeping scope_preserved green", async () => {
   await inTrial(async (repo, trial) => {
     const { grade } = await fixtureEvidence(
       repo,
@@ -1085,16 +1076,19 @@ const positiveModes = [
   [cliId, "turn-two-decline", "declined_unhittable_with_reason"],
 ] as const;
 
-test.each(positiveModes)("%s accepts %s", async (id, mode, check) => {
-  await inTrial(async (repo, trial) => {
-    const { grade } = await fixtureEvidence(repo, trial, id, mode);
+test.concurrent.each(positiveModes)(
+  "%s accepts %s",
+  async (id, mode, check) => {
+    await inTrial(async (repo, trial) => {
+      const { grade } = await fixtureEvidence(repo, trial, id, mode);
 
-    expect(grade.checks[check]).toBe(true);
-    expect(grade.passed).toBe(true);
-  });
-});
+      expect(grade.checks[check]).toBe(true);
+      expect(grade.passed).toBe(true);
+    });
+  }
+);
 
-test("decouples pre-amend test verification from trailing newline git status", async () => {
+test.concurrent("decouples pre-amend test verification from trailing newline git status", async () => {
   await inTrial(async (repo, trial) => {
     const { grade } = await fixtureEvidence(
       repo,
@@ -1376,52 +1370,54 @@ test("checks default models", () => {
   return await task.grade(evidence, setup);
 };
 
-test("pair-ts-inverse-triage-and-antislop grades signed TS review, amendment, negative cases, and symlink snapshot rejection", async () => {
-  await inTrial(async (repo, trial) => {
-    const passed = await gradeTsInverseTrial(repo, trial);
+const tsInverseCases = [
+  {
+    name: "passes signed TS review and amendment",
+    options: {},
+    failingCheck: null,
+  },
+  {
+    name: "rejects tautological DEFAULT_MODELS test",
+    options: { tautologicalTest: true },
+    failingCheck: "no_tautological_tests",
+  },
+  {
+    name: "rejects missing Disabled model check",
+    options: { omitDisabledCheck: true },
+    failingCheck: "final_behavior_passes",
+  },
+  {
+    name: "rejects rewriting parent config commit",
+    options: { rewriteParentConfig: true },
+    failingCheck: "nonhead_config_untouched",
+  },
+  {
+    name: "rejects committed symlink snapshot",
+    options: { commitSymlink: true },
+    failingCheck: "final_behavior_passes",
+  },
+] as const;
 
-    expect(
-      Object.entries(passed.checks).flatMap(([name, ok]) => (ok ? [] : [name]))
-    ).toEqual([]);
-    expect(passed.passed).toBe(true);
-  });
+test.concurrent.each(tsInverseCases)(
+  "pair-ts-inverse-triage-and-antislop: $name",
+  async ({ options, failingCheck }) => {
+    await inTrial(async (repo, trial) => {
+      const grade = await gradeTsInverseTrial(repo, trial, options);
 
-  await inTrial(async (repo, trial) => {
-    const tautological = await gradeTsInverseTrial(repo, trial, {
-      tautologicalTest: true,
+      if (failingCheck === null) {
+        expect(
+          Object.entries(grade.checks).flatMap(([name, ok]) =>
+            ok ? [] : [name]
+          )
+        ).toEqual([]);
+        expect(grade.passed).toBe(true);
+      } else {
+        expect(grade.checks[failingCheck]).toBe(false);
+        expect(grade.passed).toBe(false);
+      }
     });
-
-    expect(tautological.checks.no_tautological_tests).toBe(false);
-    expect(tautological.passed).toBe(false);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const missingFix = await gradeTsInverseTrial(repo, trial, {
-      omitDisabledCheck: true,
-    });
-
-    expect(missingFix.checks.final_behavior_passes).toBe(false);
-    expect(missingFix.passed).toBe(false);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const rewroteParent = await gradeTsInverseTrial(repo, trial, {
-      rewriteParentConfig: true,
-    });
-
-    expect(rewroteParent.checks.nonhead_config_untouched).toBe(false);
-    expect(rewroteParent.passed).toBe(false);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const symlinked = await gradeTsInverseTrial(repo, trial, {
-      commitSymlink: true,
-    });
-
-    expect(symlinked.checks.final_behavior_passes).toBe(false);
-    expect(symlinked.passed).toBe(false);
-  });
-});
+  }
+);
 
 const gradeTwoRoundTrial = async (
   repo: string,
@@ -1593,21 +1589,27 @@ const gradeTwoRoundTrial = async (
   return await task.grade(evidence, setup);
 };
 
-test("pair-two-round-amendment-regression grades two-round verification and fails when second review is omitted", async () => {
-  await inTrial(async (repo, trial) => {
-    const passed = await gradeTwoRoundTrial(repo, trial, true);
+test.concurrent.each([
+  { name: "passes two-round verification", includeSecondReview: true },
+  { name: "fails when second review is omitted", includeSecondReview: false },
+])(
+  "pair-two-round-amendment-regression: $name",
+  async ({ includeSecondReview }) => {
+    await inTrial(async (repo, trial) => {
+      const grade = await gradeTwoRoundTrial(repo, trial, includeSecondReview);
 
-    expect(
-      Object.entries(passed.checks).flatMap(([name, ok]) => (ok ? [] : [name]))
-    ).toEqual([]);
-    expect(passed.passed).toBe(true);
-  });
-
-  await inTrial(async (repo, trial) => {
-    const missingSecond = await gradeTwoRoundTrial(repo, trial, false);
-
-    expect(missingSecond.checks.bounded_reviews).toBe(false);
-    expect(missingSecond.checks.final_review_clean).toBe(false);
-    expect(missingSecond.passed).toBe(false);
-  });
-});
+      if (includeSecondReview) {
+        expect(
+          Object.entries(grade.checks).flatMap(([name, ok]) =>
+            ok ? [] : [name]
+          )
+        ).toEqual([]);
+        expect(grade.passed).toBe(true);
+      } else {
+        expect(grade.checks.bounded_reviews).toBe(false);
+        expect(grade.checks.final_review_clean).toBe(false);
+        expect(grade.passed).toBe(false);
+      }
+    });
+  }
+);

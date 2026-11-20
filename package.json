@@ -11,7 +11,7 @@
     "lint": "oxlint --type-aware .",
     "format": "oxfmt --write .",
     "check": "oxlint --type-aware . && oxfmt --check .",
-    "test": "bun test"
+    "test": "bun test --parallel"
   },
   "dependencies": {
     "@opencode/client": "2.3.2",

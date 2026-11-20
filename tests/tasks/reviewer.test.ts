@@ -522,7 +522,7 @@ const expectedSpecialChecks = (reference: (typeof cases)[number]): string[] => {
 const casesById = new Map(cases.map((entry) => [entry.id, entry]));
 
 for (const task of REVIEWER_TASKS) {
-  test(`${task.id}: seeds the review scope and grades review responses`, async () => {
+  test.concurrent(`${task.id}: seeds the review scope and grades review responses`, async () => {
     const reference = casesById.get(task.id);
 
     if (!reference) {
