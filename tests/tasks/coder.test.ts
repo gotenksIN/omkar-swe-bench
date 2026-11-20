@@ -932,7 +932,10 @@ const isNotFoundError = (cause: unknown): boolean => {
     return false;
   }
 
-  if (cause.message.includes("PermissionNotFoundError")) {
+  if (
+    cause.name === "PermissionNotFoundError" ||
+    cause.message.includes("PermissionNotFoundError")
+  ) {
     return true;
   }
 
@@ -966,15 +969,16 @@ export async function preflightAll(
 
   const settled = await Promise.allSettled(
     providers.map(async (provider) => {
-      const daemon = await startDaemon(provider, ac.signal);
+      let daemon: PreflightDaemon | undefined;
 
       try {
+        daemon = await startDaemon(provider, ac.signal);
         await validate(provider, ac.signal);
       } catch (error: unknown) {
         ac.abort();
         throw error;
       } finally {
-        await daemon.stop();
+        await daemon?.stop();
       }
     })
   );

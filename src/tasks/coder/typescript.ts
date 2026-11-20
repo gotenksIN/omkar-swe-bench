@@ -1035,9 +1035,9 @@ Fix \`src/craft-isolation.ts\` to safely parse multi-stage git diff summaries, b
 2. \`buildSafeFormatArgs(oxfmtBin, repoDir, changedFiles)\` must:
    - Reject paths that are empty, start with \`-\`, are absolute, or traverse outside \`repoDir\` (\`..\`).
    - Reject symlinks (checked via \`lstatSync\`) and any path whose resolved parent escapes \`repoDir\`.
-   - Include \`--disable-nested-config\` and \`--\` before the validated positional file arguments.
+   - Include \`--write\`, \`--disable-nested-config\`, and \`--\` before the validated repo-relative positional file arguments.
    - Return \`[]\` if no valid regular files remain.
-3. \`normalizeDiagnosticPath(repoDir, rawFilename)\` must return a clean repo-relative POSIX path without resolving already-relative filenames against host \`process.cwd()\`.
+3. \`normalizeDiagnosticPath(repoDir, rawFilename)\` must return a clean repo-relative POSIX (\`/\`-separated) path, converting any \`\\\` separators and stripping leading \`./\`, without resolving already-relative filenames against host \`process.cwd()\`.
 
 Follow \`AGENTS.md\` and add unit tests in \`tests/craft-isolation.test.ts\`.
 `,
@@ -1053,11 +1053,12 @@ export interface DiffSections {
 
 export function splitGitDiffSections(raw: string): DiffSections {
   let active: "committed" | "staged" | "unstaged" | null = null;
-  const buckets = {
-    committed: [] as string[],
-    staged: [] as string[],
-    unstaged: [] as string[],
-  };
+  const buckets: { committed: string[]; staged: string[]; unstaged: string[] } =
+    {
+      committed: [],
+      staged: [],
+      unstaged: [],
+    };
   for (const line of raw.split("\\n")) {
     if (line === "## Committed") {
       active = "committed";
@@ -1110,7 +1111,7 @@ test("splits committed section", () => {
   check: "craft_isolation_contract",
   probe: `
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -1139,33 +1140,48 @@ assert.equal(sections.staged, "diff --git a/b.ts b/b.ts\\n+const b = 2;");
 assert.equal(sections.unstaged, "diff --git a/c.ts b/c.ts\\n+const c = 3;");
 assert.ok(!sections.unstaged.includes("Untracked:"));
 
-const tmp = mkdtempSync(path.join(os.tmpdir(), "craft-iso-"));
+const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "craft-iso-")));
 try {
   const repo = path.join(tmp, "repo");
+  const outsideDir = path.join(tmp, "outside-dir");
   const outside = path.join(tmp, "outside.ts");
   mkdirSync(path.join(repo, "src"), { recursive: true });
+  mkdirSync(outsideDir, { recursive: true });
   writeFileSync(path.join(repo, "src/ok.ts"), "export const x = 1;\\n");
   writeFileSync(path.join(repo, "--config=pwn.ts"), "export const bad = 1;\\n");
   writeFileSync(outside, "export const secret = 1;\\n");
+  writeFileSync(path.join(outsideDir, "escape.ts"), "export const esc = 1;\\n");
   symlinkSync(outside, path.join(repo, "src/link.ts"));
+  symlinkSync(outsideDir, path.join(repo, "src/symdir"));
 
   const args = buildSafeFormatArgs("/bin/oxfmt", repo, [
     "src/ok.ts",
+    "src",
+    path.join(repo, "src/ok.ts"),
     "--config=pwn.ts",
     "../outside.ts",
     "/etc/passwd",
     "src/link.ts",
+    "src/symdir/escape.ts",
     "",
   ]);
   assert.equal(args[0], "/bin/oxfmt");
-  assert.ok(args.includes("--disable-nested-config"), "missing --disable-nested-config");
   const sepIndex = args.indexOf("--");
   assert.ok(sepIndex > 0, "missing -- separator");
+  const optionArgs = args.slice(1, sepIndex);
+  assert.ok(optionArgs.includes("--write"), "missing --write");
+  assert.ok(optionArgs.includes("--disable-nested-config"), "missing --disable-nested-config");
+  assert.ok(
+    optionArgs.every((arg) => arg === "--write" || arg === "--disable-nested-config"),
+    "unexpected arguments before --"
+  );
   assert.deepEqual(args.slice(sepIndex + 1), ["src/ok.ts"]);
-  assert.deepEqual(buildSafeFormatArgs("/bin/oxfmt", repo, ["src/link.ts", "../outside.ts"]), []);
+  assert.deepEqual(buildSafeFormatArgs("/bin/oxfmt", repo, [path.join(repo, "src/ok.ts")]), []);
+  assert.deepEqual(buildSafeFormatArgs("/bin/oxfmt", repo, ["src/link.ts", "../outside.ts", "src/symdir/escape.ts"]), []);
 
   assert.equal(normalizeDiagnosticPath(repo, "src/ok.ts"), "src/ok.ts");
   assert.equal(normalizeDiagnosticPath(repo, "./src/ok.ts"), "src/ok.ts");
+  assert.equal(normalizeDiagnosticPath(repo, "src\\\\ok.ts"), "src/ok.ts");
   assert.equal(normalizeDiagnosticPath(repo, path.join(repo, "src/ok.ts")), "src/ok.ts");
 } finally {
   rmSync(tmp, { recursive: true, force: true });
@@ -1183,7 +1199,7 @@ Fix three production bugs in \`src/runner-core.ts\`:
 1. **Quiescence deadlock:** \`pollQuiescence\` currently sets \`state.inboxPendingAt = state.generation\` whenever \`activeSessions.has(sessionId)\` is true, permanently deadlocking once the session leaves \`activeSessions\` without another generation bump. Keep \`pollQuiescence\` non-deadlocking (returning \`false\` while active, and \`true\` once inactive and \`state.generation > state.inboxPendingAt\`).
 2. **Cursor pagination + parallel permission rejection:**
    - \`fetchAllMessages(fetchPage)\` must pass \`{ order: "asc" }\` ONLY on the first page (\`cursor === undefined\`) and pass \`{ cursor }\` (without \`order\`) on subsequent pages, because the server rejects \`order\` + \`cursor\` with HTTP 400.
-   - \`rejectPermissions(ids, reply)\` must reject all permission IDs and ignore \`404\` / \`PermissionNotFoundError\` responses caused by sibling auto-resolution, while rethrowing other errors.
+   - \`rejectPermissions(ids, reply)\` must reject all permission IDs and ignore \`404\` / \`PermissionNotFoundError\` responses (errors with \`status === 404\`, \`name === "PermissionNotFoundError"\`, or message containing \`"PermissionNotFoundError"\`) caused by sibling auto-resolution, while rethrowing other errors.
 3. **Preflight leak on early rejection:** \`preflightAll(providers, startDaemon, validate)\` must abort a local \`AbortController\` on first error, await all started daemons via \`Promise.allSettled\`, guarantee \`daemon.stop()\` runs for every started daemon, and then rethrow the first failure.
 
 Follow \`AGENTS.md\` and add unit tests in \`tests/runner-core.test.ts\`.
@@ -1286,7 +1302,7 @@ assert.equal(pollQuiescence("s1", new Set(), state), true);
 assert.equal(pollQuiescence("s1", new Set(), { generation: 1, inboxPendingAt: 1 }), false);
 
 // 2. Cursor pagination omits order when cursor is set
-const seenReqs: unknown[] = [];
+const seenReqs: { readonly order?: string; readonly cursor?: string }[] = [];
 const msgs = await fetchAllMessages<string>(async (req) => {
   seenReqs.push(req);
   if (req.cursor !== undefined && req.order !== undefined) {
@@ -1296,21 +1312,33 @@ const msgs = await fetchAllMessages<string>(async (req) => {
     assert.equal(req.order, "asc");
     return { items: ["m1", "m2"], nextCursor: "c2" };
   }
+  assert.equal(req.cursor, "c2");
   return { items: ["m3"] };
 });
 assert.deepEqual(msgs, ["m1", "m2", "m3"]);
 assert.equal(seenReqs.length, 2);
 
-// 3. Parallel permission rejection ignores 404 PermissionNotFoundError, rethrows 500
-await rejectPermissions(["p1", "p2"], async (id) => {
-  if (id === "p2") {
-    const err = Object.assign(new Error("PermissionNotFoundError"), { status: 404 });
-    throw err;
-  }
-});
+// 3. Parallel permission rejection ignores each 404 / PermissionNotFoundError form independently and rethrows 500 even alongside a 404
+for (const makeNotFound of [
+  () => Object.assign(new Error("Not found"), { status: 404 }),
+  () => Object.assign(new Error("already resolved"), { name: "PermissionNotFoundError" }),
+  () => new Error("PermissionNotFoundError: missing"),
+]) {
+  const attempted: string[] = [];
+  await rejectPermissions(["p1", "p2"], async (id) => {
+    attempted.push(id);
+    if (id === "p2") {
+      throw makeNotFound();
+    }
+  });
+  assert.deepEqual([...attempted].sort(), ["p1", "p2"]);
+}
 await assert.rejects(
   () =>
     rejectPermissions(["p1", "p2"], async (id) => {
+      if (id === "p1") {
+        throw Object.assign(new Error("Not found"), { status: 404 });
+      }
       if (id === "p2") {
         throw Object.assign(new Error("Internal server error"), { status: 500 });
       }
@@ -1318,7 +1346,7 @@ await assert.rejects(
   /Internal server error/u
 );
 
-// 4. Preflight aborts siblings and waits for all daemons to stop before throwing
+// 4. Preflight aborts siblings and waits for all daemons to stop on both validate and startup failures
 const stopped: string[] = [];
 let siblingAborted = false;
 await assert.rejects(
@@ -1353,5 +1381,42 @@ await assert.rejects(
 );
 assert.equal(siblingAborted, true);
 assert.deepEqual([...stopped].sort(), ["fast-fail", "slow-sibling"]);
+
+const startupStopped: string[] = [];
+let startupSiblingAborted = false;
+await assert.rejects(
+  () =>
+    preflightAll(
+      ["start-fail", "slow-sibling"],
+      async (provider, _signal) => {
+        if (provider === "start-fail") {
+          throw new Error("daemon spawn failed");
+        }
+        return {
+          id: provider,
+          async stop() {
+            await new Promise((r) => setTimeout(r, 15));
+            startupStopped.push(provider);
+          },
+        };
+      },
+      async (_provider, signal) => {
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) {
+            startupSiblingAborted = true;
+            resolve();
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            startupSiblingAborted = true;
+            resolve();
+          });
+        });
+      }
+    ),
+  /daemon spawn failed/u
+);
+assert.equal(startupSiblingAborted, true);
+assert.deepEqual(startupStopped, ["slow-sibling"]);
 `,
 });
