@@ -2,7 +2,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
 import { reviewGrade } from "../../graders/findings.ts";
-import type { ReviewSpec, TaskLanguage } from "../../graders/types.ts";
 import {
   commitTaskFiles,
   initGitRepo,
@@ -11,23 +10,8 @@ import {
   TS_FILES,
 } from "../base.ts";
 import type { EvalTask, FixtureFiles } from "../base.ts";
-
-interface ReviewCommit {
-  readonly message: string;
-  readonly files: FixtureFiles;
-}
-
-interface ReviewFixture {
-  readonly id: string;
-  readonly category: string;
-  readonly language: TaskLanguage;
-  readonly spec: ReviewSpec;
-  readonly initial: FixtureFiles;
-  readonly commits: readonly ReviewCommit[];
-  readonly dirty?: FixtureFiles;
-  readonly includeWorktree?: true;
-  readonly request: string;
-}
+import { MULTI_FILE_REVIEWER_FIXTURES } from "./multi-file.ts";
+import type { ReviewCommit, ReviewFixture } from "./multi-file.ts";
 
 const writeFiles = async (
   repoDir: string,
@@ -1409,4 +1393,5 @@ def test_preview_diff_rejects_invalid_shas(tmp_path, bad_sha):
       },
     ],
   }),
+  ...MULTI_FILE_REVIEWER_FIXTURES.map(reviewerTask),
 ];

@@ -12,9 +12,9 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 | Stage             | CLI flag           |  Tasks | Primary focus                                                                                                |
 | ----------------- | ------------------ | -----: | ------------------------------------------------------------------------------------------------------------ |
 | **Coder**         | `--phase coder`    |     11 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow             |
-| **Code reviewer** | `--phase reviewer` |     11 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
+| **Code reviewer** | `--phase reviewer` |     17 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
 | **Pair**          | `--phase pair`     |      4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation           |
-| **Total**         | `--phase all`      | **26** | Full coding, review, and collaboration suite                                                                 |
+| **Total**         | `--phase all`      | **32** | Full coding, review, and collaboration suite                                                                 |
 
 ## Rankings
 
@@ -195,21 +195,27 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 </details>
 
 <details>
-<summary><strong>Stage 2 — Code reviewer tasks (11)</strong></summary>
+<summary><strong>Stage 2 — Code reviewer tasks (17)</strong></summary>
 
-| Task ID                                   | Category              | Language   | Timeout |
-| ----------------------------------------- | --------------------- | ---------- | ------: |
-| `rev-clean-personal-script`               | `clean-review`        | Python     |    480s |
-| `rev-soft-commit-range-no-filelist`       | `scope-calibration`   | Python     |    480s |
-| `rev-missing-scope-true-bounce`           | `scope-calibration`   | Python     |    480s |
-| `rev-ts-redirect-leak-and-antislop`       | `standards-review`    | TypeScript |    480s |
-| `rev-py-cache-discard-and-monkeypatch`    | `standards-review`    | Python     |    480s |
-| `rev-py-ytdlp-thread-leak-and-ratelimit`  | `regression-review`   | Python     |    480s |
-| `rev-mixed-committed-plus-worktree`       | `scope-calibration`   | Mixed      |    480s |
-| `rev-calibration-trap-clean-idiomatic`    | `clean-review`        | Python     |    480s |
-| `rev-py-denylist-bandaid-rewrite`         | `architecture-review` | Python     |    480s |
-| `rev-ts-tautological-and-inverted-test`   | `standards-review`    | TypeScript |    480s |
-| `rev-py-clean-security-rewrite-restraint` | `clean-review`        | Python     |    480s |
+| Task ID                                         | Category                  | Language   | Timeout |
+| ----------------------------------------------- | ------------------------- | ---------- | ------: |
+| `rev-clean-personal-script`                     | `clean-review`            | Python     |    480s |
+| `rev-soft-commit-range-no-filelist`             | `scope-calibration`       | Python     |    480s |
+| `rev-missing-scope-true-bounce`                 | `scope-calibration`       | Python     |    480s |
+| `rev-ts-redirect-leak-and-antislop`             | `standards-review`        | TypeScript |    480s |
+| `rev-py-cache-discard-and-monkeypatch`          | `standards-review`        | Python     |    480s |
+| `rev-py-ytdlp-thread-leak-and-ratelimit`        | `regression-review`       | Python     |    480s |
+| `rev-mixed-committed-plus-worktree`             | `scope-calibration`       | Mixed      |    480s |
+| `rev-calibration-trap-clean-idiomatic`          | `clean-review`            | Python     |    480s |
+| `rev-py-denylist-bandaid-rewrite`               | `architecture-review`     | Python     |    480s |
+| `rev-ts-tautological-and-inverted-test`         | `standards-review`        | TypeScript |    480s |
+| `rev-py-clean-security-rewrite-restraint`       | `clean-review`            | Python     |    480s |
+| `rev-ts-snapshot-formatter-rce-and-sections`    | `security-and-invariants` | TypeScript |    480s |
+| `rev-ts-quiescence-deadlock-and-preflight-leak` | `concurrency-lifecycle`   | TypeScript |    480s |
+| `rev-ts-sandbox-mount-and-transitive-types`     | `cross-module-contracts`  | TypeScript |    480s |
+| `rev-py-zsh-path-tie-and-empty-pdf-cache`       | `shell-and-io-safety`     | Mixed      |    480s |
+| `rev-ts-multi-module-clean-restraint`           | `clean-review`            | TypeScript |    480s |
+| `rev-py-four-commit-net-diff-and-iter-mutation` | `multi-commit-regression` | Python     |    480s |
 
 </details>
 

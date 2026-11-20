@@ -253,6 +253,176 @@ const cases: readonly ReviewCase[] = [
     dirty: [],
     defects: [],
   },
+  {
+    id: "rev-ts-snapshot-formatter-rce-and-sections",
+    language: "typescript",
+    committed: [
+      "src/craft-runner.ts",
+      "src/diagnostics.ts",
+      "tests/craft-runner.test.ts",
+    ],
+    dirty: [],
+    defects: [
+      {
+        id: "formatter_rce_and_symlink",
+        file: "src/craft-runner.ts",
+        range: [26, 44],
+        severity: 1,
+        needles: ["existsSync(", 'return [oxfmtBin, "--write", ...existing]'],
+        finding:
+          "[P1] `src/craft-runner.ts:32` — Invoking oxfmt without `--disable-nested-config` or `--` and using `existsSync` allows nested-config RCE, flag injection, and symlink overwrites.",
+      },
+      {
+        id: "untracked_section_prefix",
+        file: "src/craft-runner.ts",
+        range: [8, 22],
+        severity: 2,
+        needles: ['else if (line === "Untracked:")'],
+        finding:
+          '[P2] `src/craft-runner.ts:16` — Checking `line === "Untracked:"` instead of `startsWith` leaves `git-summary.ts` untracked lines in the unstaged patch and breaks `git apply`.',
+      },
+      {
+        id: "diagnostics_relative_cwd",
+        file: "src/diagnostics.ts",
+        range: [8, 16],
+        severity: 2,
+        needles: ["nodePath.relative(repoDir, issue.filename)"],
+        finding:
+          "[P2] `src/diagnostics.ts:12` — `nodePath.relative(repoDir, issue.filename)` resolves relative diagnostic filenames against host `process.cwd()` instead of `repoDir`.",
+      },
+    ],
+  },
+  {
+    id: "rev-ts-quiescence-deadlock-and-preflight-leak",
+    language: "typescript",
+    committed: ["src/poller.ts", "src/preflight.ts", "tests/poller.test.ts"],
+    dirty: [],
+    defects: [
+      {
+        id: "preflight_daemon_leak",
+        file: "src/preflight.ts",
+        range: [7, 19],
+        severity: 1,
+        needles: ["await Promise.all("],
+        finding:
+          "[P1] `src/preflight.ts:8` — `Promise.all` leaks sibling detached daemon processes and token files on early rejection because `controller.shutdown()` never aborts `signal`.",
+      },
+      {
+        id: "quiescence_deadlock",
+        file: "src/poller.ts",
+        range: [17, 25],
+        severity: 1,
+        needles: ["ctx.state.inboxPendingAt = ctx.state.generation;"],
+        finding:
+          "[P1] `src/poller.ts:20` — Setting `inboxPendingAt = generation` while `active` holds causes a permanent quiescence deadlock after `activeSessions` clears without incrementing `generation`.",
+      },
+      {
+        id: "async_poll_recursion",
+        file: "src/poller.ts",
+        range: [27, 38],
+        severity: 2,
+        needles: ["return await waitForQuiescence(ctx, deadlineMs);"],
+        finding:
+          "[P2] `src/poller.ts:36` — Recursive `return await waitForQuiescence(...)` retains O(N) async stack frames instead of using an iterative loop.",
+      },
+    ],
+  },
+  {
+    id: "rev-ts-sandbox-mount-and-transitive-types",
+    language: "typescript",
+    committed: ["src/mounts.ts", "src/ts-fixture.ts", "tests/mounts.test.ts"],
+    dirty: [],
+    defects: [
+      {
+        id: "missing_bun_types_mount",
+        file: "src/mounts.ts",
+        range: [1, 5],
+        severity: 1,
+        needles: ['"@types/bun"'],
+        finding:
+          '[P1] `src/mounts.ts:3` — Mounting `@types/bun` without transitive `bun-types` breaks `tsc` when `src/ts-fixture.ts` sets `types: ["bun"]`.',
+      },
+      {
+        id: "forbidden_mount_regex_gap",
+        file: "src/mounts.ts",
+        range: [6, 9],
+        severity: 2,
+        needles: ["/(?:^|\\/)(?:oxlint|oxfmt|@oxlint|ultracite)(?:\\/|$)/u"],
+        finding:
+          "[P2] `src/mounts.ts:7` — The segment-bounded `FORBIDDEN_HARNESS_MOUNT` regex misses `oxlint.config.ts` and scoped `@oxfmt/*` / `@oxlint-tsgolint/*` packages.",
+      },
+    ],
+  },
+  {
+    id: "rev-py-zsh-path-tie-and-empty-pdf-cache",
+    language: "mixed",
+    committed: [
+      "archive/sync.py",
+      "scripts/fetch_archive.zsh",
+      "tests/test_sync.py",
+    ],
+    dirty: [],
+    defects: [
+      {
+        id: "zsh_path_clobber",
+        file: "scripts/fetch_archive.zsh",
+        range: [4, 12],
+        severity: 1,
+        needles: ["for path in "],
+        finding:
+          "[P1] `scripts/fetch_archive.zsh:5` — Using `for path in ...` in zsh overwrites the tied `path`/`PATH` array and breaks `python3` with command not found.",
+      },
+      {
+        id: "empty_pdf_clobber",
+        file: "archive/sync.py",
+        range: [12, 26],
+        severity: 1,
+        needles: ["os.replace(tmp, dest)"],
+        finding:
+          "[P1] `archive/sync.py:13` — Replacing cached PDFs without checking `%PDF-` magic bytes and non-zero size clobbers valid cached files with 0-byte or HTML bodies.",
+      },
+    ],
+  },
+  {
+    id: "rev-ts-multi-module-clean-restraint",
+    language: "typescript",
+    committed: [
+      "src/git-guard.ts",
+      "src/parser.ts",
+      "src/runner.ts",
+      "src/span.ts",
+      "tests/runner.test.ts",
+    ],
+    dirty: [],
+    defects: [],
+  },
+  {
+    id: "rev-py-four-commit-net-diff-and-iter-mutation",
+    language: "python",
+    commits: 4,
+    committed: ["store/evict.py", "store/tx.py", "tests/test_store.py"],
+    dirty: [],
+    defects: [
+      {
+        id: "tx_partial_rollback",
+        file: "store/tx.py",
+        range: [1, 6],
+        severity: 1,
+        needles: ["entries[key] = value"],
+        finding:
+          "[P1] `store/tx.py:5` — Mutating `entries` in place without rollback leaves partial writes behind when a later update raises `ValueError`.",
+      },
+      {
+        id: "evict_dict_mutation",
+        file: "store/evict.py",
+        range: [4, 15],
+        severity: 1,
+        needles: ["del cache.entries[key]"],
+        finding:
+          "[P1] `store/evict.py:8` — Deleting from `cache.entries` during dict iteration raises `RuntimeError: dictionary changed size during iteration`.",
+      },
+    ],
+  },
 ];
 
 const cleanReview = "## Findings\n\nNo actionable findings.";
