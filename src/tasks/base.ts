@@ -18,6 +18,7 @@ import { compileSystemMounts } from "../sandbox/mount-plan.ts";
 import {
   discoverTsCompilerDirs,
   linkHostTsNodeModules,
+  resolveSandboxTool,
   runHostRuffCheck,
 } from "../sandbox/tools.ts";
 import { assertNoSymlinkBoundary } from "../util/fs.ts";
@@ -268,7 +269,7 @@ const runFixture = async (
   try {
     assertNoSymlinkBoundary(repoDir);
 
-    const executable = Bun.which(tool);
+    const executable = resolveSandboxTool(tool);
 
     if (executable === null) {
       return null;

@@ -386,11 +386,15 @@ test.skipIf(!sandbox.available)(
     const tsCompilerDirs = discoverTsCompilerDirs(harnessRoot);
     const controlledBinDir = nodePath.join(input.hostHome, ".local", "bin");
     const controlledRuff = nodePath.join(controlledBinDir, "ruff");
+    const controlledPython = nodePath.join(controlledBinDir, "python3");
     const siblingSecret = nodePath.join(controlledBinDir, "private-script");
     const previousPath = process.env.PATH;
 
     mkdirSync(controlledBinDir, { recursive: true });
     writeFileSync(controlledRuff, "#!/bin/sh\necho fake-ruff\n", {
+      mode: 0o755,
+    });
+    writeFileSync(controlledPython, "#!/bin/sh\necho fake-python\n", {
       mode: 0o755,
     });
     writeFileSync(siblingSecret, "#!/bin/sh\necho secret\n", { mode: 0o755 });
@@ -407,6 +411,12 @@ test.skipIf(!sandbox.available)(
       } else {
         process.env.PATH = previousPath;
       }
+    }
+
+    expect(hostToolFiles.some(({ name }) => name === "ruff")).toBe(true);
+
+    if (Bun.which("python3", { PATH: "/usr/bin:/bin" }) !== null) {
+      expect(hostToolFiles.some(({ name }) => name === "python3")).toBe(false);
     }
 
     writeFileSync(

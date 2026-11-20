@@ -59,6 +59,12 @@ const whichOnPath = (name: string): string | null => {
     : Bun.which(name, { PATH: pathEnv });
 };
 
+export const resolveSandboxTool = (name: string): string | null =>
+  name === "python3"
+    ? (Bun.which("python3", { PATH: "/usr/bin:/bin" }) ??
+      whichOnPath("python3"))
+    : whichOnPath(name);
+
 export const requireGlobalRuff = (): string => {
   const executable = whichOnPath("ruff");
 
@@ -96,7 +102,7 @@ export const discoverHostToolFiles = (): HostToolFile[] => {
   const files: HostToolFile[] = [];
 
   for (const name of toolNames) {
-    const executable = whichOnPath(name);
+    const executable = resolveSandboxTool(name);
 
     if (executable === null) {
       continue;
@@ -121,7 +127,7 @@ export const discoverHostToolDirs = (): string[] => {
   const dirs = new Set<string>();
 
   for (const tool of toolNames) {
-    const executable = whichOnPath(tool);
+    const executable = resolveSandboxTool(tool);
 
     if (executable !== null) {
       dirs.add(nodePath.dirname(executable));
