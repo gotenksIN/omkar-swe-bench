@@ -519,7 +519,7 @@ const reportChange = async (
 ): Promise<void> => {
   const numeric = fixed
     ? "    observed = [value for value in values if value is not None]\n"
-    : "    observed = values\n";
+    : '    if any(value is None for value in values):\n        raise ValueError("missing observation")\n    observed = values\n';
 
   const result = acceptNitpick
     ? "    return Summary(len(values), mean)\n"

@@ -243,10 +243,12 @@ ${script
 
 try:
     check()
-except (AssertionError, TypeError, ZeroDivisionError):
-    assert ${expectEdge ? "False" : "True"}
+except (ImportError, SyntaxError):
+    raise
+except Exception:
+    raise SystemExit(${expectEdge ? "1" : "0"})
 else:
-    assert ${expectEdge ? "True" : "False"}
+    raise SystemExit(${expectEdge ? "0" : "1"})
 `
   );
 };
