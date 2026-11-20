@@ -1023,3 +1023,335 @@ assert.throws(() => validateModels(["openai/gpt-fast#low"], providers), /Unknown
 assert.throws(() => validateModels(["missing/gpt-fast"], providers), /Unknown provider:/u);
 `,
 });
+
+export const multiStageDiffAndCraftIsolation = typeScriptTask({
+  id: "coder-ts-multi-stage-diff-and-craft-isolation",
+  category: "security-and-invariants",
+  scope: ["src/craft-isolation.ts"],
+  prompt: `
+Fix \`src/craft-isolation.ts\` to safely parse multi-stage git diff summaries, build isolated formatter invocations, and normalize diagnostic paths:
+
+1. \`splitGitDiffSections(raw)\` must split concatenated \`## Committed\`, \`## Staged\`, and \`## Unstaged\` sections cleanly and ignore any \`Untracked: "<path>" (<oid>)\` lines so untracked summaries never leak into tracked diff sections.
+2. \`buildSafeFormatArgs(oxfmtBin, repoDir, changedFiles)\` must:
+   - Reject paths that are empty, start with \`-\`, are absolute, or traverse outside \`repoDir\` (\`..\`).
+   - Reject symlinks (checked via \`lstatSync\`) and any path whose resolved parent escapes \`repoDir\`.
+   - Include \`--disable-nested-config\` and \`--\` before the validated positional file arguments.
+   - Return \`[]\` if no valid regular files remain.
+3. \`normalizeDiagnosticPath(repoDir, rawFilename)\` must return a clean repo-relative POSIX path without resolving already-relative filenames against host \`process.cwd()\`.
+
+Follow \`AGENTS.md\` and add unit tests in \`tests/craft-isolation.test.ts\`.
+`,
+  files: {
+    "src/craft-isolation.ts": `import { existsSync } from "node:fs";
+import nodePath from "node:path";
+
+export interface DiffSections {
+  readonly committed: string;
+  readonly staged: string;
+  readonly unstaged: string;
+}
+
+export function splitGitDiffSections(raw: string): DiffSections {
+  let active: "committed" | "staged" | "unstaged" | null = null;
+  const buckets = {
+    committed: [] as string[],
+    staged: [] as string[],
+    unstaged: [] as string[],
+  };
+  for (const line of raw.split("\\n")) {
+    if (line === "## Committed") {
+      active = "committed";
+    } else if (line === "## Staged") {
+      active = "staged";
+    } else if (line === "## Unstaged") {
+      active = "unstaged";
+    } else if (line === "Untracked:") {
+      active = null;
+    } else if (active !== null) {
+      buckets[active].push(line);
+    }
+  }
+  return {
+    committed: buckets.committed.join("\\n"),
+    staged: buckets.staged.join("\\n"),
+    unstaged: buckets.unstaged.join("\\n"),
+  };
+}
+
+export function buildSafeFormatArgs(
+  oxfmtBin: string,
+  repoDir: string,
+  changedFiles: readonly string[]
+): readonly string[] {
+  const existing = changedFiles.filter((file) =>
+    existsSync(nodePath.join(repoDir, file))
+  );
+  if (existing.length === 0) {
+    return [];
+  }
+  return [oxfmtBin, "--write", ...existing];
+}
+
+export function normalizeDiagnosticPath(
+  repoDir: string,
+  rawFilename: string
+): string {
+  return nodePath.relative(repoDir, rawFilename);
+}
+`,
+    "tests/craft-isolation.test.ts": `import { expect, test } from "bun:test";
+import { splitGitDiffSections } from "../src/craft-isolation.ts";
+
+test("splits committed section", () => {
+  expect(splitGitDiffSections("## Committed\\n+hello").committed).toBe("+hello");
+});
+`,
+  },
+  check: "craft_isolation_contract",
+  probe: `
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import {
+  buildSafeFormatArgs,
+  normalizeDiagnosticPath,
+  splitGitDiffSections,
+} from "./src/craft-isolation.ts";
+
+const raw = [
+  "## Committed",
+  "diff --git a/a.ts b/a.ts",
+  "+const a = 1;",
+  "## Staged",
+  "diff --git a/b.ts b/b.ts",
+  "+const b = 2;",
+  "## Unstaged",
+  "diff --git a/c.ts b/c.ts",
+  "+const c = 3;",
+  'Untracked: "notes.txt" (deadbeef)',
+  'Untracked: "sub/extra.ts" (cafebabe)',
+].join("\\n");
+
+const sections = splitGitDiffSections(raw);
+assert.equal(sections.committed, "diff --git a/a.ts b/a.ts\\n+const a = 1;");
+assert.equal(sections.staged, "diff --git a/b.ts b/b.ts\\n+const b = 2;");
+assert.equal(sections.unstaged, "diff --git a/c.ts b/c.ts\\n+const c = 3;");
+assert.ok(!sections.unstaged.includes("Untracked:"));
+
+const tmp = mkdtempSync(path.join(os.tmpdir(), "craft-iso-"));
+try {
+  const repo = path.join(tmp, "repo");
+  const outside = path.join(tmp, "outside.ts");
+  mkdirSync(path.join(repo, "src"), { recursive: true });
+  writeFileSync(path.join(repo, "src/ok.ts"), "export const x = 1;\\n");
+  writeFileSync(path.join(repo, "--config=pwn.ts"), "export const bad = 1;\\n");
+  writeFileSync(outside, "export const secret = 1;\\n");
+  symlinkSync(outside, path.join(repo, "src/link.ts"));
+
+  const args = buildSafeFormatArgs("/bin/oxfmt", repo, [
+    "src/ok.ts",
+    "--config=pwn.ts",
+    "../outside.ts",
+    "/etc/passwd",
+    "src/link.ts",
+    "",
+  ]);
+  assert.equal(args[0], "/bin/oxfmt");
+  assert.ok(args.includes("--disable-nested-config"), "missing --disable-nested-config");
+  const sepIndex = args.indexOf("--");
+  assert.ok(sepIndex > 0, "missing -- separator");
+  assert.deepEqual(args.slice(sepIndex + 1), ["src/ok.ts"]);
+  assert.deepEqual(buildSafeFormatArgs("/bin/oxfmt", repo, ["src/link.ts", "../outside.ts"]), []);
+
+  assert.equal(normalizeDiagnosticPath(repo, "src/ok.ts"), "src/ok.ts");
+  assert.equal(normalizeDiagnosticPath(repo, "./src/ok.ts"), "src/ok.ts");
+  assert.equal(normalizeDiagnosticPath(repo, path.join(repo, "src/ok.ts")), "src/ok.ts");
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}
+`,
+});
+
+export const sessionQuiescenceAndCursorPagination = typeScriptTask({
+  id: "coder-ts-session-quiescence-and-cursor-pagination",
+  category: "concurrency-lifecycle",
+  scope: ["src/runner-core.ts"],
+  prompt: `
+Fix three production bugs in \`src/runner-core.ts\`:
+
+1. **Quiescence deadlock:** \`pollQuiescence\` currently sets \`state.inboxPendingAt = state.generation\` whenever \`activeSessions.has(sessionId)\` is true, permanently deadlocking once the session leaves \`activeSessions\` without another generation bump. Keep \`pollQuiescence\` non-deadlocking (returning \`false\` while active, and \`true\` once inactive and \`state.generation > state.inboxPendingAt\`).
+2. **Cursor pagination + parallel permission rejection:**
+   - \`fetchAllMessages(fetchPage)\` must pass \`{ order: "asc" }\` ONLY on the first page (\`cursor === undefined\`) and pass \`{ cursor }\` (without \`order\`) on subsequent pages, because the server rejects \`order\` + \`cursor\` with HTTP 400.
+   - \`rejectPermissions(ids, reply)\` must reject all permission IDs and ignore \`404\` / \`PermissionNotFoundError\` responses caused by sibling auto-resolution, while rethrowing other errors.
+3. **Preflight leak on early rejection:** \`preflightAll(providers, startDaemon, validate)\` must abort a local \`AbortController\` on first error, await all started daemons via \`Promise.allSettled\`, guarantee \`daemon.stop()\` runs for every started daemon, and then rethrow the first failure.
+
+Follow \`AGENTS.md\` and add unit tests in \`tests/runner-core.test.ts\`.
+`,
+  files: {
+    "src/runner-core.ts": `export interface QuiescenceState {
+  generation: number;
+  inboxPendingAt: number;
+}
+
+export function pollQuiescence(
+  sessionId: string,
+  activeSessions: ReadonlySet<string>,
+  state: QuiescenceState
+): boolean {
+  if (activeSessions.has(sessionId)) {
+    state.inboxPendingAt = state.generation;
+    return false;
+  }
+  return state.generation > state.inboxPendingAt;
+}
+
+export interface PageRequest {
+  readonly order?: "asc";
+  readonly cursor?: string;
+}
+
+export interface PageResponse<T> {
+  readonly items: readonly T[];
+  readonly nextCursor?: string;
+}
+
+export async function fetchAllMessages<T>(
+  fetchPage: (req: PageRequest) => Promise<PageResponse<T>>
+): Promise<readonly T[]> {
+  const all: T[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await fetchPage({ order: "asc", ...(cursor === undefined ? {} : { cursor }) });
+    all.push(...page.items);
+    if (page.nextCursor === undefined) {
+      return all;
+    }
+    cursor = page.nextCursor;
+  }
+}
+
+export async function rejectPermissions(
+  ids: readonly string[],
+  reply: (id: string) => Promise<void>
+): Promise<void> {
+  await Promise.all(ids.map((id) => reply(id)));
+}
+
+export interface PreflightDaemon {
+  readonly id: string;
+  stop: () => Promise<void>;
+}
+
+export async function preflightAll(
+  providers: readonly string[],
+  startDaemon: (provider: string, signal: AbortSignal) => Promise<PreflightDaemon>,
+  validate: (provider: string, signal: AbortSignal) => Promise<void>
+): Promise<void> {
+  const ac = new AbortController();
+  await Promise.all(
+    providers.map(async (provider) => {
+      const daemon = await startDaemon(provider, ac.signal);
+      try {
+        await validate(provider, ac.signal);
+      } finally {
+        await daemon.stop();
+      }
+    })
+  );
+}
+`,
+    "tests/runner-core.test.ts": `import { expect, test } from "bun:test";
+import { pollQuiescence } from "../src/runner-core.ts";
+
+test("returns true when inactive and generation advanced", () => {
+  expect(pollQuiescence("s1", new Set(), { generation: 2, inboxPendingAt: 1 })).toBe(true);
+});
+`,
+  },
+  check: "runner_core_contract",
+  probe: `
+import assert from "node:assert/strict";
+import {
+  fetchAllMessages,
+  pollQuiescence,
+  preflightAll,
+  rejectPermissions,
+} from "./src/runner-core.ts";
+
+// 1. Quiescence does not deadlock after active clears
+const state = { generation: 2, inboxPendingAt: 1 };
+assert.equal(pollQuiescence("s1", new Set(["s1"]), state), false);
+assert.equal(pollQuiescence("s1", new Set(), state), true);
+assert.equal(pollQuiescence("s1", new Set(), { generation: 1, inboxPendingAt: 1 }), false);
+
+// 2. Cursor pagination omits order when cursor is set
+const seenReqs: unknown[] = [];
+const msgs = await fetchAllMessages<string>(async (req) => {
+  seenReqs.push(req);
+  if (req.cursor !== undefined && req.order !== undefined) {
+    throw new Error("400 InvalidCursorError: cannot combine order and cursor");
+  }
+  if (req.cursor === undefined) {
+    assert.equal(req.order, "asc");
+    return { items: ["m1", "m2"], nextCursor: "c2" };
+  }
+  return { items: ["m3"] };
+});
+assert.deepEqual(msgs, ["m1", "m2", "m3"]);
+assert.equal(seenReqs.length, 2);
+
+// 3. Parallel permission rejection ignores 404 PermissionNotFoundError, rethrows 500
+await rejectPermissions(["p1", "p2"], async (id) => {
+  if (id === "p2") {
+    const err = Object.assign(new Error("PermissionNotFoundError"), { status: 404 });
+    throw err;
+  }
+});
+await assert.rejects(
+  () =>
+    rejectPermissions(["p1", "p2"], async (id) => {
+      if (id === "p2") {
+        throw Object.assign(new Error("Internal server error"), { status: 500 });
+      }
+    }),
+  /Internal server error/u
+);
+
+// 4. Preflight aborts siblings and waits for all daemons to stop before throwing
+const stopped: string[] = [];
+let siblingAborted = false;
+await assert.rejects(
+  () =>
+    preflightAll(
+      ["fast-fail", "slow-sibling"],
+      async (provider, _signal) => ({
+        id: provider,
+        async stop() {
+          await new Promise((r) => setTimeout(r, provider === "slow-sibling" ? 25 : 0));
+          stopped.push(provider);
+        },
+      }),
+      async (provider, signal) => {
+        if (provider === "fast-fail") {
+          throw new Error("bad credentials");
+        }
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) {
+            siblingAborted = true;
+            resolve();
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            siblingAborted = true;
+            resolve();
+          });
+        });
+      }
+    ),
+  /bad credentials/u
+);
+assert.equal(siblingAborted, true);
+assert.deepEqual([...stopped].sort(), ["fast-fail", "slow-sibling"]);
+`,
+});

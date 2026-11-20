@@ -746,6 +746,315 @@ test("validates catalog entries by id and enabled flag", () => {
 `,
     },
   },
+  {
+    id: "coder-ts-multi-stage-diff-and-craft-isolation",
+    failing: ["craft_isolation_contract"],
+    files: {
+      "src/craft-isolation.ts": `import { lstatSync, realpathSync } from "node:fs";
+import nodePath from "node:path";
+
+export interface DiffSections {
+  readonly committed: string;
+  readonly staged: string;
+  readonly unstaged: string;
+}
+
+export function splitGitDiffSections(raw: string): DiffSections {
+  let active: "committed" | "staged" | "unstaged" | null = null;
+  const committed: string[] = [];
+  const staged: string[] = [];
+  const unstaged: string[] = [];
+
+  for (const line of raw.split("\\n")) {
+    if (line === "## Committed") {
+      active = "committed";
+    } else if (line === "## Staged") {
+      active = "staged";
+    } else if (line === "## Unstaged") {
+      active = "unstaged";
+    } else if (line.startsWith("Untracked: ")) {
+      active = null;
+    } else if (active === "committed") {
+      committed.push(line);
+    } else if (active === "staged") {
+      staged.push(line);
+    } else if (active === "unstaged") {
+      unstaged.push(line);
+    }
+  }
+
+  return {
+    committed: committed.join("\\n"),
+    staged: staged.join("\\n"),
+    unstaged: unstaged.join("\\n"),
+  };
+}
+
+const isSafeRegularFile = (repoReal: string, relPath: string): boolean => {
+  if (
+    relPath.length === 0 ||
+    relPath.startsWith("-") ||
+    nodePath.isAbsolute(relPath)
+  ) {
+    return false;
+  }
+
+  const normalized = nodePath.posix.normalize(relPath.replaceAll("\\\\", "/"));
+
+  if (normalized === ".." || normalized.startsWith("../")) {
+    return false;
+  }
+
+  const candidate = nodePath.resolve(repoReal, normalized);
+
+  if (!candidate.startsWith(\`\${repoReal}\${nodePath.sep}\`)) {
+    return false;
+  }
+
+  try {
+    const stat = lstatSync(candidate);
+
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      return false;
+    }
+
+    const parentReal = realpathSync(nodePath.dirname(candidate));
+
+    return (
+      parentReal === repoReal ||
+      parentReal.startsWith(\`\${repoReal}\${nodePath.sep}\`)
+    );
+  } catch {
+    return false;
+  }
+};
+
+export function buildSafeFormatArgs(
+  oxfmtBin: string,
+  repoDir: string,
+  changedFiles: readonly string[]
+): readonly string[] {
+  const repoReal = realpathSync(repoDir);
+  const valid: string[] = [];
+
+  for (const file of changedFiles) {
+    if (isSafeRegularFile(repoReal, file)) {
+      valid.push(file);
+    }
+  }
+
+  if (valid.length === 0) {
+    return [];
+  }
+
+  return [oxfmtBin, "--disable-nested-config", "--write", "--", ...valid];
+}
+
+export function normalizeDiagnosticPath(
+  repoDir: string,
+  rawFilename: string
+): string {
+  const raw = rawFilename.replaceAll("\\\\", "/");
+
+  if (nodePath.isAbsolute(rawFilename)) {
+    return nodePath.relative(repoDir, rawFilename).replaceAll("\\\\", "/");
+  }
+
+  return raw.replace(/^(?:\\.\\/)+/u, "");
+}
+`,
+      "tests/craft-isolation.test.ts": `import { expect, test } from "bun:test";
+import { normalizeDiagnosticPath, splitGitDiffSections } from "../src/craft-isolation.ts";
+
+test("splits sections and drops untracked lines", () => {
+  const sections = splitGitDiffSections('## Unstaged\\n+a\\nUntracked: "x" (123)');
+  expect(sections.unstaged).toBe("+a");
+  expect(normalizeDiagnosticPath("/tmp/repo", "./src/a.ts")).toBe("src/a.ts");
+});
+`,
+    },
+  },
+  {
+    id: "coder-ts-session-quiescence-and-cursor-pagination",
+    failing: ["runner_core_contract"],
+    files: {
+      "src/runner-core.ts": `export interface QuiescenceState {
+  generation: number;
+  inboxPendingAt: number;
+}
+
+export function pollQuiescence(
+  sessionId: string,
+  activeSessions: ReadonlySet<string>,
+  state: QuiescenceState
+): boolean {
+  if (activeSessions.has(sessionId)) {
+    return false;
+  }
+
+  return state.generation > state.inboxPendingAt;
+}
+
+export interface PageRequest {
+  readonly order?: "asc";
+  readonly cursor?: string;
+}
+
+export interface PageResponse<T> {
+  readonly items: readonly T[];
+  readonly nextCursor?: string;
+}
+
+export async function fetchAllMessages<T>(
+  fetchPage: (req: PageRequest) => Promise<PageResponse<T>>
+): Promise<readonly T[]> {
+  const all: T[] = [];
+  let cursor: string | undefined;
+
+  for (;;) {
+    const req: PageRequest =
+      cursor === undefined ? { order: "asc" } : { cursor };
+    const page = await fetchPage(req);
+    all.push(...page.items);
+
+    if (page.nextCursor === undefined) {
+      return all;
+    }
+
+    cursor = page.nextCursor;
+  }
+}
+
+const isNotFoundError = (cause: unknown): boolean => {
+  if (!(cause instanceof Error)) {
+    return false;
+  }
+
+  if (cause.message.includes("PermissionNotFoundError")) {
+    return true;
+  }
+
+  return "status" in cause && cause.status === 404;
+};
+
+export async function rejectPermissions(
+  ids: readonly string[],
+  reply: (id: string) => Promise<void>
+): Promise<void> {
+  const results = await Promise.allSettled(ids.map((id) => reply(id)));
+
+  for (const result of results) {
+    if (result.status === "rejected" && !isNotFoundError(result.reason)) {
+      throw result.reason;
+    }
+  }
+}
+
+export interface PreflightDaemon {
+  readonly id: string;
+  stop: () => Promise<void>;
+}
+
+export async function preflightAll(
+  providers: readonly string[],
+  startDaemon: (provider: string, signal: AbortSignal) => Promise<PreflightDaemon>,
+  validate: (provider: string, signal: AbortSignal) => Promise<void>
+): Promise<void> {
+  const ac = new AbortController();
+
+  const settled = await Promise.allSettled(
+    providers.map(async (provider) => {
+      const daemon = await startDaemon(provider, ac.signal);
+
+      try {
+        await validate(provider, ac.signal);
+      } catch (error: unknown) {
+        ac.abort();
+        throw error;
+      } finally {
+        await daemon.stop();
+      }
+    })
+  );
+
+  for (const outcome of settled) {
+    if (outcome.status === "rejected") {
+      throw outcome.reason;
+    }
+  }
+}
+`,
+      "tests/runner-core.test.ts": `import { expect, test } from "bun:test";
+import { pollQuiescence } from "../src/runner-core.ts";
+
+test("returns true after active clears without deadlock", () => {
+  const state = { generation: 2, inboxPendingAt: 1 };
+  expect(pollQuiescence("s1", new Set(["s1"]), state)).toBe(false);
+  expect(pollQuiescence("s1", new Set(), state)).toBe(true);
+});
+`,
+    },
+  },
+  {
+    id: "coder-py-archive-sync-empty-200-and-zsh",
+    failing: ["archive_sync_and_zsh_safety"],
+    files: {
+      "archive/sync.py": `import os
+import tempfile
+from pathlib import Path
+
+
+def sync_pdf(endpoint: str, dest: Path, fetch) -> bool:
+    resp = fetch(endpoint)
+    content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+    if resp.status != 200 or content_type != "application/pdf":
+        return False
+    if not resp.body or not resp.body.startswith(b"%PDF-"):
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=".sync-", suffix=".tmp")
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(resp.body)
+        os.replace(tmp_path, dest)
+    except OSError:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    return True
+`,
+      "scripts/fetch_archive.zsh": `#!/usr/bin/env zsh
+set -euo pipefail
+
+endpoints=("2025/math.pdf" "2025/physics.pdf")
+for endpoint in "\${endpoints[@]}"; do
+  python3 -m archive.sync "$endpoint"
+done
+`,
+      "tests/test_sync.py": `import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+
+from archive.sync import sync_pdf
+
+
+class SyncTests(unittest.TestCase):
+    def test_rejects_empty_and_html_pdf_bodies(self):
+        with tempfile.TemporaryDirectory() as root:
+            dest = Path(root) / "paper.pdf"
+            dest.write_bytes(b"%PDF-1.7\\n")
+            for body in (b"", b"<html>login</html>"):
+                resp = SimpleNamespace(
+                    status=200, headers={"content-type": "application/pdf"}, body=body
+                )
+                self.assertFalse(
+                    sync_pdf("2025/math.pdf", dest, lambda _, r=resp: r)
+                )
+            self.assertEqual(dest.read_bytes(), b"%PDF-1.7\\n")
+`,
+    },
+  },
 ];
 
 const withFixture = async (

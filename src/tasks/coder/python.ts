@@ -859,3 +859,111 @@ with TemporaryDirectory() as directory:
     };
   },
 });
+
+export const archiveSyncEmpty200AndZsh = pythonTask({
+  id: "coder-py-archive-sync-empty-200-and-zsh",
+  category: "shell-and-io-safety",
+  scope: ["archive/sync.py", "scripts/fetch_archive.zsh", "tests/test_sync.py"],
+  prompt: `
+Fix two bugs in this archive sync project:
+
+1. In \`archive/sync.py\`, \`sync_pdf(endpoint, dest, fetch)\` currently overwrites existing cached PDFs whenever the server returns HTTP 200 with \`Content-Type: application/pdf\`, even if the body is empty (0 bytes) or an HTML error page.
+   - Only replace \`dest\` when \`resp.status == 200\`, the media type (ignoring parameters) is \`application/pdf\`, \`len(resp.body) > 0\`, and \`resp.body.startswith(b"%PDF-")\`.
+   - Write atomically via a temp file in \`dest.parent\` and clean up any temp file if validation or writing fails, leaving any existing valid \`dest\` untouched.
+2. In \`scripts/fetch_archive.zsh\`, fix the Zsh \`for path in ...\` loop that clobbers Zsh's special \`path\`/\`PATH\` tied array so external commands like \`python3\` remain resolvable.
+3. Add regression tests in \`tests/test_sync.py\` without monkeypatching internal helpers or stdlib file primitives.
+`,
+  files: {
+    "archive/__init__.py": "",
+    "archive/sync.py": `import os
+from pathlib import Path
+
+
+def sync_pdf(endpoint: str, dest: Path, fetch) -> bool:
+    resp = fetch(endpoint)
+    content_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+    if resp.status != 200 or content_type != "application/pdf":
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(".pdf.tmp")
+    tmp.write_bytes(resp.body)
+    os.replace(tmp, dest)
+    return True
+`,
+    "scripts/fetch_archive.zsh": `#!/usr/bin/env zsh
+set -euo pipefail
+
+endpoints=("2025/math.pdf" "2025/physics.pdf")
+for path in "\${endpoints[@]}"; do
+  python3 -m archive.sync "$path"
+done
+`,
+    "tests/test_sync.py": `import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+
+from archive.sync import sync_pdf
+
+
+class SyncTests(unittest.TestCase):
+    def test_rejects_non_pdf_content_type(self):
+        with tempfile.TemporaryDirectory() as root:
+            dest = Path(root) / "paper.pdf"
+            resp = SimpleNamespace(
+                status=200, headers={"content-type": "text/plain"}, body=b"hi"
+            )
+            self.assertFalse(sync_pdf("2025/math.pdf", dest, lambda _: resp))
+`,
+  },
+  async probe(ev) {
+    const [patches, behavior] = await Promise.all([
+      noTestPatches(ev, ["archive"]),
+      python(
+        ev.repoDir,
+        `
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+import re
+
+from archive.sync import sync_pdf
+
+script = Path("scripts/fetch_archive.zsh").read_text(encoding="utf-8")
+assert not re.search(r"\\bfor\\s+path\\s+in\\b", script), "zsh loop still clobbers path/PATH"
+assert "python3 -m archive.sync" in script
+
+with TemporaryDirectory() as root:
+    dest = Path(root) / "paper.pdf"
+    valid_pdf = b"%PDF-1.7\\n1 0 obj\\n<<>>\\nendobj\\n"
+    dest.write_bytes(valid_pdf)
+
+    for bad_body in (b"", b"<html><body>Login</body></html>", b"not a pdf"):
+        resp = SimpleNamespace(
+            status=200,
+            headers={"content-type": "application/pdf; charset=binary"},
+            body=bad_body,
+        )
+        assert sync_pdf("2025/math.pdf", dest, lambda _: resp) is False
+        assert dest.read_bytes() == valid_pdf
+        assert list(Path(root).iterdir()) == [dest]
+
+    new_pdf = b"%PDF-1.7\\n2 0 obj\\n<<>>\\nendobj\\n"
+    ok_resp = SimpleNamespace(
+        status=200,
+        headers={"content-type": "application/pdf; charset=utf-8"},
+        body=new_pdf,
+    )
+    assert sync_pdf("2025/math.pdf", dest, lambda _: ok_resp) is True
+    assert dest.read_bytes() == new_pdf
+    assert list(Path(root).iterdir()) == [dest]
+`
+      ),
+    ]);
+
+    return {
+      no_internal_test_patches: patches,
+      archive_sync_and_zsh_safety: behavior,
+    };
+  },
+});

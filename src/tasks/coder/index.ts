@@ -1,6 +1,7 @@
 import type { EvalTask } from "../base.ts";
 import { commitGuardTwoTask } from "./git.ts";
 import {
+  archiveSyncEmpty200AndZsh,
   atomicAsyncLifecycle,
   blockerHonesty,
   conventionAutonomy,
@@ -11,6 +12,8 @@ import {
 import {
   boundaryDecoderHttp,
   catalogAliasAndTestRigor,
+  multiStageDiffAndCraftIsolation,
+  sessionQuiescenceAndCursorPagination,
   shellHeredocSubst,
   sseChunkCrlf,
 } from "./typescript.ts";
@@ -27,4 +30,7 @@ export const CODER_TASKS: readonly EvalTask[] = [
   atomicAsyncLifecycle,
   boundaryDecoderHttp,
   catalogAliasAndTestRigor,
+  multiStageDiffAndCraftIsolation,
+  sessionQuiescenceAndCursorPagination,
+  archiveSyncEmpty200AndZsh,
 ];

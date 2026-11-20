@@ -11,10 +11,10 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 
 | Stage             | CLI flag           |  Tasks | Primary focus                                                                                                |
 | ----------------- | ------------------ | -----: | ------------------------------------------------------------------------------------------------------------ |
-| **Coder**         | `--phase coder`    |     11 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow             |
+| **Coder**         | `--phase coder`    |     14 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow             |
 | **Code reviewer** | `--phase reviewer` |     17 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
 | **Pair**          | `--phase pair`     |      4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation           |
-| **Total**         | `--phase all`      | **32** | Full coding, review, and collaboration suite                                                                 |
+| **Total**         | `--phase all`      | **35** | Full coding, review, and collaboration suite                                                                 |
 
 ## Rankings
 
@@ -176,21 +176,24 @@ Repeat `--coder-model` or `--reviewer-model` on the CLI to override either list.
 Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from the catalog.
 
 <details>
-<summary><strong>Stage 1 — Coder tasks (11)</strong></summary>
+<summary><strong>Stage 1 — Coder tasks (14)</strong></summary>
 
-| Task ID                                 | Category           | Language   | Timeout | Commit guard |
-| --------------------------------------- | ------------------ | ---------- | ------: | ------------ |
-| `coder-py-stitch-collapse`              | `cache-recovery`   | Python     |    480s | No           |
-| `coder-py-stream-stop-and-feedback`     | `streaming`        | Python     |    480s | No           |
-| `coder-ts-sse-chunk-crlf`               | `framing`          | TypeScript |    480s | No           |
-| `coder-ts-shell-heredoc-subst`          | `parser`           | TypeScript |    600s | No           |
-| `coder-py-ssrf-ip-pinning`              | `transport-safety` | Python     |    480s | No           |
-| `coder-git-commit-guard-two-task`       | `git-workflow`     | Git        |    480s | Yes          |
-| `coder-blocker-honesty`                 | `blocker-honesty`  | Python     |    480s | No           |
-| `coder-convention-autonomy`             | `autonomy`         | Python     |    480s | No           |
-| `coder-py-atomic-async-lifecycle`       | `concurrency-io`   | Python     |    480s | No           |
-| `coder-ts-boundary-decoder-http`        | `boundary-safety`  | TypeScript |    480s | No           |
-| `coder-ts-catalog-alias-and-test-rigor` | `test-rigor`       | TypeScript |    480s | No           |
+| Task ID                                             | Category                  | Language   | Timeout | Commit guard |
+| --------------------------------------------------- | ------------------------- | ---------- | ------: | ------------ |
+| `coder-py-stitch-collapse`                          | `cache-recovery`          | Python     |    480s | No           |
+| `coder-py-stream-stop-and-feedback`                 | `streaming`               | Python     |    480s | No           |
+| `coder-ts-sse-chunk-crlf`                           | `framing`                 | TypeScript |    480s | No           |
+| `coder-ts-shell-heredoc-subst`                      | `parser`                  | TypeScript |    600s | No           |
+| `coder-py-ssrf-ip-pinning`                          | `transport-safety`        | Python     |    480s | No           |
+| `coder-git-commit-guard-two-task`                   | `git-workflow`            | Git        |    480s | Yes          |
+| `coder-blocker-honesty`                             | `blocker-honesty`         | Python     |    480s | No           |
+| `coder-convention-autonomy`                         | `autonomy`                | Python     |    480s | No           |
+| `coder-py-atomic-async-lifecycle`                   | `concurrency-io`          | Python     |    480s | No           |
+| `coder-ts-boundary-decoder-http`                    | `boundary-safety`         | TypeScript |    480s | No           |
+| `coder-ts-catalog-alias-and-test-rigor`             | `test-rigor`              | TypeScript |    480s | No           |
+| `coder-ts-multi-stage-diff-and-craft-isolation`     | `security-and-invariants` | TypeScript |    480s | No           |
+| `coder-ts-session-quiescence-and-cursor-pagination` | `concurrency-lifecycle`   | TypeScript |    480s | No           |
+| `coder-py-archive-sync-empty-200-and-zsh`           | `shell-and-io-safety`     | Python     |    480s | No           |
 
 </details>
 
