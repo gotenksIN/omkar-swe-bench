@@ -68,7 +68,8 @@ const python = async (repoDir: string, code: string): Promise<boolean> =>
 
 const noTestPatches = async (
   ev: Evidence,
-  projectModules?: readonly string[]
+  projectModules?: readonly string[],
+  prohibitStdlibPatches = projectModules === undefined
 ): Promise<boolean> => {
   const files = await pythonTestFiles(ev.repoDir);
 
@@ -77,8 +78,8 @@ const noTestPatches = async (
       ev.repoDir,
       files,
       projectModules === undefined
-        ? { prohibitStdlibPatches: true }
-        : { projectModules }
+        ? { prohibitStdlibPatches }
+        : { projectModules, prohibitStdlibPatches }
     ));
 };
 
@@ -918,25 +919,30 @@ class SyncTests(unittest.TestCase):
   },
   async probe(ev) {
     const [patches, behavior] = await Promise.all([
-      noTestPatches(ev, ["archive"]),
+      noTestPatches(ev, ["archive"], true),
       python(
         ev.repoDir,
         `
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+import os
 import re
 
 from archive.sync import sync_pdf
 
 script = Path("scripts/fetch_archive.zsh").read_text(encoding="utf-8")
-assert not re.search(r"\\bfor\\s+path\\s+in\\b", script), "zsh loop still clobbers path/PATH"
-assert "python3 -m archive.sync" in script
+code_lines = [line.split("#", 1)[0] for line in script.splitlines()]
+code_only = "\\n".join(code_lines)
+assert not re.search(r"\\bfor\\s+path\\s+in\\b", code_only), "zsh loop still clobbers path/PATH"
+assert re.search(r"\\bpython3\\s+-m\\s+archive\\.sync\\b", code_only), "missing python3 -m archive.sync invocation"
 
 with TemporaryDirectory() as root:
     dest = Path(root) / "paper.pdf"
     valid_pdf = b"%PDF-1.7\\n1 0 obj\\n<<>>\\nendobj\\n"
     dest.write_bytes(valid_pdf)
+    orig_link = Path(root) / "orig.link"
+    os.link(dest, orig_link)
 
     for bad_body in (b"", b"<html><body>Login</body></html>", b"not a pdf"):
         resp = SimpleNamespace(
@@ -946,7 +952,7 @@ with TemporaryDirectory() as root:
         )
         assert sync_pdf("2025/math.pdf", dest, lambda _: resp) is False
         assert dest.read_bytes() == valid_pdf
-        assert list(Path(root).iterdir()) == [dest]
+        assert set(Path(root).iterdir()) == {dest, orig_link}
 
     new_pdf = b"%PDF-1.7\\n2 0 obj\\n<<>>\\nendobj\\n"
     ok_resp = SimpleNamespace(
@@ -956,7 +962,9 @@ with TemporaryDirectory() as root:
     )
     assert sync_pdf("2025/math.pdf", dest, lambda _: ok_resp) is True
     assert dest.read_bytes() == new_pdf
-    assert list(Path(root).iterdir()) == [dest]
+    # Atomic os.replace leaves the previous inode intact via orig_link.
+    assert orig_link.read_bytes() == valid_pdf, "dest was overwritten in place instead of atomically replaced"
+    assert set(Path(root).iterdir()) == {dest, orig_link}
 `
       ),
     ]);
