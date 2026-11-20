@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" width="920" height="520" role="img" aria-label="Code Reviewer Calibration Quadrant">
+<title>Code Reviewer Calibration Quadrant</title>
+<desc>Seeded defect recall vs. false-alarm restraint (2× P0–P2 FP + 1× P3 nitpick) across calibrated tasks (excluding rev-missing-scope-true-bounce); bubble size = median wall time</desc>
+<rect x="0" y="0" width="920" height="520" fill="#0b1120"/>
+<rect x="12" y="12" width="896" height="496" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+<text x="32" y="42" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Code Reviewer Calibration Quadrant</text>
+<text x="32" y="62" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Seeded defect recall vs. false-alarm restraint (2× P0–P2 FP + 1× P3 nitpick) across calibrated tasks (excluding rev-missing-scope-true-bounce); bubble size = median wall time</text>
+<rect x="743.0" y="96" width="133.0" height="78.3" fill="#10b981" opacity="0.07"/>
+<line x1="743.0" y1="96" x2="743.0" y2="454" stroke="#334155" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="78" y1="174.3" x2="876" y2="174.3" stroke="#334155" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="868.0" y="112.0" text-anchor="end" fill="#34d399" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">High Recall + High Restraint ↗</text>
+<text x="86.0" y="112.0" fill="#f59e0b" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">High Recall, Noisy / Pedantic</text>
+<text x="868.0" y="444.0" text-anchor="end" fill="#64748b" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Clean but Under-Sensitive</text>
+<line x1="78" y1="454.0" x2="876" y2="454.0" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="458.0" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">70%</text>
+<line x1="78" y1="342.1" x2="876" y2="342.1" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="346.1" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">80%</text>
+<line x1="78" y1="230.3" x2="876" y2="230.3" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="234.3" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">90%</text>
+<line x1="78" y1="118.4" x2="876" y2="118.4" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="122.4" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100%</text>
+<line x1="876.0" y1="96" x2="876.0" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="876.0" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">0</text>
+<line x1="787.3" y1="96" x2="787.3" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="787.3" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">1</text>
+<line x1="698.7" y1="96" x2="698.7" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="698.7" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">2</text>
+<line x1="610.0" y1="96" x2="610.0" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="610.0" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">3</text>
+<line x1="521.3" y1="96" x2="521.3" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="521.3" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">4</text>
+<line x1="432.7" y1="96" x2="432.7" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="432.7" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">5</text>
+<line x1="344.0" y1="96" x2="344.0" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="344.0" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">6</text>
+<line x1="255.3" y1="96" x2="255.3" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="255.3" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">7</text>
+<line x1="166.7" y1="96" x2="166.7" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="166.7" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">8</text>
+<line x1="78.0" y1="96" x2="78.0" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="78.0" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">9</text>
+<line x1="78" y1="96" x2="78" y2="454" stroke="#334155" stroke-width="1.2"/>
+<line x1="78" y1="454" x2="876" y2="454" stroke="#334155" stroke-width="1.2"/>
+<text x="477" y="496" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Weighted Unsolicited False Alarms (2× P0–P2 + 1× P3 — right is cleaner)</text>
+<text x="26" y="275" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" transform="rotate(-90 26 275)">Seeded Defect Recall (%)</text>
+<g class="chart-point" data-tip="google/gemini-4-carbon#medium | LSAS 100.0 | Recall 100.0% | FP 0, P3 0 | Wall 85.2s | Cost $0.93"><circle cx="876.0" cy="118.4" r="15.4" fill="#38bdf8" fill-opacity="0.32" stroke="#38bdf8" stroke-width="2"/></g>
+<text x="853.6" y="150.8" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">carbon#m (85s)</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#xhigh | LSAS 100.0 | Recall 100.0% | FP 0, P3 0 | Wall 138.8s | Cost $2.67"><circle cx="858.0" cy="128.4" r="18.0" fill="#38bdf8" fill-opacity="0.32" stroke="#38bdf8" stroke-width="2"/></g>
+<text x="833.0" y="132.4" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">neon#xh (139s)</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-astra#medium | LSAS 99.8 | Recall 100.0% | FP 0, P3 0 | Wall 15.8s | Cost $0.58"><circle cx="840.0" cy="138.4" r="10.1" fill="#34d399" fill-opacity="0.32" stroke="#34d399" stroke-width="2"/></g>
+<text x="822.9" y="165.4" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">astra#m (16s)</text>
+<g class="chart-point" data-tip="anthropic/claude-opus-5-5#high | LSAS 96.8 | Recall 100.0% | FP 1, P3 0 | Wall 18.0s | Cost $0.49"><circle cx="698.7" cy="118.4" r="10.3" fill="#f59e0b" fill-opacity="0.32" stroke="#f59e0b" stroke-width="2"/></g>
+<text x="681.3" y="145.7" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">opus-5-5#h (18s)</text>
+<line x1="610.0" y1="118.4" x2="610.0" y2="159.9" stroke="#64748b" stroke-width="0.9" stroke-dasharray="2 2"/>
+<g class="chart-point" data-tip="openai/gpt-6.2-astra#high | LSAS 95.1 | Recall 100.0% | FP 1, P3 1 | Wall 20.0s | Cost $0.69"><circle cx="610.0" cy="118.4" r="10.6" fill="#34d399" fill-opacity="0.32" stroke="#34d399" stroke-width="2"/></g>
+<text x="610.0" y="163.9" text-anchor="middle" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">astra#h (20s)</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#high | LSAS 95.0 | Recall 92.9% | FP 0, P3 0 | Wall 60.8s | Cost $1.25"><circle cx="876.0" cy="198.3" r="13.9" fill="#38bdf8" fill-opacity="0.32" stroke="#38bdf8" stroke-width="2"/></g>
+<text x="855.1" y="202.3" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">neon#h (61s)</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#high | LSAS 89.0 | Recall 92.9% | FP 1, P3 2 | Wall 16.2s | Cost $0.18"><circle cx="521.3" cy="198.3" r="10.1" fill="#34d399" fill-opacity="0.32" stroke="#34d399" stroke-width="2"/></g>
+<text x="538.4" y="202.3" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">sol#h (16s)</text>
+<g class="chart-point" data-tip="anthropic/claude-fable-5-2#high | LSAS 87.0 | Recall 100.0% | FP 3, P3 2 | Wall 19.6s | Cost $1.33"><circle cx="166.7" cy="118.4" r="10.5" fill="#f59e0b" fill-opacity="0.32" stroke="#f59e0b" stroke-width="2"/></g>
+<text x="166.7" y="146.9" text-anchor="middle" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">fable-5-2#h (20s)</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#xhigh | LSAS 87.0 | Recall 85.7% | FP 2, P3 2 | Wall 23.2s | Cost $0.24"><circle cx="344.0" cy="278.2" r="10.9" fill="#34d399" fill-opacity="0.32" stroke="#34d399" stroke-width="2"/></g>
+<text x="361.9" y="282.2" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">sol#xh (23s)</text>
+<polygon points="78.0,72.1 83.9,78.0 78.0,83.9 72.1,78.0" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/>
+<text x="88.0" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Anthropic</text>
+<circle cx="165.2" cy="78.0" r="5.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/>
+<text x="175.2" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Google</text>
+<rect x="227.4" y="73.4" width="9.2" height="9.2" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/>
+<text x="242.0" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">OpenAI</text>
+</svg>

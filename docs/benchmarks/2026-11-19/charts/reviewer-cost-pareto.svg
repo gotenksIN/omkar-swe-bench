@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" width="920" height="520" role="img" aria-label="Code Reviewer Autonomy vs. Cost Pareto Frontier">
+<title>Code Reviewer Autonomy vs. Cost Pareto Frontier</title>
+<desc>Code Reviewer LSAS (calibrated 10 tasks (excluding rev-missing-scope-true-bounce)) vs. suite API cost (USD, log scale)</desc>
+<rect x="0" y="0" width="920" height="520" fill="#0b1120"/>
+<rect x="12" y="12" width="896" height="496" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+<text x="32" y="42" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Code Reviewer Autonomy vs. Cost Pareto Frontier</text>
+<text x="32" y="62" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Code Reviewer LSAS (calibrated 10 tasks (excluding rev-missing-scope-true-bounce)) vs. suite API cost (USD, log scale)</text>
+<line x1="78" y1="454.0" x2="880" y2="454.0" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="458.0" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">80</text>
+<line x1="78" y1="368.8" x2="880" y2="368.8" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="372.8" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">85</text>
+<line x1="78" y1="283.5" x2="880" y2="283.5" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="287.5" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">90</text>
+<line x1="78" y1="198.3" x2="880" y2="198.3" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="202.3" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">95</text>
+<line x1="78" y1="113.0" x2="880" y2="113.0" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="117.0" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100</text>
+<line x1="177.0" y1="96" x2="177.0" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="177.0" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$0.20</text>
+<line x1="399.9" y1="96" x2="399.9" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="399.9" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$0.50</text>
+<line x1="568.5" y1="96" x2="568.5" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="568.5" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$1.0</text>
+<line x1="737.1" y1="96" x2="737.1" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="737.1" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$2.0</text>
+<line x1="78" y1="96" x2="78" y2="454" stroke="#334155" stroke-width="1.2"/>
+<line x1="78" y1="454" x2="880" y2="454" stroke="#334155" stroke-width="1.2"/>
+<text x="479" y="496" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Suite API Cost (USD, log scale)</text>
+<text x="26" y="275" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" transform="rotate(-90 26 275)">Code Reviewer LSAS (0–100)</text>
+<text x="86" y="446" fill="#64748b" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10">Y-axis starts at 80 (zoomed)</text>
+<text x="86" y="112" fill="#38bdf8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">↖ Better (Higher autonomy, lower cost)</text>
+<path d="M 157.9 300.6 L 393.6 300.6 L 393.6 167.6 L 433.9 167.6 L 433.9 116.5 L 550.7 116.5 L 550.7 113.0" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.85"/>
+<g class="chart-point" data-tip="google/gemini-4-carbon#medium | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $0.93 | Med wall 85.2s"><circle cx="550.7" cy="113.0" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><circle cx="550.7" cy="113.0" r="7.5" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="550.7" y="138.5" text-anchor="middle" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">carbon#m</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#xhigh | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $2.67 | Med wall 138.8s"><circle cx="807.0" cy="113.0" r="6.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="807.0" y="137.0" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">neon#xh</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-astra#medium | Reviewer LSAS 99.8 | Pass 10/10 | FP 0, P3 0 | Cost $0.58 | Med wall 15.8s"><circle cx="433.9" cy="116.5" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><rect x="427.0" y="109.6" width="13.8" height="13.8" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="433.9" y="142.0" text-anchor="middle" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">astra#m</text>
+<g class="chart-point" data-tip="anthropic/claude-opus-5-5#high | Reviewer LSAS 96.8 | Pass 9/10 | FP 1, P3 0 | Cost $0.49 | Med wall 18.0s"><circle cx="393.6" cy="167.6" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><polygon points="393.6,158.8 402.4,167.6 393.6,176.5 384.7,167.6" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="408.1" y="171.6" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">opus-5-5#h</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-astra#high | Reviewer LSAS 95.1 | Pass 8/10 | FP 1, P3 1 | Cost $0.69 | Med wall 20.0s"><rect x="472.6" y="191.1" width="11.0" height="11.0" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="491.1" y="200.6" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">astra#h</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#high | Reviewer LSAS 95.0 | Pass 9/10 | FP 0, P3 0 | Cost $1.25 | Med wall 60.8s"><circle cx="621.9" cy="198.3" r="6.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="634.9" y="202.3" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">neon#h</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#high | Reviewer LSAS 89.0 | Pass 6/10 | FP 1, P3 2 | Cost $0.18 | Med wall 16.2s"><circle cx="157.9" cy="300.6" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><rect x="151.0" y="293.7" width="13.8" height="13.8" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="172.4" y="304.6" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">sol#h</text>
+<g class="chart-point" data-tip="anthropic/claude-fable-5-2#high | Reviewer LSAS 87.0 | Pass 7/10 | FP 3, P3 2 | Cost $1.33 | Med wall 19.6s"><polygon points="637.7,327.6 644.7,334.7 637.7,341.7 630.6,334.7" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="650.7" y="338.7" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">fable-5-2#h</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#xhigh | Reviewer LSAS 87.0 | Pass 7/10 | FP 2, P3 2 | Cost $0.24 | Med wall 23.2s"><rect x="211.6" y="329.1" width="11.0" height="11.0" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="230.2" y="338.7" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">sol#xh</text>
+<polygon points="544.2,72.1 550.1,78.0 544.2,83.9 538.3,78.0" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/>
+<text x="554.2" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Anthropic</text>
+<circle cx="631.4" cy="78.0" r="5.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/>
+<text x="641.4" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Google</text>
+<rect x="693.6" y="73.4" width="9.2" height="9.2" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/>
+<text x="708.2" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">OpenAI</text>
+<line x1="778.0" y1="78" x2="802.0" y2="78" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 3"/>
+<text x="808.0" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Pareto frontier</text>
+</svg>

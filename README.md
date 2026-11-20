@@ -3,7 +3,7 @@
 Deterministic benchmark harness for evaluating coding, static code review, and coder-reviewer collaboration in OpenCode.
 Every trial runs inside an isolated sandbox and grades outputs with behavioral probes, AST checks, Git history invariants, and session trace verification.
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Task suite](#task-suite) · [Default models](#default-models) · [Sandbox isolation](#sandbox-isolation) · [CLI reference](#cli-reference) · [Telemetry](#telemetry) · [Offline judging](#offline-judging)
+[Rankings](#rankings) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Task suite](#task-suite) · [Default models](#default-models) · [Sandbox isolation](#sandbox-isolation) · [CLI reference](#cli-reference) · [Telemetry](#telemetry) · [Offline judging](#offline-judging)
 
 ---
 
@@ -15,6 +15,52 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 | **Code reviewer** | `--phase reviewer` | 11 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
 | **Pair** | `--phase pair` | 4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation |
 | **Total** | `--phase all` | **26** | Full coding, review, and collaboration suite |
+
+## Rankings
+
+Models are ranked by **Low-Steering Autonomy Score (`LSAS`, 0–100)**—how rarely you must intervene, debug, nudge static compliance, or fight stubborn review refusals—with cost and wall-clock time on separate Pareto axes.
+See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/2026-11-19/summary.md)** or open the **[interactive HTML dashboard](docs/benchmarks/2026-11-19/report.html)** (`neutral` profile, `--sandbox require`, OpenCode `2.3.2`, `$37.74` total API spend).
+
+### Autonomous Coders (`ACI` across 19 Solo + Pair trials)
+
+| Rank | Coder | ACI | ZSDR | Pass@1 | 19-trial cost | Total wall |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | `google/gemini-4-hydrogen#high` | **99.9** | 100.0% | 19/19 | $4.23 | 2400s |
+| 2 | `google/gemini-4-neon#medium` | **99.9** | 100.0% | 19/19 | $5.65 | 2722s |
+| 3 | `anthropic/claude-opus-5-5#medium` | **98.1** | 94.7% | 18/19 | $3.51 | 1166s |
+| 4 | `deepseek/deepseek-flash#high` | **95.1** | 94.7% | 17/19 | **$0.68** | 1718s |
+| 5 | `google/gemini-4-neon#high` | **93.1** | 94.7% | 17/19 | $8.96 | 4341s |
+| 6 | `anthropic/claude-sonnet-5-5#high` | **93.1** | 94.7% | 13/19 | $1.73 | **792s** |
+| 7 | `openai/gpt-6.2-sol#high` | **91.3** | 89.5% | 16/19 | $1.98 | 1678s |
+| 8 | `openai/gpt-6.2-sol#medium` | **89.8** | 84.2% | 16/19 | $1.65 | 1405s |
+
+![Coder Autonomy vs. Cost Pareto Frontier](docs/benchmarks/2026-11-19/charts/coder-cost-pareto.svg)
+
+![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](docs/benchmarks/2026-11-19/charts/coder-speed-pareto.svg)
+
+### Code Reviewers (`LSAS` across 10 calibrated tasks)
+
+| Rank | Reviewer | LSAS | Pass@1 | Recall | P0–P2 FPs | P3 nits | Suite cost | Med wall |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | `google/gemini-4-carbon#medium` | **100.0** | 10/10 | 100.0% | 0 | 0 | $0.93 | 85.2s |
+| 2 | `google/gemini-4-neon#xhigh` | **100.0** | 10/10 | 100.0% | 0 | 0 | $2.67 | 138.8s |
+| 3 | `openai/gpt-6.2-astra#medium` | **99.8** | 10/10 | 100.0% | 0 | 0 | $0.58 | **15.8s** |
+| 4 | `anthropic/claude-opus-5-5#high` | **96.8** | 9/10 | 100.0% | 1 | 0 | $0.49 | 18.0s |
+| 5 | `openai/gpt-6.2-astra#high` | **95.1** | 8/10 | 100.0% | 1 | 1 | $0.69 | 20.0s |
+| 6 | `google/gemini-4-neon#high` | **95.0** | 9/10 | 92.9% | 0 | 0 | $1.25 | 60.8s |
+| 7 | `openai/gpt-6.2-sol#high` | **89.0** | 6/10 | 92.9% | 1 | 2 | **$0.18** | 16.2s |
+| 8 | `anthropic/claude-fable-5-2#high` | **87.0** | 7/10 | 100.0% | 3 | 2 | $1.33 | 19.6s |
+| 9 | `openai/gpt-6.2-sol#xhigh` | **87.0** | 7/10 | 85.7% | 2 | 2 | $0.24 | 23.2s |
+
+![Code Reviewer Calibration Quadrant](docs/benchmarks/2026-11-19/charts/reviewer-calibration.svg)
+
+### Pair Collaboration & Babysitting Diagnostics
+
+![Phase 3 Coder × Reviewer Synergy Matrix](docs/benchmarks/2026-11-19/charts/pair-synergy-matrix.svg)
+
+![Low-Steering Babysitting & Failure Taxonomy](docs/benchmarks/2026-11-19/charts/failure-taxonomy.svg)
+
+Full per-stage tables, inference overhead & diff discipline charts, and all 251 trial rows live in **[`docs/benchmarks/2026-11-19/summary.md`](docs/benchmarks/2026-11-19/summary.md)**.
 
 ## How it works
 
@@ -193,7 +239,7 @@ The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in 
 | --- | --- |
 | `list [--phase <p>] [--json]` | Print task metadata as a table or JSON |
 | `run [options]` | Execute trials, checkpoint `results.json` after each trial, and write `summary.md` |
-| `report --input <results.json> [--out <md>]` | Rebuild a Markdown report from an existing `results.json` |
+| `report --input <results.json>... [--out <md> \| --out-dir <dir> [--png]]` | Build a Markdown summary or full LSAS report bundle (`summary.md`, `report.html`, `charts/*.svg`) from one or more `results.json` files |
 | `judge --input <results.json> [--answers <file>] [--out <file>]` | Export anonymized blind review packets or validate completed binary judgments |
 
 <details>

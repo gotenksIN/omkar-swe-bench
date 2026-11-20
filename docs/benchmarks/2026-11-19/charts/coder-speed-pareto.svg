@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" width="920" height="520" role="img" aria-label="Coder Autonomy vs. Wall-Clock Time Pareto Frontier">
+<title>Coder Autonomy vs. Wall-Clock Time Pareto Frontier</title>
+<desc>Combined Autonomous Coder Index (ACI, 19 trials) vs. total end-to-end wall-clock time (minutes)</desc>
+<rect x="0" y="0" width="920" height="520" fill="#0b1120"/>
+<rect x="12" y="12" width="896" height="496" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+<text x="32" y="42" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Coder Autonomy vs. Wall-Clock Time Pareto Frontier</text>
+<text x="32" y="62" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Combined Autonomous Coder Index (ACI, 19 trials) vs. total end-to-end wall-clock time (minutes)</text>
+<line x1="78" y1="454.0" x2="880" y2="454.0" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="458.0" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">85</text>
+<line x1="78" y1="342.1" x2="880" y2="342.1" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="346.1" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">90</text>
+<line x1="78" y1="230.3" x2="880" y2="230.3" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="234.3" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">95</text>
+<line x1="78" y1="118.4" x2="880" y2="118.4" stroke="#1e293b" stroke-width="1"/>
+<text x="68" y="122.4" text-anchor="end" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100</text>
+<line x1="178.9" y1="96" x2="178.9" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="178.9" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">20m</text>
+<line x1="408.6" y1="96" x2="408.6" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="408.6" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">40m</text>
+<line x1="638.4" y1="96" x2="638.4" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="638.4" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">60m</text>
+<line x1="868.2" y1="96" x2="868.2" y2="454" stroke="#1e293b" stroke-width="1"/>
+<text x="868.2" y="474" text-anchor="middle" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">80m</text>
+<line x1="78" y1="96" x2="78" y2="454" stroke="#334155" stroke-width="1.2"/>
+<line x1="78" y1="454" x2="880" y2="454" stroke="#334155" stroke-width="1.2"/>
+<text x="479" y="496" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Total 19-Trial Wall-Clock Time (minutes)</text>
+<text x="26" y="275" text-anchor="middle" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" transform="rotate(-90 26 275)">Autonomous Coder Index (ACI, 0–100)</text>
+<text x="86" y="446" fill="#64748b" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10">Y-axis starts at 85 (zoomed)</text>
+<text x="86" y="112" fill="#38bdf8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">↖ Better (Higher autonomy, lower wall time)</text>
+<path d="M 100.8 272.8 L 172.4 272.8 L 172.4 160.9 L 408.6 160.9 L 408.6 120.6" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.85"/>
+<g class="chart-point" data-tip="google/gemini-4-hydrogen#high | ACI 99.9 | Total wall 40.0 min (2400s) | Med wall 99.6s | Cost $4.23"><circle cx="408.6" cy="120.6" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><circle cx="408.6" cy="120.6" r="7.5" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="408.6" y="146.1" text-anchor="middle" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">hydrogen#h</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#medium | ACI 99.9 | Total wall 45.4 min (2722s) | Med wall 144.5s | Cost $5.65"><circle cx="470.4" cy="120.6" r="6.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="483.4" y="143.6" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">neon#m</text>
+<g class="chart-point" data-tip="anthropic/claude-opus-5-5#medium | ACI 98.1 | Total wall 19.4 min (1166s) | Med wall 51.0s | Cost $3.51"><circle cx="172.4" cy="160.9" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><polygon points="172.4,152.0 181.2,160.9 172.4,169.7 163.5,160.9" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="186.9" y="164.9" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">opus-5-5#m</text>
+<g class="chart-point" data-tip="deepseek/deepseek-flash#high | ACI 95.1 | Total wall 28.6 min (1718s) | Med wall 71.7s | Cost $0.68"><polygon points="278.0,221.1 284.9,233.7 271.1,233.7" fill="#a78bfa" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="291.0" y="232.0" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">flash#h</text>
+<g class="chart-point" data-tip="google/gemini-4-neon#high | ACI 93.1 | Total wall 72.3 min (4341s) | Med wall 211.5s | Cost $8.96"><circle cx="780.3" cy="272.8" r="6.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="793.3" y="276.8" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">neon#h</text>
+<g class="chart-point" data-tip="anthropic/claude-sonnet-5-5#high | ACI 93.1 | Total wall 13.2 min (792s) | Med wall 35.6s | Cost $1.73"><circle cx="100.8" cy="272.8" r="11.0" fill="none" stroke="#38bdf8" stroke-width="1.3" opacity="0.7"/><polygon points="100.8,263.9 109.6,272.8 100.8,281.6 91.9,272.8" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="115.3" y="276.8" text-anchor="start" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">sonnet-5-5#h</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#high | ACI 91.3 | Total wall 28.0 min (1678s) | Med wall 82.7s | Cost $1.98"><rect x="264.8" y="307.5" width="11.0" height="11.0" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="283.3" y="317.0" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">sol#h</text>
+<g class="chart-point" data-tip="openai/gpt-6.2-sol#medium | ACI 89.8 | Total wall 23.4 min (1405s) | Med wall 59.7s | Cost $1.65"><rect x="212.5" y="341.1" width="11.0" height="11.0" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/></g>
+<text x="231.1" y="350.6" text-anchor="start" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400">sol#m</text>
+<polygon points="463.8,72.1 469.7,78.0 463.8,83.9 457.9,78.0" fill="#f59e0b" stroke="#0b1120" stroke-width="1.5"/>
+<text x="473.8" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Anthropic</text>
+<polygon points="551.0,72.3 556.8,82.7 545.3,82.7" fill="#a78bfa" stroke="#0b1120" stroke-width="1.5"/>
+<text x="561.0" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">DeepSeek</text>
+<circle cx="631.4" cy="78.0" r="5.0" fill="#38bdf8" stroke="#0b1120" stroke-width="1.5"/>
+<text x="641.4" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Google</text>
+<rect x="693.6" y="73.4" width="9.2" height="9.2" rx="2" fill="#34d399" stroke="#0b1120" stroke-width="1.5"/>
+<text x="708.2" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">OpenAI</text>
+<line x1="778.0" y1="78" x2="802.0" y2="78" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 3"/>
+<text x="808.0" y="82" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Pareto frontier</text>
+</svg>
