@@ -1,20 +1,55 @@
-# OmkarSWE bench — Full Evaluation Report
+# OmkarSWE bench — Evaluation Report
 
-Evaluated **330** trials (**280/330** strict Pass@1, **84.8%**, **$46.76** total API cost).
+**330 trials** · **280/330** strict Pass@1 (84.8%) · **$46.76** total API cost
 
-Open [`report.html`](report.html) in a browser for the interactive dashboard with hover tooltips and phase tabs.
+Open [`report.html`](report.html) for interactive hover tooltips and phase tabs, or read [`craft.md`](craft.md) for host-side code craft metrics.
 
-## Scoring methodology
+## Highlights
+
+| Category | Model | Score | Cost · Speed |
+| :--- | :--- | ---: | ---: |
+| Best Overall Coder | Gemini 4 Hydrogen (medium) | ACI 99.9 | $2.79 · 27.6m |
+| Best Value Coder | DeepSeek Flash (high) | ACI 95.1 | $0.68 · 28.6m |
+| Fastest Pareto Coder | Claude Sonnet 5.5 (high) | ACI 93.1 | 13.2m · $1.73 |
+| Top Code Reviewer | Gemini 4 Carbon (low) | LSAS 100.0 | $0.49 · med 39s |
+
+<details>
+<summary>Scoring methodology (LSAS, ZSDR, ACI)</summary>
 
 - **LSAS (Low-Steering Autonomy Score, 0–100):** Zeroes timeouts, crashes, and partial runs. Caps broken deliverables or scope violations at `<= 25`. Passing deliverables start at `100` minus `-35` per static/test hygiene miss, `-20` per skipped verification check, `-8` per self-healed in-session friction item (such as a commit-guard rejection recovered autonomously), and `-2` per root tool error (capped at `-8`). For code reviewers, LSAS starts at `100 × recall` (`100` on clean diffs) minus `-30` per blocking `P0–P2` false alarm and `-15` per `P3` nitpick.
 - **ZSDR (Zero-Steering Deliverable Rate):** Share of trials needing zero human intervention after the session ends.
-- **ACI (Autonomous Coder Index):** `0.6 × Solo LSAS + 0.4 × Pair LSAS` across all 19 coder trials (Phases 1 and 3).
+- **ACI (Autonomous Coder Index):** `0.6 × Solo LSAS + 0.4 × Pair LSAS` across all solo and pair coder trials (Phases 1 and 3).
 - **Cost and Wall Time:** Reported on orthogonal Pareto axes rather than blended into capability scores.
+
+</details>
 
 ## Combined Autonomous Coder Index (Phases 1 + 3)
 
-| Rank | Coder | ACI | Solo LSAS | Pair LSAS | ZSDR | Pass@1 | 19-trial cost | $/clean pass | Total wall | Active tok/s | Diff ratio |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Rank | Coder | ACI | Pass@1 | Cost · Wall |
+| ---: | :--- | ---: | ---: | ---: |
+| 1 | Gemini 4 Hydrogen (medium) | 99.9 | 19/19 (100%) | $2.79 · 27.6m |
+| 2 | Gemini 4 Hydrogen (high) | 99.9 | 19/19 (100%) | $4.23 · 40.0m |
+| 3 | Gemini 4 Neon (medium) | 99.9 | 19/19 (100%) | $5.65 · 45.4m |
+| 4 | Claude Opus 5.5 (medium) | 98.1 | 18/19 (95%) | $3.51 · 19.4m |
+| 5 | DeepSeek Flash (high) | 95.1 | 17/19 (89%) | $0.68 · 28.6m |
+| 6 | Gemini 4 Neon (high) | 93.1 | 17/19 (89%) | $8.96 · 72.3m |
+| 7 | Claude Sonnet 5.5 (high) | 93.1 | 13/19 (68%) | $1.73 · 13.2m |
+| 8 | GPT-6.2 Sol (high) | 91.3 | 16/19 (84%) | $1.98 · 28.0m |
+| 9 | GPT-6.2 Sol (medium) | 89.8 | 16/19 (84%) | $1.65 · 23.4m |
+| 10 | Claude Opus 5.5 (high) | 89.5 | 16/19 (84%) | $4.51 · 24.0m |
+| 11 | DeepSeek Flash (max) | 84.2 | 15/19 (79%) | $0.73 · 40.7m |
+
+![Coder Autonomy vs. Cost Pareto Frontier](charts/coder-cost-pareto.svg)
+
+![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](charts/coder-speed-pareto.svg)
+
+![Inference Overhead & Diff Discipline (Coders)](charts/overhead-and-diff.svg)
+
+<details>
+<summary>Full coder telemetry (12 metrics, Phases 1 + 3)</summary>
+
+| Rank | Coder | ACI | Solo LSAS | Pair LSAS | ZSDR | Pass@1 | Suite cost | $/clean pass | Total wall | Active tok/s | Diff ratio |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | `google/gemini-4-hydrogen#medium` | 99.9 | 99.8 | 100.0 | 100.0% (19/19) | 100.0% (19/19) | $2.79 | $0.147 | 1656s | 101 | 0.99× |
 | 2 | `google/gemini-4-hydrogen#high` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $4.23 | $0.223 | 2400s | 110 | 1.14× |
 | 3 | `google/gemini-4-neon#medium` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $5.65 | $0.298 | 2722s | 67 | 1.00× |
@@ -27,16 +62,29 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | 10 | `anthropic/claude-opus-5-5#high` | 89.5 | 89.2 | 90.0 | 84.2% (16/19) | 84.2% (16/19) | $4.51 | $0.282 | 1437s | 97 | 1.28× |
 | 11 | `deepseek/deepseek-flash#max` | 84.2 | 87.7 | 78.9 | 78.9% (15/19) | 78.9% (15/19) | $0.73 | $0.049 | 2444s | 122 | 0.95× |
 
-![Coder Autonomy vs. Cost Pareto Frontier](charts/coder-cost-pareto.svg)
-
-![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](charts/coder-speed-pareto.svg)
-
-![Inference Overhead & Diff Discipline (Coders)](charts/overhead-and-diff.svg)
+</details>
 
 ## Phase 1 — Standalone coder leaderboard
 
+| Rank | Model | LSAS | Pass@1 | Cost · Wall |
+| ---: | :--- | ---: | ---: | ---: |
+| 1 | Gemini 4 Hydrogen (high) | 100.0 | 11/11 (100%) | $2.35 · 80s |
+| 2 | Gemini 4 Neon (medium) | 100.0 | 11/11 (100%) | $2.96 · 96s |
+| 3 | DeepSeek Flash (high) | 99.8 | 11/11 (100%) | $0.11 · 59s |
+| 4 | Gemini 4 Hydrogen (medium) | 99.8 | 11/11 (100%) | $1.30 · 72s |
+| 5 | GPT-6.2 Sol (high) | 99.1 | 10/11 (91%) | $0.74 · 46s |
+| 6 | Claude Opus 5.5 (medium) | 96.8 | 10/11 (91%) | $1.79 · 33s |
+| 7 | GPT-6.2 Sol (medium) | 96.6 | 10/11 (91%) | $0.49 · 34s |
+| 8 | Claude Sonnet 5.5 (high) | 91.9 | 9/11 (82%) | $0.66 · 21s |
+| 9 | Gemini 4 Neon (high) | 90.9 | 10/11 (91%) | $5.01 · 196s |
+| 10 | Claude Opus 5.5 (high) | 89.2 | 9/11 (82%) | $2.43 · 36s |
+| 11 | DeepSeek Flash (max) | 87.7 | 9/11 (82%) | $0.11 · 84s |
+
+<details>
+<summary>Full Phase 1 telemetry (13 metrics)</summary>
+
 | Rank | Model | LSAS | ZSDR | Pass@1 | Passed | Mean check | Diff ratio | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | `google/gemini-4-hydrogen#high` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.02× | $2.35 | 80.1s | 2.18s | 155 | 76% |
 | 2 | `google/gemini-4-neon#medium` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.13× | $2.96 | 96.0s | 4.25s | 87 | 68% |
 | 3 | `deepseek/deepseek-flash#high` | 99.8 | 100.0% | 100.0% | 11/11 | 100.0% | 1.00× | $0.11 | 59.2s | 1.91s | 163 | 71% |
@@ -49,10 +97,35 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | 10 | `anthropic/claude-opus-5-5#high` | 89.2 | 81.8% | 81.8% | 9/11 | 97.4% | 1.15× | $2.43 | 36.4s | 2.33s | 107 | 15% |
 | 11 | `deepseek/deepseek-flash#max` | 87.7 | 81.8% | 81.8% | 9/11 | 93.0% | 0.92× | $0.11 | 84.4s | 2.11s | 160 | 76% |
 
-## Phase 2 — Code reviewer leaderboard (calibrated, excluding `rev-missing-scope-true-bounce`)
+</details>
+
+## Phase 2 — Code reviewer leaderboard (calibrated)
+
+Excludes uncalibrated bounce fixture: `rev-missing-scope-true-bounce`.
+
+| Rank | Model | LSAS | Recall | Alarms | Cost |
+| ---: | :--- | ---: | ---: | ---: | ---: |
+| 1 | Gemini 4 Carbon (low) | 100.0 | 100% | 0 | $0.49 |
+| 2 | Gemini 4 Carbon (medium) | 100.0 | 100% | 0 | $0.93 |
+| 3 | Gemini 4 Neon (xhigh) | 100.0 | 100% | 0 | $2.67 |
+| 4 | GPT-6.2 Astra (medium) | 99.8 | 100% | 0 | $0.58 |
+| 5 | Claude Opus 5.5 (high) | 96.8 | 100% | 1 FP · 0 P3 | $0.49 |
+| 6 | Claude Opus 5.5 (medium) | 96.6 | 100% | 1 FP · 0 P3 | $0.42 |
+| 7 | GPT-6.2 Astra (high) | 95.1 | 100% | 1 FP · 1 P3 | $0.69 |
+| 8 | Gemini 4 Neon (high) | 95.0 | 93% | 0 | $1.25 |
+| 9 | GPT-6.2 Sol (high) | 89.0 | 93% | 1 FP · 2 P3 | $0.18 |
+| 10 | Claude Fable 5.2 (high) | 87.0 | 100% | 3 FP · 2 P3 | $1.33 |
+| 11 | GPT-6.2 Sol (xhigh) | 87.0 | 86% | 2 FP · 2 P3 | $0.24 |
+
+![Code Reviewer Autonomy vs. Cost Pareto Frontier](charts/reviewer-cost-pareto.svg)
+
+![Code Reviewer Calibration Quadrant](charts/reviewer-calibration.svg)
+
+<details>
+<summary>Full Phase 2 telemetry (13 metrics, calibrated)</summary>
 
 | Rank | Model | LSAS | Pass@1 | Passed | Defect recall | P0–P2 FPs | P3 nits | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | `google/gemini-4-carbon#low` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.49 | 39.0s | 5.37s | 22 | 0% |
 | 2 | `google/gemini-4-carbon#medium` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.93 | 85.2s | 8.52s | 63 | 87% |
 | 3 | `google/gemini-4-neon#xhigh` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $2.67 | 138.8s | 9.26s | 106 | 94% |
@@ -65,14 +138,13 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | 10 | `anthropic/claude-fable-5-2#high` | 87.0 | 70.0% | 7/10 | 100.0% | 3 | 2 | $1.33 | 19.6s | 1.76s | 92 | 29% |
 | 11 | `openai/gpt-6.2-sol#xhigh` | 87.0 | 70.0% | 7/10 | 85.7% | 2 | 2 | $0.24 | 23.2s | 4.70s | 48 | 60% |
 
-![Code Reviewer Autonomy vs. Cost Pareto Frontier](charts/reviewer-cost-pareto.svg)
+</details>
 
-![Code Reviewer Calibration Quadrant](charts/reviewer-calibration.svg)
-
-### All Phase 2 tasks (including 0%-pass bounce fixture)
+<details>
+<summary>All Phase 2 tasks (including uncalibrated bounce fixture)</summary>
 
 | Rank | Model | LSAS | Pass@1 | Passed | Defect recall | P0–P2 FPs | P3 nits | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | `google/gemini-4-carbon#low` | 90.9 | 90.9% | 10/11 | 100.0% | 1 | 0 | $0.55 | 43.0s | 4.73s | 20 | 0% |
 | 2 | `google/gemini-4-carbon#medium` | 90.9 | 90.9% | 10/11 | 100.0% | 0 | 0 | $1.31 | 88.8s | 8.35s | 65 | 88% |
 | 3 | `google/gemini-4-neon#xhigh` | 90.9 | 90.9% | 10/11 | 100.0% | 1 | 0 | $2.97 | 154.6s | 9.19s | 104 | 95% |
@@ -85,12 +157,42 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | 10 | `anthropic/claude-fable-5-2#high` | 80.5 | 63.6% | 7/11 | 100.0% | 3 | 2 | $1.41 | 19.5s | 1.87s | 91 | 28% |
 | 11 | `openai/gpt-6.2-sol#xhigh` | 79.1 | 63.6% | 7/11 | 85.7% | 3 | 2 | $0.25 | 23.1s | 4.69s | 46 | 59% |
 
+</details>
+
 ## Phase 3 — Pair collaboration leaderboard
 
 ![Phase 3 Coder × Reviewer Synergy Matrix](charts/pair-synergy-matrix.svg)
 
+| Rank | Model | LSAS | Pass@1 | Cost · Wall |
+| ---: | :--- | ---: | ---: | ---: |
+| 1 | Claude Opus 5.5 (medium) → GPT-6.2 Astra (medium) | 100.0 | 4/4 (100%) | $0.86 · 56s |
+| 2 | Gemini 4 Hydrogen (medium) → GPT-6.2 Astra (medium) | 100.0 | 4/4 (100%) | $0.77 · 74s |
+| 3 | Claude Opus 5.5 (high) → Gemini 4 Carbon (medium) | 100.0 | 4/4 (100%) | $1.04 · 91s |
+| 4 | Claude Opus 5.5 (medium) → Gemini 4 Carbon (medium) | 100.0 | 4/4 (100%) | $0.86 · 96s |
+| 5 | Gemini 4 Hydrogen (high) → GPT-6.2 Astra (medium) | 100.0 | 4/4 (100%) | $0.89 · 107s |
+| 6 | DeepSeek Flash (high) → Gemini 4 Carbon (medium) | 100.0 | 4/4 (100%) | $0.30 · 122s |
+| 7 | Gemini 4 Hydrogen (medium) → Gemini 4 Carbon (medium) | 100.0 | 4/4 (100%) | $0.72 · 135s |
+| 8 | Gemini 4 Neon (medium) → GPT-6.2 Astra (medium) | 100.0 | 4/4 (100%) | $1.31 · 157s |
+| 9 | Gemini 4 Hydrogen (high) → Gemini 4 Carbon (medium) | 99.5 | 4/4 (100%) | $1.00 · 155s |
+| 10 | Gemini 4 Neon (medium) → Gemini 4 Carbon (medium) | 99.5 | 4/4 (100%) | $1.38 · 188s |
+| 11 | Gemini 4 Neon (high) → GPT-6.2 Astra (medium) | 99.5 | 4/4 (100%) | $1.78 · 211s |
+| 12 | Claude Sonnet 5.5 (high) → Gemini 4 Carbon (medium) | 96.0 | 2/4 (50%) | $0.50 · 64s |
+| 13 | Claude Sonnet 5.5 (high) → GPT-6.2 Astra (medium) | 94.0 | 2/4 (50%) | $0.58 · 55s |
+| 14 | Gemini 4 Neon (high) → Gemini 4 Carbon (medium) | 93.5 | 3/4 (75%) | $2.18 · 239s |
+| 15 | Claude Opus 5.5 (high) → GPT-6.2 Astra (medium) | 80.0 | 3/4 (75%) | $1.05 · 56s |
+| 16 | GPT-6.2 Sol (medium) → GPT-6.2 Astra (medium) | 79.7 | 3/4 (75%) | $0.51 · 64s |
+| 17 | GPT-6.2 Sol (high) → GPT-6.2 Astra (medium) | 79.7 | 3/4 (75%) | $0.62 · 90s |
+| 18 | GPT-6.2 Sol (high) → Gemini 4 Carbon (medium) | 79.7 | 3/4 (75%) | $0.62 · 141s |
+| 19 | GPT-6.2 Sol (medium) → Gemini 4 Carbon (medium) | 79.7 | 3/4 (75%) | $0.65 · 143s |
+| 20 | DeepSeek Flash (max) → GPT-6.2 Astra (medium) | 79.0 | 3/4 (75%) | $0.33 · 99s |
+| 21 | DeepSeek Flash (max) → Gemini 4 Carbon (medium) | 78.8 | 3/4 (75%) | $0.29 · 123s |
+| 22 | DeepSeek Flash (high) → GPT-6.2 Astra (medium) | 76.3 | 2/4 (50%) | $0.28 · 61s |
+
+<details>
+<summary>Full Phase 3 telemetry (13 metrics)</summary>
+
 | Rank | Model | LSAS | ZSDR | Pass@1 | Passed | Mean check | Diff ratio | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ---: | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | `anthropic/claude-opus-5-5#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.10× | $0.86 | 55.7s | 2.23s | 77 | 3% |
 | 2 | `google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 0.91× | $0.77 | 74.4s | 2.27s | 87 | 43% |
 | 3 | `anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.43× | $1.04 | 90.7s | 2.35s | 81 | 29% |
@@ -114,16 +216,19 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | 21 | `deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium` | 78.8 | 75.0% | 75.0% | 3/4 | 92.9% | 1.05× | $0.29 | 123.0s | 1.89s | 100 | 54% |
 | 22 | `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium` | 76.3 | 75.0% | 50.0% | 2/4 | 88.8% | 1.02× | $0.28 | 61.0s | 1.72s | 117 | 29% |
 
+</details>
+
 ## Diagnostics
 
 ![Low-Steering Babysitting & Failure Taxonomy](charts/failure-taxonomy.svg)
 
 ![Diagnostic Task × Model Outcome Heatmap](charts/task-heatmap.svg)
 
-## Per-trial breakdown
+<details>
+<summary>Per-trial breakdown (330 trials)</summary>
 
 | Task | Role | Model | Tier | LSAS | Pass | Raw score | Wall | Cost | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- | ---: | :---: | ---: | ---: | ---: | :--- |
 | coder-py-stitch-collapse | coder | openai/gpt-6.2-sol#medium | clean_pass | 100.0 | Yes | 100.0% | 32.4s | $0.0339 |  |
 | coder-py-stitch-collapse | coder | openai/gpt-6.2-sol#high | clean_pass | 100.0 | Yes | 100.0% | 30.5s | $0.0384 |  |
 | coder-py-stitch-collapse | coder | google/gemini-4-hydrogen#high | clean_pass | 100.0 | Yes | 100.0% | 80.1s | $0.1569 |  |
@@ -454,3 +559,6 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | pair-unhittable-finding-and-nonhead | pair | google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 153.3s | $0.1803 |  |
 | pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium | broken_deliverable | 20.0 | No | 92.9% | 93.6s | $0.0988 | failed: declined_unhittable_with_reason |
 | pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium | broken_deliverable | 15.0 | No | 71.4% | 121.9s | $0.0483 | failed: nonhead_core_untouched, final_behavior_passes, amendment_count, reviewed_commit_needs_fix |
+
+</details>
+

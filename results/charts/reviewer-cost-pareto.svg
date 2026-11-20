@@ -1,6 +1,6 @@
-<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-label="Code Reviewer Autonomy vs. Cost Pareto Frontier">
+<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 654" width="760" height="654" role="img" aria-label="Code Reviewer Autonomy vs. Cost Pareto Frontier">
 <title>Code Reviewer Autonomy vs. Cost Pareto Frontier</title>
-<desc>Code Reviewer LSAS (calibrated 10 tasks (excluding rev-missing-scope-true-bounce)) vs. suite API cost (USD, log scale)</desc>
+<desc>Code Reviewer LSAS (calibrated 10 tasks) vs. suite API cost (USD, log scale)</desc>
 <style>
 .omkar-chart {
   --c-bg: #fcfcfc;
@@ -9,17 +9,19 @@
   --c-border: #e5e5e5;
   --c-grid: #efefef;
   --c-axis: #d4d4d4;
-  --c-text: #000000;
-  --c-muted: #525252;
-  --c-subtle: #737373;
-  --c-frontier: #000000;
-  --c-quadrant: #f5f5f5;
+  --c-text: #09090b;
+  --c-muted: #52525b;
+  --c-subtle: #71717a;
+  --c-frontier: #18181b;
+  --c-quadrant: #f4f4f5;
   --c-reason-overlay: rgba(0, 0, 0, 0.24);
-  --p-anthropic: #d97706;
-  --p-google: #2563eb;
-  --p-openai: #09090b;
-  --p-deepseek: #737373;
-  --p-other: #525252;
+  --p-anthropic: #d97757;
+  --p-google: #4285f4;
+  --p-openai: #18181b;
+  --p-deepseek: #4d6bfe;
+  --p-other: #52525b;
+  --p-badge-ink: #ffffff;
+  --p-openai-ink: #ffffff;
   --t-clean: #18181b;
   --t-clean-ink: #ffffff;
   --t-friction: #3167f6;
@@ -46,17 +48,19 @@
     --c-border: #262626;
     --c-grid: #1a1a1a;
     --c-axis: #3a3a3a;
-    --c-text: #ffffff;
-    --c-muted: #a3a3a3;
-    --c-subtle: #737373;
-    --c-frontier: #ffffff;
-    --c-quadrant: #171717;
+    --c-text: #fafafa;
+    --c-muted: #a1a1aa;
+    --c-subtle: #71717a;
+    --c-frontier: #fafafa;
+    --c-quadrant: #141417;
     --c-reason-overlay: rgba(0, 0, 0, 0.45);
-    --p-anthropic: #f5a623;
-    --p-google: #3b82f6;
-    --p-openai: #f5f5f5;
-    --p-deepseek: #a3a3a3;
-    --p-other: #737373;
+    --p-anthropic: #e88b6d;
+    --p-google: #60a5fa;
+    --p-openai: #f4f4f5;
+    --p-deepseek: #738bff;
+    --p-other: #71717a;
+    --p-badge-ink: #ffffff;
+    --p-openai-ink: #09090b;
     --t-clean: #e5e5e5;
     --t-clean-ink: #000000;
     --t-friction: #3b82f6;
@@ -77,65 +81,108 @@
   }
 }
 </style>
-<rect x="0.5" y="0.5" width="959" height="539" rx="10" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>
-<text x="28" y="36" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="-0.02em">Code Reviewer Autonomy vs. Cost Pareto Frontier</text>
-<text x="28" y="56" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Code Reviewer LSAS (calibrated 10 tasks (excluding rev-missing-scope-true-bounce)) vs. suite API cost (USD, log scale)</text>
-<line x1="76" y1="478.0" x2="924" y2="478.0" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="66" y="482.0" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">80</text>
-<line x1="76" y1="387.0" x2="924" y2="387.0" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="66" y="391.0" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">85</text>
-<line x1="76" y1="296.1" x2="924" y2="296.1" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="66" y="300.1" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">90</text>
-<line x1="76" y1="205.1" x2="924" y2="205.1" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="66" y="209.1" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">95</text>
-<line x1="76" y1="114.2" x2="924" y2="114.2" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="66" y="118.2" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100</text>
-<line x1="179.6" y1="96" x2="179.6" y2="478" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="179.6" y="498" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$0.20</text>
-<line x1="412.7" y1="96" x2="412.7" y2="478" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="412.7" y="498" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$0.50</text>
-<line x1="589.0" y1="96" x2="589.0" y2="478" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="589.0" y="498" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$1.0</text>
-<line x1="765.3" y1="96" x2="765.3" y2="478" stroke="var(--c-grid)" stroke-width="1"/>
-<text x="765.3" y="498" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">$2.0</text>
-<line x1="76" y1="96" x2="76" y2="478" stroke="var(--c-axis)" stroke-width="1"/>
-<line x1="76" y1="478" x2="924" y2="478" stroke="var(--c-axis)" stroke-width="1"/>
-<text x="500" y="520" text-anchor="middle" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Suite API Cost (USD, log scale)</text>
-<text x="22" y="287" text-anchor="middle" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" transform="rotate(-90 22 287)">Code Reviewer LSAS (0–100)</text>
-<text x="84" y="470" fill="var(--c-subtle)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10">Y-axis starts at 80 (zoomed)</text>
-<text x="84" y="112" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">↖ Better (Higher autonomy, lower cost)</text>
-<path d="M 159.6 314.3 L 369.2 314.3 L 369.2 176.0 L 406.0 176.0 L 406.0 172.4 L 409.6 172.4 L 409.6 114.2" fill="none" stroke="var(--c-frontier)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.65"/>
-<g class="chart-point" data-tip="Gemini 4 Carbon (low) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $0.49 | Med wall 39.0s"><circle cx="409.6" cy="114.2" r="10.5" fill="none" stroke="var(--c-frontier)" stroke-width="1" opacity="0.35"/><circle cx="409.6" cy="114.2" r="6.5" fill="var(--c-card)" stroke="var(--p-google)" stroke-width="2.4"/></g>
-<text x="395.1" y="139.7" text-anchor="end" fill="var(--c-text)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">Gemini 4 Carbon (low)</text>
-<g class="chart-point" data-tip="Gemini 4 Carbon (medium) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $0.93 | Med wall 85.2s"><circle cx="570.4" cy="114.2" r="5.5" fill="var(--c-card)" stroke="var(--p-google)" stroke-width="2.4"/></g>
-<text x="570.4" y="139.7" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">Gemini 4 Carbon (medium)</text>
-<g class="chart-point" data-tip="Gemini 4 Neon (xhigh) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $2.67 | Med wall 138.8s"><circle cx="838.4" cy="114.2" r="5.5" fill="var(--c-card)" stroke="var(--p-google)" stroke-width="2.4"/></g>
-<text x="838.4" y="139.7" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">Gemini 4 Neon (xhigh)</text>
-<line x1="448.2" y1="117.8" x2="479.7" y2="157.8" stroke="var(--c-subtle)" stroke-width="0.9" stroke-dasharray="2 2"/>
-<g class="chart-point" data-tip="GPT-6.2 Astra (medium) | Reviewer LSAS 99.8 | Pass 10/10 | FP 0, P3 0 | Cost $0.58 | Med wall 15.8s"><rect x="443.3" y="112.9" width="9.9" height="9.9" rx="1.8" fill="var(--c-card)" stroke="var(--p-openai)" stroke-width="2.4"/></g>
-<text x="479.7" y="161.8" text-anchor="start" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">GPT-6.2 Astra (medium)</text>
-<line x1="406.0" y1="172.4" x2="373.5" y2="212.4" stroke="var(--c-subtle)" stroke-width="0.9" stroke-dasharray="2 2"/>
-<g class="chart-point" data-tip="Claude Opus 5.5 (high) | Reviewer LSAS 96.8 | Pass 9/10 | FP 1, P3 0 | Cost $0.49 | Med wall 18.0s"><circle cx="406.0" cy="172.4" r="10.5" fill="none" stroke="var(--c-frontier)" stroke-width="1" opacity="0.35"/><polygon points="406.0,164.7 413.7,172.4 406.0,180.1 398.4,172.4" fill="var(--c-card)" stroke="var(--p-anthropic)" stroke-width="2.4"/></g>
-<text x="373.5" y="216.4" text-anchor="end" fill="var(--c-text)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">Claude Opus 5.5 (high)</text>
-<line x1="369.2" y1="176.0" x2="316.7" y2="176.0" stroke="var(--c-subtle)" stroke-width="0.9" stroke-dasharray="2 2"/>
-<g class="chart-point" data-tip="Claude Opus 5.5 (medium) | Reviewer LSAS 96.6 | Pass 9/10 | FP 1, P3 0 | Cost $0.42 | Med wall 15.4s"><circle cx="369.2" cy="176.0" r="10.5" fill="none" stroke="var(--c-frontier)" stroke-width="1" opacity="0.35"/><polygon points="369.2,168.4 376.9,176.0 369.2,183.7 361.5,176.0" fill="var(--c-card)" stroke="var(--p-anthropic)" stroke-width="2.4"/></g>
-<text x="316.7" y="180.0" text-anchor="end" fill="var(--c-text)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">Claude Opus 5.5 (medium)</text>
-<g class="chart-point" data-tip="GPT-6.2 Astra (high) | Reviewer LSAS 95.1 | Pass 8/10 | FP 1, P3 1 | Cost $0.69 | Med wall 20.0s"><rect x="489.5" y="198.4" width="9.9" height="9.9" rx="1.8" fill="var(--c-card)" stroke="var(--p-openai)" stroke-width="2.4"/></g>
-<text x="494.4" y="186.8" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">GPT-6.2 Astra (high)</text>
-<g class="chart-point" data-tip="Gemini 4 Neon (high) | Reviewer LSAS 95.0 | Pass 9/10 | FP 0, P3 0 | Cost $1.25 | Med wall 60.8s"><circle cx="644.8" cy="205.1" r="5.5" fill="var(--c-card)" stroke="var(--p-google)" stroke-width="2.4"/></g>
-<text x="644.8" y="188.6" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">Gemini 4 Neon (high)</text>
-<g class="chart-point" data-tip="GPT-6.2 Sol (high) | Reviewer LSAS 89.0 | Pass 6/10 | FP 1, P3 2 | Cost $0.18 | Med wall 16.2s"><circle cx="159.6" cy="314.3" r="10.5" fill="none" stroke="var(--c-frontier)" stroke-width="1" opacity="0.35"/><rect x="153.7" y="308.4" width="11.7" height="11.7" rx="1.8" fill="var(--c-card)" stroke="var(--p-openai)" stroke-width="2.4"/></g>
-<text x="159.6" y="296.8" text-anchor="middle" fill="var(--c-text)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">GPT-6.2 Sol (high)</text>
-<g class="chart-point" data-tip="Claude Fable 5.2 (high) | Reviewer LSAS 87.0 | Pass 7/10 | FP 3, P3 2 | Cost $1.33 | Med wall 19.6s"><polygon points="661.3,344.2 667.8,350.7 661.3,357.2 654.8,350.7" fill="var(--c-card)" stroke="var(--p-anthropic)" stroke-width="2.4"/></g>
-<text x="661.3" y="334.2" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">Claude Fable 5.2 (high)</text>
-<g class="chart-point" data-tip="GPT-6.2 Sol (xhigh) | Reviewer LSAS 87.0 | Pass 7/10 | FP 2, P3 2 | Cost $0.24 | Med wall 23.2s"><rect x="216.6" y="345.7" width="9.9" height="9.9" rx="1.8" fill="var(--c-card)" stroke="var(--p-openai)" stroke-width="2.4"/></g>
-<text x="221.5" y="376.2" text-anchor="middle" fill="var(--c-muted)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="400">GPT-6.2 Sol (xhigh)</text>
-<polygon points="588.2,70.7 593.5,76.0 588.2,81.3 582.9,76.0" fill="var(--c-card)" stroke="var(--p-anthropic)" stroke-width="2.4"/>
-<text x="598.2" y="80" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Anthropic</text>
-<circle cx="675.4" cy="76.0" r="4.5" fill="var(--c-card)" stroke="var(--p-google)" stroke-width="2.4"/>
-<text x="685.4" y="80" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Google</text>
-<rect x="738.2" y="72.0" width="8.1" height="8.1" rx="1.8" fill="var(--c-card)" stroke="var(--p-openai)" stroke-width="2.4"/>
-<text x="752.2" y="80" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">OpenAI</text>
-<line x1="822.0" y1="76" x2="846.0" y2="76" stroke="var(--c-frontier)" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.7"/>
-<text x="852.0" y="80" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Pareto frontier</text>
+<rect x="0.5" y="0.5" width="759" height="653" rx="12" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>
+<text x="32" y="40" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18.5" font-weight="600" letter-spacing="-0.02em">Code Reviewer Autonomy vs. Cost Pareto Frontier</text>
+<text x="32" y="61" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5">Code Reviewer LSAS (calibrated 10 tasks) vs. suite API cost (USD, log scale)</text>
+<g transform="translate(72.0 80.5) scale(0.5833)"><path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" fill="var(--p-anthropic)" fill-rule="evenodd"/></g>
+<text x="91.0" y="92" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Anthropic</text>
+<g transform="translate(174.8 80.5) scale(0.5833)"><path d="M5.988 1.622A8.539 8.539 0 003.45 8.446c.349 4.408 4.506 7.995 8.276 7.995 3.507 0 4.88-3.061 4.541-5.14a4.318 4.318 0 00-.95-2.073c.632.34 1.244.776 1.809 1.3 1.52 1.415 2.44 3.229 2.587 5.1C20.04 19.763 16.98 24 11.863 24c-1.695 0-3.48-.432-4.98-1.143C2.816 20.937 0 16.797 0 12.002 0 7.571 2.405 3.7 5.988 1.622zM12.136 0c1.696 0 3.481.432 4.98 1.143C21.186 3.063 24 7.203 24 11.998c0 4.431-2.405 8.303-5.988 10.38a8.539 8.539 0 002.538-6.824c-.349-4.408-4.506-7.995-8.276-7.995-3.507 0-4.88 3.061-4.541 5.14a4.3 4.3 0 00.953 2.073 8.723 8.723 0 01-1.81-1.3c-1.52-1.415-2.44-3.227-2.589-5.1C3.96 4.237 7.02 0 12.137 0z" fill="var(--p-google)" fill-rule="evenodd"/></g>
+<text x="193.8" y="92" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">DeepMind</text>
+<g transform="translate(270.4 80.5) scale(0.5833)"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="var(--p-openai)" fill-rule="evenodd"/></g>
+<text x="289.4" y="92" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">OpenAI</text>
+<line x1="612.0" y1="88" x2="638.0" y2="88" stroke="var(--c-frontier)" stroke-width="1.6" stroke-dasharray="5 3" opacity="0.75"/>
+<text x="644.0" y="92" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Pareto frontier</text>
+<line x1="68" y1="404.0" x2="732" y2="404.0" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="58" y="408.0" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">80</text>
+<line x1="68" y1="339.6" x2="732" y2="339.6" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="58" y="343.6" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">85</text>
+<line x1="68" y1="275.1" x2="732" y2="275.1" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="58" y="279.1" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">90</text>
+<line x1="68" y1="210.7" x2="732" y2="210.7" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="58" y="214.7" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">95</text>
+<line x1="68" y1="146.2" x2="732" y2="146.2" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="58" y="150.2" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">100</text>
+<line x1="150.0" y1="114" x2="150.0" y2="404" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="150.0" y="425" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">$0.20</text>
+<line x1="334.5" y1="114" x2="334.5" y2="404" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="334.5" y="425" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">$0.50</text>
+<line x1="474.1" y1="114" x2="474.1" y2="404" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="474.1" y="425" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">$1.0</text>
+<line x1="613.7" y1="114" x2="613.7" y2="404" stroke="var(--c-grid)" stroke-width="1"/>
+<text x="613.7" y="425" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">$2.0</text>
+<line x1="68" y1="114" x2="68" y2="404" stroke="var(--c-axis)" stroke-width="1"/>
+<line x1="68" y1="404" x2="732" y2="404" stroke="var(--c-axis)" stroke-width="1"/>
+<text x="400" y="446" text-anchor="middle" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5">Suite API Cost (USD, log scale)</text>
+<text x="20" y="259" text-anchor="middle" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12.5" transform="rotate(-90 20 259)">Code Reviewer LSAS (0–100)</text>
+<text x="78" y="394" fill="var(--c-subtle)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Y-axis starts at 80 (zoomed)</text>
+<g stroke="var(--c-text)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="87" y1="131" x2="79" y2="123"/><polyline points="79,129 79,123 85,123"/></g>
+<text x="93" y="132" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Better (Higher autonomy, lower cost)</text>
+<path d="M 134.2 288.0 L 300.1 288.0 L 300.1 190.0 L 329.3 190.0 L 329.3 187.5 L 332.1 187.5 L 332.1 146.2" fill="none" stroke="var(--c-frontier)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.65"/>
+<g class="chart-point" data-tip="GPT-6.2 Sol (xhigh) | Reviewer LSAS 87.0 | Pass 7/10 | FP 2, P3 2 | Cost $0.24 | Med wall 23.2s"><circle cx="183.2" cy="313.8" r="10.5" fill="var(--p-openai)" stroke="var(--c-card)" stroke-width="2"/><text x="183.2" y="317.6" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10" font-weight="700">11</text></g>
+<g class="chart-point" data-tip="Claude Fable 5.2 (high) | Reviewer LSAS 87.0 | Pass 7/10 | FP 3, P3 2 | Cost $1.33 | Med wall 19.6s"><circle cx="531.4" cy="313.8" r="10.5" fill="var(--p-anthropic)" stroke="var(--c-card)" stroke-width="2"/><text x="531.4" y="317.6" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10" font-weight="700">10</text></g>
+<g class="chart-point" data-tip="GPT-6.2 Sol (high) | Reviewer LSAS 89.0 | Pass 6/10 | FP 1, P3 2 | Cost $0.18 | Med wall 16.2s"><circle cx="134.2" cy="288.0" r="14.0" fill="none" stroke="var(--c-frontier)" stroke-width="1.35" stroke-dasharray="3 2" opacity="0.55"/><circle cx="134.2" cy="288.0" r="10.5" fill="var(--p-openai)" stroke="var(--c-card)" stroke-width="2"/><text x="134.2" y="291.8" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">9</text></g>
+<g class="chart-point" data-tip="Gemini 4 Neon (high) | Reviewer LSAS 95.0 | Pass 9/10 | FP 0, P3 0 | Cost $1.25 | Med wall 60.8s"><circle cx="518.3" cy="210.7" r="10.5" fill="var(--p-google)" stroke="var(--c-card)" stroke-width="2"/><text x="518.3" y="214.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">8</text></g>
+<g class="chart-point" data-tip="GPT-6.2 Astra (high) | Reviewer LSAS 95.1 | Pass 8/10 | FP 1, P3 1 | Cost $0.69 | Med wall 20.0s"><circle cx="399.3" cy="209.4" r="10.5" fill="var(--p-openai)" stroke="var(--c-card)" stroke-width="2"/><text x="399.3" y="213.2" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">7</text></g>
+<g class="chart-point" data-tip="Claude Opus 5.5 (medium) | Reviewer LSAS 96.6 | Pass 9/10 | FP 1, P3 0 | Cost $0.42 | Med wall 15.4s"><circle cx="300.1" cy="190.0" r="14.0" fill="none" stroke="var(--c-frontier)" stroke-width="1.35" stroke-dasharray="3 2" opacity="0.55"/><circle cx="300.1" cy="190.0" r="10.5" fill="var(--p-anthropic)" stroke="var(--c-card)" stroke-width="2"/><text x="300.1" y="193.8" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">6</text></g>
+<g class="chart-point" data-tip="Claude Opus 5.5 (high) | Reviewer LSAS 96.8 | Pass 9/10 | FP 1, P3 0 | Cost $0.49 | Med wall 18.0s"><circle cx="329.3" cy="187.5" r="14.0" fill="none" stroke="var(--c-frontier)" stroke-width="1.35" stroke-dasharray="3 2" opacity="0.55"/><circle cx="329.3" cy="187.5" r="10.5" fill="var(--p-anthropic)" stroke="var(--c-card)" stroke-width="2"/><text x="329.3" y="191.3" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">5</text></g>
+<g class="chart-point" data-tip="GPT-6.2 Astra (medium) | Reviewer LSAS 99.8 | Pass 10/10 | FP 0, P3 0 | Cost $0.58 | Med wall 15.8s"><circle cx="362.7" cy="148.8" r="10.5" fill="var(--p-openai)" stroke="var(--c-card)" stroke-width="2"/><text x="362.7" y="152.6" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">4</text></g>
+<g class="chart-point" data-tip="Gemini 4 Neon (xhigh) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $2.67 | Med wall 138.8s"><circle cx="671.6" cy="146.2" r="10.5" fill="var(--p-google)" stroke="var(--c-card)" stroke-width="2"/><text x="671.6" y="150.0" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">3</text></g>
+<g class="chart-point" data-tip="Gemini 4 Carbon (medium) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $0.93 | Med wall 85.2s"><circle cx="459.4" cy="146.2" r="10.5" fill="var(--p-google)" stroke="var(--c-card)" stroke-width="2"/><text x="459.4" y="150.0" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">2</text></g>
+<g class="chart-point" data-tip="Gemini 4 Carbon (low) | Reviewer LSAS 100.0 | Pass 10/10 | FP 0, P3 0 | Cost $0.49 | Med wall 39.0s"><circle cx="332.1" cy="146.2" r="14.0" fill="none" stroke="var(--c-frontier)" stroke-width="1.35" stroke-dasharray="3 2" opacity="0.55"/><circle cx="332.1" cy="146.2" r="10.5" fill="var(--p-google)" stroke="var(--c-card)" stroke-width="2"/><text x="332.1" y="150.0" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700">1</text></g>
+<line x1="32" y1="460" x2="728" y2="460" stroke="var(--c-border)" stroke-width="1"/>
+<circle cx="42.5" cy="480.0" r="8.5" fill="var(--p-google)"/>
+<text x="42.5" y="483.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">1</text>
+<g transform="translate(57.0 473.5) scale(0.5417)"><path d="M5.988 1.622A8.539 8.539 0 003.45 8.446c.349 4.408 4.506 7.995 8.276 7.995 3.507 0 4.88-3.061 4.541-5.14a4.318 4.318 0 00-.95-2.073c.632.34 1.244.776 1.809 1.3 1.52 1.415 2.44 3.229 2.587 5.1C20.04 19.763 16.98 24 11.863 24c-1.695 0-3.48-.432-4.98-1.143C2.816 20.937 0 16.797 0 12.002 0 7.571 2.405 3.7 5.988 1.622zM12.136 0c1.696 0 3.481.432 4.98 1.143C21.186 3.063 24 7.203 24 11.998c0 4.431-2.405 8.303-5.988 10.38a8.539 8.539 0 002.538-6.824c-.349-4.408-4.506-7.995-8.276-7.995-3.507 0-4.88 3.061-4.541 5.14a4.3 4.3 0 00.953 2.073 8.723 8.723 0 01-1.81-1.3c-1.52-1.415-2.44-3.227-2.589-5.1C3.96 4.237 7.02 0 12.137 0z" fill="var(--p-google)" fill-rule="evenodd"/></g>
+<text x="76.0" y="484" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Gemini 4 Carbon (low)</text>
+<text x="366.0" y="484" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100.0 · $0.49</text>
+<circle cx="42.5" cy="506.0" r="8.5" fill="var(--p-google)"/>
+<text x="42.5" y="509.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">2</text>
+<g transform="translate(57.0 499.5) scale(0.5417)"><path d="M5.988 1.622A8.539 8.539 0 003.45 8.446c.349 4.408 4.506 7.995 8.276 7.995 3.507 0 4.88-3.061 4.541-5.14a4.318 4.318 0 00-.95-2.073c.632.34 1.244.776 1.809 1.3 1.52 1.415 2.44 3.229 2.587 5.1C20.04 19.763 16.98 24 11.863 24c-1.695 0-3.48-.432-4.98-1.143C2.816 20.937 0 16.797 0 12.002 0 7.571 2.405 3.7 5.988 1.622zM12.136 0c1.696 0 3.481.432 4.98 1.143C21.186 3.063 24 7.203 24 11.998c0 4.431-2.405 8.303-5.988 10.38a8.539 8.539 0 002.538-6.824c-.349-4.408-4.506-7.995-8.276-7.995-3.507 0-4.88 3.061-4.541 5.14a4.3 4.3 0 00.953 2.073 8.723 8.723 0 01-1.81-1.3c-1.52-1.415-2.44-3.227-2.589-5.1C3.96 4.237 7.02 0 12.137 0z" fill="var(--p-google)" fill-rule="evenodd"/></g>
+<text x="76.0" y="510" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">Gemini 4 Carbon (medium)</text>
+<text x="366.0" y="510" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100.0 · $0.93</text>
+<circle cx="42.5" cy="532.0" r="8.5" fill="var(--p-google)"/>
+<text x="42.5" y="535.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">3</text>
+<g transform="translate(57.0 525.5) scale(0.5417)"><path d="M5.988 1.622A8.539 8.539 0 003.45 8.446c.349 4.408 4.506 7.995 8.276 7.995 3.507 0 4.88-3.061 4.541-5.14a4.318 4.318 0 00-.95-2.073c.632.34 1.244.776 1.809 1.3 1.52 1.415 2.44 3.229 2.587 5.1C20.04 19.763 16.98 24 11.863 24c-1.695 0-3.48-.432-4.98-1.143C2.816 20.937 0 16.797 0 12.002 0 7.571 2.405 3.7 5.988 1.622zM12.136 0c1.696 0 3.481.432 4.98 1.143C21.186 3.063 24 7.203 24 11.998c0 4.431-2.405 8.303-5.988 10.38a8.539 8.539 0 002.538-6.824c-.349-4.408-4.506-7.995-8.276-7.995-3.507 0-4.88 3.061-4.541 5.14a4.3 4.3 0 00.953 2.073 8.723 8.723 0 01-1.81-1.3c-1.52-1.415-2.44-3.227-2.589-5.1C3.96 4.237 7.02 0 12.137 0z" fill="var(--p-google)" fill-rule="evenodd"/></g>
+<text x="76.0" y="536" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">Gemini 4 Neon (xhigh)</text>
+<text x="366.0" y="536" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">100.0 · $2.67</text>
+<circle cx="42.5" cy="558.0" r="8.5" fill="var(--p-openai)"/>
+<text x="42.5" y="561.5" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">4</text>
+<g transform="translate(57.0 551.5) scale(0.5417)"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="var(--p-openai)" fill-rule="evenodd"/></g>
+<text x="76.0" y="562" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">GPT-6.2 Astra (medium)</text>
+<text x="366.0" y="562" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">99.8 · $0.58</text>
+<circle cx="42.5" cy="584.0" r="8.5" fill="var(--p-anthropic)"/>
+<text x="42.5" y="587.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">5</text>
+<g transform="translate(57.0 577.5) scale(0.5417)"><path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" fill="var(--p-anthropic)" fill-rule="evenodd"/></g>
+<text x="76.0" y="588" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Claude Opus 5.5 (high)</text>
+<text x="366.0" y="588" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">96.8 · $0.49</text>
+<circle cx="42.5" cy="610.0" r="8.5" fill="var(--p-anthropic)"/>
+<text x="42.5" y="613.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">6</text>
+<g transform="translate(57.0 603.5) scale(0.5417)"><path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" fill="var(--p-anthropic)" fill-rule="evenodd"/></g>
+<text x="76.0" y="614" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Claude Opus 5.5 (medium)</text>
+<text x="366.0" y="614" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">96.6 · $0.42</text>
+<circle cx="402.5" cy="480.0" r="8.5" fill="var(--p-openai)"/>
+<text x="402.5" y="483.5" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">7</text>
+<g transform="translate(417.0 473.5) scale(0.5417)"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="var(--p-openai)" fill-rule="evenodd"/></g>
+<text x="436.0" y="484" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">GPT-6.2 Astra (high)</text>
+<text x="726.0" y="484" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">95.1 · $0.69</text>
+<circle cx="402.5" cy="506.0" r="8.5" fill="var(--p-google)"/>
+<text x="402.5" y="509.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">8</text>
+<g transform="translate(417.0 499.5) scale(0.5417)"><path d="M5.988 1.622A8.539 8.539 0 003.45 8.446c.349 4.408 4.506 7.995 8.276 7.995 3.507 0 4.88-3.061 4.541-5.14a4.318 4.318 0 00-.95-2.073c.632.34 1.244.776 1.809 1.3 1.52 1.415 2.44 3.229 2.587 5.1C20.04 19.763 16.98 24 11.863 24c-1.695 0-3.48-.432-4.98-1.143C2.816 20.937 0 16.797 0 12.002 0 7.571 2.405 3.7 5.988 1.622zM12.136 0c1.696 0 3.481.432 4.98 1.143C21.186 3.063 24 7.203 24 11.998c0 4.431-2.405 8.303-5.988 10.38a8.539 8.539 0 002.538-6.824c-.349-4.408-4.506-7.995-8.276-7.995-3.507 0-4.88 3.061-4.541 5.14a4.3 4.3 0 00.953 2.073 8.723 8.723 0 01-1.81-1.3c-1.52-1.415-2.44-3.227-2.589-5.1C3.96 4.237 7.02 0 12.137 0z" fill="var(--p-google)" fill-rule="evenodd"/></g>
+<text x="436.0" y="510" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">Gemini 4 Neon (high)</text>
+<text x="726.0" y="510" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">95.0 · $1.25</text>
+<circle cx="402.5" cy="532.0" r="8.5" fill="var(--p-openai)"/>
+<text x="402.5" y="535.5" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700">9</text>
+<g transform="translate(417.0 525.5) scale(0.5417)"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="var(--p-openai)" fill-rule="evenodd"/></g>
+<text x="436.0" y="536" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">GPT-6.2 Sol (high)</text>
+<text x="726.0" y="536" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">89.0 · $0.18</text>
+<circle cx="402.5" cy="558.0" r="8.5" fill="var(--p-anthropic)"/>
+<text x="402.5" y="561.5" text-anchor="middle" fill="var(--p-badge-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700">10</text>
+<g transform="translate(417.0 551.5) scale(0.5417)"><path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" fill="var(--p-anthropic)" fill-rule="evenodd"/></g>
+<text x="436.0" y="562" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">Claude Fable 5.2 (high)</text>
+<text x="726.0" y="562" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">87.0 · $1.33</text>
+<circle cx="402.5" cy="584.0" r="8.5" fill="var(--p-openai)"/>
+<text x="402.5" y="587.5" text-anchor="middle" fill="var(--p-openai-ink)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700">11</text>
+<g transform="translate(417.0 577.5) scale(0.5417)"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="var(--p-openai)" fill-rule="evenodd"/></g>
+<text x="436.0" y="588" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="500">GPT-6.2 Sol (xhigh)</text>
+<text x="726.0" y="588" text-anchor="end" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">87.0 · $0.24</text>
 </svg>
