@@ -6,6 +6,7 @@ import ultraciteOxfmt from "ultracite/oxfmt";
 import antiSlop from "ultracite/oxlint/anti-slop";
 
 import { median } from "../driver/telemetry.ts";
+import { displayModelLabel } from "../report/scoring.ts";
 import type { TrialResult } from "../runner/types.ts";
 import { requireGlobalRuff } from "../sandbox/tools.ts";
 import type { EvalTask } from "../tasks/base.ts";
@@ -1325,14 +1326,45 @@ export const analyzeTrialsCodeCraft = async (
 };
 
 export const renderCraftMarkdown = (report: BatchCraftReport): string => {
+  const passingCount = report.trials.filter((trial) => trial.passed).length;
+
+  const summaryLine =
+    passingCount === report.trials.length
+      ? `Evaluated **${report.trials.length}** passing coder/pair diffs with host-side Ruff, Oxfmt, and Oxlint anti-slop checks (never mounted into trial sandboxes).`
+      : `Evaluated **${report.trials.length}** coder/pair diffs (**${passingCount}** passing) with host-side Ruff, Oxfmt, and Oxlint anti-slop checks (never mounted into trial sandboxes).`;
+
   const lines = [
     "# Host-Side Code Craft Summary",
     "",
-    "| Model | Trials | Norm Prod +LOC | Py Format Churn | TS Spacing | TS Curly | TS Curly / 100 LOC | Complexity | Nesting | Perf / Anti-Slop | Med Log Diff Ratio |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    summaryLine,
+    "",
+    "Back to [`summary.md`](summary.md) or [`report.html`](report.html).",
+    "",
+    "| Model | Trials | Norm +LOC | Hygiene | Structural | Diff Ratio |",
+    "| :--- | ---: | ---: | ---: | ---: | ---: |",
+  ];
+
+  const detailedLines = [
+    "| Model | Trials | Norm +LOC | Py Churn | TS Spacing | TS Curly | Curly / 100 LOC | Complexity | Nesting | Perf / Slop | Med Log Ratio |",
+    "| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ];
 
   for (const row of report.models) {
+    const hygiene =
+      row.pythonFormatChurnLines +
+      row.tsSpacingViolations +
+      row.tsCurlyViolations;
+
+    const structural =
+      row.complexityViolations +
+      row.nestingViolations +
+      row.perfAndSlopViolations;
+
+    const diffRatio =
+      row.medianLogDiffExpansion === null
+        ? "—"
+        : `${Math.exp(row.medianLogDiffExpansion).toFixed(2)}×`;
+
     const curlyRate =
       row.tsCurlyPer100Loc === null ? "—" : row.tsCurlyPer100Loc.toFixed(1);
 
@@ -1342,9 +1374,23 @@ export const renderCraftMarkdown = (report: BatchCraftReport): string => {
         : row.medianLogDiffExpansion.toFixed(2);
 
     lines.push(
+      `| ${displayModelLabel(row.model)} | ${row.trials} | ${row.totalAddedProdLines} | ${hygiene} | ${structural} | ${diffRatio} |`
+    );
+
+    detailedLines.push(
       `| \`${row.model}\` | ${row.trials} | ${row.totalAddedProdLines} | ${row.pythonFormatChurnLines} | ${row.tsSpacingViolations} | ${row.tsCurlyViolations} | ${curlyRate} | ${row.complexityViolations} | ${row.nestingViolations} | ${row.perfAndSlopViolations} | ${logRatio} |`
     );
   }
+
+  lines.push(
+    "",
+    "<details>",
+    "<summary>Detailed craft metrics (11 columns)</summary>",
+    "",
+    ...detailedLines,
+    "",
+    "</details>"
+  );
 
   return `${lines.join("\n")}\n`;
 };

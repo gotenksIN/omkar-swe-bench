@@ -16,8 +16,12 @@ import {
 } from "../util/json.ts";
 import type { JsonValue } from "../util/json.ts";
 import type { GeneratedChart } from "./charts.ts";
-import { summarizeBenchmark } from "./scoring.ts";
-import type { ModelRoleSummary } from "./scoring.ts";
+import {
+  computeParetoFrontier,
+  displayModelLabel,
+  summarizeBenchmark,
+} from "./scoring.ts";
+import type { BenchmarkSummary, ModelRoleSummary } from "./scoring.ts";
 
 type Field = JsonValue | undefined;
 
@@ -166,10 +170,44 @@ const tableRow = (cells: readonly string[]): string =>
     )
     .join(" | ")} |`;
 
-const tableHeader = (columns: readonly string[]): string[] => [
+type Alignment = "left" | "right" | "center";
+
+const alignMarker = (align: Alignment): string => {
+  if (align === "right") {
+    return "---:";
+  }
+
+  if (align === "center") {
+    return ":---:";
+  }
+
+  return ":---";
+};
+
+const tableHeader = (
+  columns: readonly string[],
+  alignments?: readonly Alignment[]
+): string[] => [
   tableRow(columns),
-  tableRow(columns.map(() => "---")),
+  tableRow(
+    columns.map((_, idx) =>
+      alignments === undefined ? "---" : alignMarker(alignments[idx] ?? "left")
+    )
+  ),
 ];
+
+const detailsBlock = (title: string, body: readonly string[]): string[] => [
+  "<details>",
+  `<summary>${title}</summary>`,
+  "",
+  ...body,
+  "",
+  "</details>",
+  "",
+];
+
+const formatMinutes = (seconds: number): string =>
+  seconds >= 120 ? `${(seconds / 60).toFixed(1)}m` : `${Math.round(seconds)}s`;
 
 const mean = (values: readonly number[]): number =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -327,7 +365,62 @@ export const renderMarkdownReport = (
   return `${lines.join("\n")}\n`;
 };
 
-const roleTableLines = (
+const compactRoleTableLines = (
+  rows: readonly ModelRoleSummary[],
+  isReviewer: boolean
+): string[] => {
+  if (isReviewer) {
+    const lines = [
+      ...tableHeader(
+        ["Rank", "Model", "LSAS", "Recall", "Alarms", "Cost"],
+        ["right", "left", "right", "right", "right", "right"]
+      ),
+    ];
+
+    for (const [index, row] of rows.entries()) {
+      const alarms =
+        row.falsePositiveP0P2 === 0 && row.nitpickP3 === 0
+          ? "0"
+          : `${row.falsePositiveP0P2} FP · ${row.nitpickP3} P3`;
+
+      lines.push(
+        tableRow([
+          String(index + 1),
+          displayModelLabel(row.label),
+          row.lsas.toFixed(1),
+          row.defectRecall === null ? "—" : percent(row.defectRecall, 0),
+          alarms,
+          format(row.totalCostUsd, 2, "", "$"),
+        ])
+      );
+    }
+
+    return lines;
+  }
+
+  const lines = [
+    ...tableHeader(
+      ["Rank", "Model", "LSAS", "Pass@1", "Cost · Wall"],
+      ["right", "left", "right", "right", "right"]
+    ),
+  ];
+
+  for (const [index, row] of rows.entries()) {
+    lines.push(
+      tableRow([
+        String(index + 1),
+        displayModelLabel(row.label),
+        row.lsas.toFixed(1),
+        `${row.passedCount}/${row.trials} (${percent(row.passRate, 0)})`,
+        `${format(row.totalCostUsd, 2, "", "$")} · ${format(row.medianWallS, 0, "s")}`,
+      ])
+    );
+  }
+
+  return lines;
+};
+
+const fullRoleTableLines = (
   rows: readonly ModelRoleSummary[],
   isReviewer: boolean
 ): string[] => {
@@ -363,7 +456,23 @@ const roleTableLines = (
         "Reasoning %",
       ];
 
-  const lines = [...tableHeader(header)];
+  const alignments: Alignment[] = [
+    "right",
+    "left",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+    "right",
+  ];
+
+  const lines = [...tableHeader(header, alignments)];
 
   for (const [index, row] of rows.entries()) {
     lines.push(
@@ -406,6 +515,96 @@ const roleTableLines = (
   return lines;
 };
 
+const highlightRows = (summary: BenchmarkSummary): string[] => {
+  const items: string[][] = [];
+
+  if (summary.combinedCoderRows.length > 0) {
+    const [topCoder] = summary.combinedCoderRows;
+
+    if (topCoder !== undefined) {
+      items.push([
+        "Best Overall Coder",
+        displayModelLabel(topCoder.model),
+        `ACI ${topCoder.aci.toFixed(1)}`,
+        `$${topCoder.totalCostUsd.toFixed(2)} · ${formatMinutes(topCoder.totalWallS)}`,
+      ]);
+    }
+
+    const costFrontier = computeParetoFrontier(
+      summary.combinedCoderRows.map((row) => ({
+        id: row.model,
+        row,
+        x: row.totalCostUsd,
+        y: row.aci,
+      }))
+    );
+
+    const bestValue = costFrontier.find(
+      (entry) => entry.row.model !== topCoder?.model && entry.row.aci >= 90
+    );
+
+    if (bestValue !== undefined) {
+      items.push([
+        "Best Value Coder",
+        displayModelLabel(bestValue.row.model),
+        `ACI ${bestValue.row.aci.toFixed(1)}`,
+        `$${bestValue.row.totalCostUsd.toFixed(2)} · ${formatMinutes(bestValue.row.totalWallS)}`,
+      ]);
+    }
+
+    const speedFrontier = computeParetoFrontier(
+      summary.combinedCoderRows.map((row) => ({
+        id: row.model,
+        row,
+        x: row.totalWallS,
+        y: row.aci,
+      }))
+    );
+
+    const fastest = speedFrontier.find(
+      (entry) =>
+        entry.row.model !== topCoder?.model &&
+        entry.row.model !== bestValue?.row.model &&
+        entry.row.aci >= 90
+    );
+
+    if (fastest !== undefined) {
+      items.push([
+        "Fastest Pareto Coder",
+        displayModelLabel(fastest.row.model),
+        `ACI ${fastest.row.aci.toFixed(1)}`,
+        `${formatMinutes(fastest.row.totalWallS)} · $${fastest.row.totalCostUsd.toFixed(2)}`,
+      ]);
+    }
+  }
+
+  const [topReviewer] = summary.reviewerCalibratedRows;
+
+  if (topReviewer !== undefined) {
+    items.push([
+      "Top Code Reviewer",
+      displayModelLabel(topReviewer.model),
+      `LSAS ${topReviewer.lsas.toFixed(1)}`,
+      `$${topReviewer.totalCostUsd.toFixed(2)} · med ${topReviewer.medianWallS.toFixed(0)}s`,
+    ]);
+  }
+
+  if (items.length === 0) {
+    return [];
+  }
+
+  return [
+    "## Highlights",
+    "",
+    ...tableHeader(
+      ["Category", "Model", "Score", "Cost · Speed"],
+      ["left", "left", "right", "right"]
+    ),
+    ...items.map(tableRow),
+    "",
+  ];
+};
+
 export const renderDetailedReport = (
   results: readonly TrialResult[],
   charts: readonly GeneratedChart[] = [],
@@ -422,44 +621,79 @@ export const renderDetailedReport = (
       : [`![${chart.title}](${chartPrefix}/${chart.filename})`, ""];
   };
 
+  const passPct = percent(
+    summary.totalTrials === 0 ? 0 : summary.totalPassed / summary.totalTrials
+  );
+
   const lines: string[] = [
-    "# OmkarSWE bench — Full Evaluation Report",
+    "# OmkarSWE bench — Evaluation Report",
     "",
-    `Evaluated **${summary.totalTrials}** trials (**${summary.totalPassed}/${summary.totalTrials}** strict Pass@1, **${percent(summary.totalTrials === 0 ? 0 : summary.totalPassed / summary.totalTrials)}**, **$${summary.totalCostUsd.toFixed(2)}** total API cost).`,
+    `**${summary.totalTrials} trials** · **${summary.totalPassed}/${summary.totalTrials}** strict Pass@1 (${passPct}) · **$${summary.totalCostUsd.toFixed(2)}** total API cost`,
     "",
-    "Open [`report.html`](report.html) in a browser for the interactive dashboard with hover tooltips and phase tabs.",
+    "Open [`report.html`](report.html) for interactive hover tooltips and phase tabs, or read [`craft.md`](craft.md) for host-side code craft metrics.",
     "",
-    "## Scoring methodology",
-    "",
-    "- **LSAS (Low-Steering Autonomy Score, 0–100):** Zeroes timeouts, crashes, and partial runs. Caps broken deliverables or scope violations at `<= 25`. Passing deliverables start at `100` minus `-35` per static/test hygiene miss, `-20` per skipped verification check, `-8` per self-healed in-session friction item (such as a commit-guard rejection recovered autonomously), and `-2` per root tool error (capped at `-8`). For code reviewers, LSAS starts at `100 × recall` (`100` on clean diffs) minus `-30` per blocking `P0–P2` false alarm and `-15` per `P3` nitpick.",
-    "- **ZSDR (Zero-Steering Deliverable Rate):** Share of trials needing zero human intervention after the session ends.",
-    "- **ACI (Autonomous Coder Index):** `0.6 × Solo LSAS + 0.4 × Pair LSAS` across all 19 coder trials (Phases 1 and 3).",
-    "- **Cost and Wall Time:** Reported on orthogonal Pareto axes rather than blended into capability scores.",
-    "",
+    ...highlightRows(summary),
+    ...detailsBlock("Scoring methodology (LSAS, ZSDR, ACI)", [
+      "- **LSAS (Low-Steering Autonomy Score, 0–100):** Zeroes timeouts, crashes, and partial runs. Caps broken deliverables or scope violations at `<= 25`. Passing deliverables start at `100` minus `-35` per static/test hygiene miss, `-20` per skipped verification check, `-8` per self-healed in-session friction item (such as a commit-guard rejection recovered autonomously), and `-2` per root tool error (capped at `-8`). For code reviewers, LSAS starts at `100 × recall` (`100` on clean diffs) minus `-30` per blocking `P0–P2` false alarm and `-15` per `P3` nitpick.",
+      "- **ZSDR (Zero-Steering Deliverable Rate):** Share of trials needing zero human intervention after the session ends.",
+      "- **ACI (Autonomous Coder Index):** `0.6 × Solo LSAS + 0.4 × Pair LSAS` across all solo and pair coder trials (Phases 1 and 3).",
+      "- **Cost and Wall Time:** Reported on orthogonal Pareto axes rather than blended into capability scores.",
+    ]),
   ];
 
   if (summary.combinedCoderRows.length > 0) {
-    lines.push(
-      "## Combined Autonomous Coder Index (Phases 1 + 3)",
-      "",
-      ...tableHeader([
-        "Rank",
-        "Coder",
-        "ACI",
-        "Solo LSAS",
-        "Pair LSAS",
-        "ZSDR",
-        "Pass@1",
-        "19-trial cost",
-        "$/clean pass",
-        "Total wall",
-        "Active tok/s",
-        "Diff ratio",
-      ])
-    );
+    const compactCombined: string[] = [
+      ...tableHeader(
+        ["Rank", "Coder", "ACI", "Pass@1", "Cost · Wall"],
+        ["right", "left", "right", "right", "right"]
+      ),
+    ];
+
+    const fullCombined: string[] = [
+      ...tableHeader(
+        [
+          "Rank",
+          "Coder",
+          "ACI",
+          "Solo LSAS",
+          "Pair LSAS",
+          "ZSDR",
+          "Pass@1",
+          "Suite cost",
+          "$/clean pass",
+          "Total wall",
+          "Active tok/s",
+          "Diff ratio",
+        ],
+        [
+          "right",
+          "left",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+        ]
+      ),
+    ];
 
     for (const [index, row] of summary.combinedCoderRows.entries()) {
-      lines.push(
+      compactCombined.push(
+        tableRow([
+          String(index + 1),
+          displayModelLabel(row.model),
+          row.aci.toFixed(1),
+          `${row.passedCount}/${row.totalTrials} (${percent(row.passRate, 0)})`,
+          `${format(row.totalCostUsd, 2, "", "$")} · ${formatMinutes(row.totalWallS)}`,
+        ])
+      );
+
+      fullCombined.push(
         tableRow([
           String(index + 1),
           `\`${row.model}\``,
@@ -478,10 +712,17 @@ export const renderDetailedReport = (
     }
 
     lines.push(
+      "## Combined Autonomous Coder Index (Phases 1 + 3)",
+      "",
+      ...compactCombined,
       "",
       ...embed("coder-cost-pareto"),
       ...embed("coder-speed-pareto"),
-      ...embed("overhead-and-diff")
+      ...embed("overhead-and-diff"),
+      ...detailsBlock(
+        "Full coder telemetry (12 metrics, Phases 1 + 3)",
+        fullCombined
+      )
     );
   }
 
@@ -489,32 +730,47 @@ export const renderDetailedReport = (
     lines.push(
       "## Phase 1 — Standalone coder leaderboard",
       "",
-      ...roleTableLines(summary.coderRows, false),
-      ""
+      ...compactRoleTableLines(summary.coderRows, false),
+      "",
+      ...detailsBlock(
+        "Full Phase 1 telemetry (13 metrics)",
+        fullRoleTableLines(summary.coderRows, false)
+      )
     );
   }
 
   if (summary.reviewerCalibratedRows.length > 0) {
     const heading =
       summary.excludedReviewerTasks.length > 0
-        ? `## Phase 2 — Code reviewer leaderboard (calibrated, excluding \`${summary.excludedReviewerTasks.join("`, `")}\`)`
+        ? `## Phase 2 — Code reviewer leaderboard (calibrated)`
         : "## Phase 2 — Code reviewer leaderboard";
 
+    lines.push(heading, "");
+
+    if (summary.excludedReviewerTasks.length > 0) {
+      lines.push(
+        `Excludes uncalibrated bounce fixture: \`${summary.excludedReviewerTasks.join("`, `")}\`.`,
+        ""
+      );
+    }
+
     lines.push(
-      heading,
-      "",
-      ...roleTableLines(summary.reviewerCalibratedRows, true),
+      ...compactRoleTableLines(summary.reviewerCalibratedRows, true),
       "",
       ...embed("reviewer-cost-pareto"),
-      ...embed("reviewer-calibration")
+      ...embed("reviewer-calibration"),
+      ...detailsBlock(
+        "Full Phase 2 telemetry (13 metrics, calibrated)",
+        fullRoleTableLines(summary.reviewerCalibratedRows, true)
+      )
     );
 
     if (summary.excludedReviewerTasks.length > 0) {
       lines.push(
-        "### All Phase 2 tasks (including 0%-pass bounce fixture)",
-        "",
-        ...roleTableLines(summary.reviewerRows, true),
-        ""
+        ...detailsBlock(
+          "All Phase 2 tasks (including uncalibrated bounce fixture)",
+          fullRoleTableLines(summary.reviewerRows, true)
+        )
       );
     }
   }
@@ -524,31 +780,43 @@ export const renderDetailedReport = (
       "## Phase 3 — Pair collaboration leaderboard",
       "",
       ...embed("pair-synergy-matrix"),
-      ...roleTableLines(summary.pairRows, false),
-      ""
+      ...compactRoleTableLines(summary.pairRows, false),
+      "",
+      ...detailsBlock(
+        "Full Phase 3 telemetry (13 metrics)",
+        fullRoleTableLines(summary.pairRows, false)
+      )
     );
   }
 
-  lines.push(
-    "## Diagnostics",
-    "",
-    ...embed("failure-taxonomy"),
-    ...embed("task-heatmap"),
-    "## Per-trial breakdown",
-    "",
-    ...tableHeader([
-      "Task",
-      "Role",
-      "Model",
-      "Tier",
-      "LSAS",
-      "Pass",
-      "Raw score",
-      "Wall",
-      "Cost",
-      "Notes",
-    ])
-  );
+  const trialRows: string[] = [
+    ...tableHeader(
+      [
+        "Task",
+        "Role",
+        "Model",
+        "Tier",
+        "LSAS",
+        "Pass",
+        "Raw score",
+        "Wall",
+        "Cost",
+        "Notes",
+      ],
+      [
+        "left",
+        "left",
+        "left",
+        "left",
+        "right",
+        "center",
+        "right",
+        "right",
+        "right",
+        "left",
+      ]
+    ),
+  ];
 
   for (const item of summary.scoredTrials) {
     const { trial } = item;
@@ -564,7 +832,7 @@ export const renderDetailedReport = (
       ...trial.notes,
     ].join("; ");
 
-    lines.push(
+    trialRows.push(
       tableRow([
         trial.task_id,
         trial.role,
@@ -579,6 +847,17 @@ export const renderDetailedReport = (
       ])
     );
   }
+
+  lines.push(
+    "## Diagnostics",
+    "",
+    ...embed("failure-taxonomy"),
+    ...embed("task-heatmap"),
+    ...detailsBlock(
+      `Per-trial breakdown (${summary.scoredTrials.length} trials)`,
+      trialRows
+    )
+  );
 
   return `${lines.join("\n")}\n`;
 };

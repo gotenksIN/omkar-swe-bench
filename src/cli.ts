@@ -702,10 +702,13 @@ const craft = async (args: string[]): Promise<number> => {
     passingOnly: values.all !== true,
   });
 
-  const rendered =
-    values.markdown === true
-      ? renderCraftMarkdown(craftReport)
-      : `${JSON.stringify(craftReport, null, 2)}\n`;
+  const asMarkdown =
+    values.markdown === true ||
+    values.out?.toLowerCase().endsWith(".md") === true;
+
+  const rendered = asMarkdown
+    ? renderCraftMarkdown(craftReport)
+    : `${JSON.stringify(craftReport, null, 2)}\n`;
 
   output(rendered, values.out);
 

@@ -23,19 +23,19 @@ See the **[full scores, methodology, and 330-trial breakdown](results/summary.md
 
 ### Autonomous Coders (`ACI` across 19 Solo + Pair trials)
 
-| Rank | Coder                              |      ACI |   ZSDR | Pass@1 | 19-trial cost | Total wall |
-| ---: | ---------------------------------- | -------: | -----: | -----: | ------------: | ---------: |
-|    1 | `google/gemini-4-hydrogen#medium`  | **99.9** | 100.0% |  19/19 |         $2.79 |      1656s |
-|    2 | `google/gemini-4-hydrogen#high`    | **99.9** | 100.0% |  19/19 |         $4.23 |      2400s |
-|    3 | `google/gemini-4-neon#medium`      | **99.9** | 100.0% |  19/19 |         $5.65 |      2722s |
-|    4 | `anthropic/claude-opus-5-5#medium` | **98.1** |  94.7% |  18/19 |         $3.51 |      1166s |
-|    5 | `deepseek/deepseek-flash#high`     | **95.1** |  94.7% |  17/19 |     **$0.68** |      1718s |
-|    6 | `google/gemini-4-neon#high`        | **93.1** |  94.7% |  17/19 |         $8.96 |      4341s |
-|    7 | `anthropic/claude-sonnet-5-5#high` | **93.1** |  94.7% |  13/19 |         $1.73 |   **792s** |
-|    8 | `openai/gpt-6.2-sol#high`          | **91.3** |  89.5% |  16/19 |         $1.98 |      1678s |
-|    9 | `openai/gpt-6.2-sol#medium`        | **89.8** |  84.2% |  16/19 |         $1.65 |      1405s |
-|   10 | `anthropic/claude-opus-5-5#high`   | **89.5** |  84.2% |  16/19 |         $4.51 |      1437s |
-|   11 | `deepseek/deepseek-flash#max`      | **84.2** |  78.9% |  15/19 |         $0.73 |      2444s |
+| Rank | Coder                      |      ACI | Pass@1 |       Cost · Wall |
+| ---: | :------------------------- | -------: | -----: | ----------------: |
+|    1 | Gemini 4 Hydrogen (medium) | **99.9** |  19/19 |     $2.79 · 27.6m |
+|    2 | Gemini 4 Hydrogen (high)   | **99.9** |  19/19 |     $4.23 · 40.0m |
+|    3 | Gemini 4 Neon (medium)     | **99.9** |  19/19 |     $5.65 · 45.4m |
+|    4 | Claude Opus 5.5 (medium)   | **98.1** |  18/19 |     $3.51 · 19.4m |
+|    5 | DeepSeek Flash (high)      | **95.1** |  17/19 | **$0.68** · 28.6m |
+|    6 | Gemini 4 Neon (high)       | **93.1** |  17/19 |     $8.96 · 72.3m |
+|    7 | Claude Sonnet 5.5 (high)   | **93.1** |  13/19 | $1.73 · **13.2m** |
+|    8 | GPT-6.2 Sol (high)         | **91.3** |  16/19 |     $1.98 · 28.0m |
+|    9 | GPT-6.2 Sol (medium)       | **89.8** |  16/19 |     $1.65 · 23.4m |
+|   10 | Claude Opus 5.5 (high)     | **89.5** |  16/19 |     $4.51 · 24.0m |
+|   11 | DeepSeek Flash (max)       | **84.2** |  15/19 |     $0.73 · 40.7m |
 
 ![Coder Autonomy vs. Cost Pareto Frontier](results/charts/coder-cost-pareto.svg)
 
@@ -43,19 +43,19 @@ See the **[full scores, methodology, and 330-trial breakdown](results/summary.md
 
 ### Code Reviewers (`LSAS` across 10 calibrated tasks)
 
-| Rank | Reviewer                           |      LSAS | Pass@1 | Recall | P0–P2 FPs | P3 nits | Suite cost |  Med wall |
-| ---: | ---------------------------------- | --------: | -----: | -----: | --------: | ------: | ---------: | --------: |
-|    1 | `google/gemini-4-carbon#low`       | **100.0** |  10/10 | 100.0% |         0 |       0 |      $0.49 |     39.0s |
-|    2 | `google/gemini-4-carbon#medium`    | **100.0** |  10/10 | 100.0% |         0 |       0 |      $0.93 |     85.2s |
-|    3 | `google/gemini-4-neon#xhigh`       | **100.0** |  10/10 | 100.0% |         0 |       0 |      $2.67 |    138.8s |
-|    4 | `openai/gpt-6.2-astra#medium`      |  **99.8** |  10/10 | 100.0% |         0 |       0 |      $0.58 |     15.8s |
-|    5 | `anthropic/claude-opus-5-5#high`   |  **96.8** |   9/10 | 100.0% |         1 |       0 |      $0.49 |     18.0s |
-|    6 | `anthropic/claude-opus-5-5#medium` |  **96.6** |   9/10 | 100.0% |         1 |       0 |      $0.42 | **15.4s** |
-|    7 | `openai/gpt-6.2-astra#high`        |  **95.1** |   8/10 | 100.0% |         1 |       1 |      $0.69 |     20.0s |
-|    8 | `google/gemini-4-neon#high`        |  **95.0** |   9/10 |  92.9% |         0 |       0 |      $1.25 |     60.8s |
-|    9 | `openai/gpt-6.2-sol#high`          |  **89.0** |   6/10 |  92.9% |         1 |       2 |  **$0.18** |     16.2s |
-|   10 | `anthropic/claude-fable-5-2#high`  |  **87.0** |   7/10 | 100.0% |         3 |       2 |      $1.33 |     19.6s |
-|   11 | `openai/gpt-6.2-sol#xhigh`         |  **87.0** |   7/10 |  85.7% |         2 |       2 |      $0.24 |     23.2s |
+| Rank | Reviewer                 |      LSAS | Recall |      Alarms |     Cost · Wall |
+| ---: | :----------------------- | --------: | -----: | ----------: | --------------: |
+|    1 | Gemini 4 Carbon (low)    | **100.0** |   100% |           0 |     $0.49 · 39s |
+|    2 | Gemini 4 Carbon (medium) | **100.0** |   100% |           0 |     $0.93 · 85s |
+|    3 | Gemini 4 Neon (xhigh)    | **100.0** |   100% |           0 |    $2.67 · 139s |
+|    4 | GPT-6.2 Astra (medium)   |  **99.8** |   100% |           0 |     $0.58 · 16s |
+|    5 | Claude Opus 5.5 (high)   |  **96.8** |   100% | 1 FP · 0 P3 |     $0.49 · 18s |
+|    6 | Claude Opus 5.5 (medium) |  **96.6** |   100% | 1 FP · 0 P3 | $0.42 · **15s** |
+|    7 | GPT-6.2 Astra (high)     |  **95.1** |   100% | 1 FP · 1 P3 |     $0.69 · 20s |
+|    8 | Gemini 4 Neon (high)     |  **95.0** |    93% |           0 |     $1.25 · 61s |
+|    9 | GPT-6.2 Sol (high)       |  **89.0** |    93% | 1 FP · 2 P3 | **$0.18** · 16s |
+|   10 | Claude Fable 5.2 (high)  |  **87.0** |   100% | 3 FP · 2 P3 |     $1.33 · 20s |
+|   11 | GPT-6.2 Sol (xhigh)      |  **87.0** |    86% | 2 FP · 2 P3 |     $0.24 · 23s |
 
 ![Code Reviewer Calibration Quadrant](results/charts/reviewer-calibration.svg)
 
