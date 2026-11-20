@@ -497,7 +497,8 @@ type Negative =
   | "below-one-decline"
   | "turn-two-decline"
   | "unreasoned-decline"
-  | "omitted-decline";
+  | "omitted-decline"
+  | "ruff-violation";
 
 type ToolPart = SessionMessageAssistant["content"][number];
 
@@ -581,8 +582,8 @@ const cliChange = async (
 
     return source
       .replace(
-        "\ndef _divide_pages",
-        "\n\nMAX_LIMIT = 100\n\n\ndef _divide_pages"
+        "\n\ndef _divide_pages",
+        "\nMAX_LIMIT = 100\n\n\ndef _divide_pages"
       )
       .replace(
         "    pages = _divide_pages",
@@ -927,6 +928,10 @@ const fixtureEvidence = async (
     await reportChange(repo, true, negative === "nitpick");
   }
 
+  if (negative === "ruff-violation") {
+    await modify(repo, amendFile, (source) => `import os\n\n${source}`);
+  }
+
   if (negative === "core") {
     await rewriteCoreParent(repo, pre);
   }
@@ -1039,6 +1044,7 @@ const negatives = [
   [reportId, "failed-batched-amend", "tests_rerun_before_amend"],
   [reportId, "reviewer-unsafe-shell", "scope_preserved"],
   [reportId, "reviewer-blocked-edit", "scope_preserved"],
+  [reportId, "ruff-violation", "ruff_check_passes"],
 ] as const;
 
 test.each(negatives)("%s rejects %s", async (id, negative, check) => {

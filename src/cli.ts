@@ -12,7 +12,12 @@ import {
   validateModels,
 } from "./config/models.ts";
 import {
+  analyzeTrialsCodeCraft,
+  renderCraftMarkdown,
+} from "./graders/craft.ts";
+import {
   exportBlindJudgePacket,
+  exportCoderDiffJudgePacket,
   validateBlindJudgeAnswers,
 } from "./judge/blind.ts";
 import { renderBenchmarkCharts } from "./report/charts.ts";
@@ -563,17 +568,7 @@ const report = (args: string[]): number => {
     },
   });
 
-  const inputs = values.input ?? [];
-
-  if (inputs.length === 0) {
-    throw new Error("Provide at least one --input <results.json>.");
-  }
-
-  const results: TrialResult[] = [];
-
-  for (const inputPath of inputs) {
-    results.push(...readResultsJson(inputPath));
-  }
+  const results = readInputResults(values.input ?? []);
 
   if (values["out-dir"] !== undefined) {
     const outDir = nodePath.resolve(values["out-dir"]);
@@ -615,21 +610,46 @@ const report = (args: string[]): number => {
   return 0;
 };
 
-const judge = (args: string[]): number => {
+const readInputResults = (inputs: readonly string[]): TrialResult[] => {
+  if (inputs.length === 0) {
+    throw new Error("Provide at least one --input <results.json>.");
+  }
+
+  const results: TrialResult[] = [];
+
+  for (const inputPath of inputs) {
+    results.push(...readResultsJson(inputPath));
+  }
+
+  return results;
+};
+
+const judge = async (args: string[]): Promise<number> => {
   const { values } = parseArgs({
     args,
     options: {
-      input: { type: "string" },
+      input: { type: "string", multiple: true },
       out: { type: "string" },
       answers: { type: "string" },
+      target: { type: "string" },
+      "no-normalize": { type: "boolean" },
     },
   });
 
-  if (values.input === undefined || values.input.length === 0) {
-    throw new Error("Provide --input <results.json>.");
+  const target = values.target ?? "reviewer";
+
+  if (target !== "reviewer" && target !== "coder") {
+    throw new Error("Set --target to reviewer or coder.");
   }
 
-  const packet = exportBlindJudgePacket(readResultsJson(values.input));
+  const results = readInputResults(values.input ?? []);
+
+  const packet =
+    target === "coder"
+      ? await exportCoderDiffJudgePacket(results, {
+          normalize: values["no-normalize"] !== true,
+        })
+      : exportBlindJudgePacket(results);
 
   const result =
     values.answers === undefined
@@ -644,13 +664,40 @@ const judge = (args: string[]): number => {
   return 0;
 };
 
+const craft = async (args: string[]): Promise<number> => {
+  const { values } = parseArgs({
+    args,
+    options: {
+      input: { type: "string", multiple: true },
+      out: { type: "string" },
+      markdown: { type: "boolean" },
+      all: { type: "boolean" },
+    },
+  });
+
+  const results = readInputResults(values.input ?? []);
+
+  const craftReport = await analyzeTrialsCodeCraft(results, {
+    passingOnly: values.all !== true,
+  });
+
+  const rendered =
+    values.markdown === true
+      ? renderCraftMarkdown(craftReport)
+      : `${JSON.stringify(craftReport, null, 2)}\n`;
+
+  output(rendered, values.out);
+
+  return 0;
+};
+
 export const runCli = async (argv: readonly string[]): Promise<number> => {
   const [command, ...args] = argv;
 
   try {
     if (command === undefined) {
       throw new Error(
-        "Usage: omkar-swe-bench <list|run|report|judge> [options]"
+        "Usage: omkar-swe-bench <list|run|report|judge|craft> [options]"
       );
     }
 
@@ -668,12 +715,16 @@ export const runCli = async (argv: readonly string[]): Promise<number> => {
       }
 
       case "judge": {
-        return judge(args);
+        return await judge(args);
+      }
+
+      case "craft": {
+        return await craft(args);
       }
 
       default: {
         throw new Error(
-          "Usage: omkar-swe-bench <list|run|report|judge> [options]"
+          "Usage: omkar-swe-bench <list|run|report|judge|craft> [options]"
         );
       }
     }

@@ -25,6 +25,7 @@ import type {
   Evidence,
   ShellRunTrace,
 } from "../../graders/types.ts";
+import { runHostRuffCheck } from "../../sandbox/tools.ts";
 import { isString } from "../../util/json.ts";
 import {
   PY_FILES,
@@ -106,6 +107,16 @@ const withCommitSnapshot = async <T>(
     return await check(nodePath.join(dir, "repo"));
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+};
+
+const ruffPasses = async (dir: string): Promise<boolean> => {
+  try {
+    const result = await runHostRuffCheck(dir);
+
+    return result.exitCode === 0;
+  } catch {
+    return false;
   }
 };
 
@@ -453,13 +464,14 @@ const pairTask = (fixture: PairFixture): EvalTask => ({
         ).catch(() => false));
 
       const checkFinal = async (dir: string | null) => {
-        const [testsPass, ordinaryPass, edgePass] =
+        const [testsPass, ordinaryPass, edgePass, ruffPass] =
           dir === null
-            ? [false, false, false]
+            ? [false, false, false, false]
             : await Promise.all([
                 unitTests(dir),
                 probe(dir, fixture.ordinaryProbe),
                 probe(dir, fixture.edgeProbe),
+                ruffPasses(dir),
               ]);
 
         const results = {
@@ -474,7 +486,11 @@ const pairTask = (fixture: PairFixture): EvalTask => ({
         };
 
         return computeGradeResult(
-          { ...signed, ...(await fixture.checks(ev, results, dir)) },
+          {
+            ...signed,
+            ruff_check_passes: ruffPass,
+            ...(await fixture.checks(ev, results, dir)),
+          },
           { timedOut: ev.timedOut, reviewDiff }
         );
       };

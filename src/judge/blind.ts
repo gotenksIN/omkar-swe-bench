@@ -1,23 +1,73 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 
+import {
+  analyzeTrialCodeCraft,
+  splitGitDiffSections,
+} from "../graders/craft.ts";
 import type { TrialResult } from "../runner/types.ts";
 import { canonicalJsonStringify, isJsonObject } from "../util/json.ts";
 import type { JsonObject, JsonValue } from "../util/json.ts";
 
-interface JudgeCase {
+export interface JudgeCase {
   readonly id: string;
   readonly evidence: JsonObject;
   readonly rubric: readonly string[];
 }
 
-interface JudgePacket {
+export interface JudgePacket {
   readonly cases: readonly JudgeCase[];
   readonly answers: Readonly<Record<string, Readonly<Record<string, null>>>>;
 }
 
+export interface CoderDiffJudgeOptions {
+  readonly normalize?: boolean;
+  readonly passingOnly?: boolean;
+}
+
+export const CODER_DIFF_RUBRIC = [
+  "idiomatic_control_flow",
+  "sound_error_and_resource_handling",
+  "appropriate_abstraction_size",
+  "response_concise_and_direct",
+] as const;
+
 const workspacePath =
   /(?<=^|[\s"'`(=,:<[])(?:\/tmp(?:\/opencode)?\/omkar-swe-bench\/[^/\s"'`<>[\]]+\/trial_[0-9a-f]+(?:\/repo)?|\/[^\s"'`<>[\]]+?\/trial_[0-9a-f]+(?:\/repo)?)/gu;
+
+const scrubWorkspacePaths = (content: string, repoDir: string): string => {
+  const trialDir = path.dirname(repoDir);
+  let redacted = repoDir ? content.replaceAll(repoDir, "<repo>") : content;
+
+  if (trialDir !== "." && trialDir !== "/") {
+    redacted = redacted.replaceAll(trialDir, "<trial>");
+  }
+
+  return redacted.replaceAll(workspacePath, "<repo>");
+};
+
+const finalizePacket = (byId: ReadonlyMap<string, JudgeCase>): JudgePacket => {
+  const cases = [...byId.values()].toSorted((left, right) => {
+    if (left.id < right.id) {
+      return -1;
+    }
+
+    if (left.id > right.id) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  const answers = Object.fromEntries(
+    cases.map(({ id, rubric }) => [
+      id,
+      Object.fromEntries(rubric.map((key) => [key, null])),
+    ])
+  );
+
+  return { cases, answers };
+};
 
 export const exportBlindJudgePacket = (
   results: readonly TrialResult[]
@@ -40,17 +90,8 @@ export const exportBlindJudgePacket = (
       continue;
     }
 
-    const scrub = (content: string): string => {
-      const repoDir = trial.repo_dir;
-      const trialDir = path.dirname(repoDir);
-      let redacted = repoDir ? content.replaceAll(repoDir, "<repo>") : content;
-
-      if (trialDir !== "." && trialDir !== "/") {
-        redacted = redacted.replaceAll(trialDir, "<trial>");
-      }
-
-      return redacted.replaceAll(workspacePath, "<repo>");
-    };
+    const scrub = (content: string): string =>
+      scrubWorkspacePaths(content, trial.repo_dir);
 
     const baseEvidence = {
       canonical_git_diff: scrub(trial.review_diff ?? trial.git_diff),
@@ -104,26 +145,63 @@ export const exportBlindJudgePacket = (
     byId.set(id, { id, evidence, rubric: [...new Set(rubric)] });
   }
 
-  const cases = [...byId.values()].toSorted((left, right) => {
-    if (left.id < right.id) {
-      return -1;
+  return finalizePacket(byId);
+};
+
+export const exportCoderDiffJudgePacket = async (
+  results: readonly TrialResult[],
+  options?: CoderDiffJudgeOptions
+): Promise<JudgePacket> => {
+  const passingOnly = options?.passingOnly ?? true;
+  const normalize = options?.normalize ?? true;
+  const byId = new Map<string, JudgeCase>();
+
+  for (const trial of results) {
+    if (
+      (trial.role !== "coder" && trial.role !== "pair") ||
+      trial.checks.dry_run_fixture_ready === true ||
+      trial.partial ||
+      (passingOnly && !trial.passed)
+    ) {
+      continue;
     }
 
-    if (left.id > right.id) {
-      return 1;
+    let rawDiff = splitGitDiffSections(trial.git_diff).join("");
+
+    if (normalize) {
+      // oxlint-disable-next-line no-await-in-loop -- Normalize diffs sequentially to bound host formatter subprocesses.
+      const craft = await analyzeTrialCodeCraft(trial);
+
+      if (craft !== null && craft.normalizedDiff.trim().length > 0) {
+        rawDiff = craft.normalizedDiff;
+      }
     }
 
-    return 0;
-  });
+    if (!rawDiff.trim()) {
+      continue;
+    }
 
-  const answers = Object.fromEntries(
-    cases.map(({ id, rubric }) => [
-      id,
-      Object.fromEntries(rubric.map((key) => [key, null])),
-    ])
-  );
+    const scrub = (content: string): string =>
+      scrubWorkspacePaths(content, trial.repo_dir);
 
-  return { cases, answers };
+    const evidence: JsonObject = {
+      canonical_git_diff: scrub(rawDiff),
+      coder_final_text: scrub(trial.final_text),
+      task_spec: scrub(trial.task_spec),
+    };
+
+    const id = createHash("sha256")
+      .update(canonicalJsonStringify(evidence))
+      .digest("hex");
+
+    if (byId.has(id)) {
+      continue;
+    }
+
+    byId.set(id, { id, evidence, rubric: [...CODER_DIFF_RUBRIC] });
+  }
+
+  return finalizePacket(byId);
 };
 
 const hasExactKeys = (values: JsonObject, keys: readonly string[]): boolean =>
