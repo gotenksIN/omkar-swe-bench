@@ -12,12 +12,14 @@ const reviewerModel = "fixture-reviewer/synthetic-review";
 const commitGuard = "opencode-commit-guard@1.1.1";
 let directory: string;
 const previousXdg = new Map<string, string | undefined>();
+let warnSpy: ReturnType<typeof spyOn> | undefined;
 
 beforeEach(() => {
   mkdirSync("/tmp/opencode", { recursive: true });
   directory = mkdtempSync("/tmp/opencode/bench-dry-run-");
   const cacheHome = join(directory, "host-cache");
   mkdirSync(join(cacheHome, "opencode", "npm", commitGuard), { recursive: true });
+  warnSpy = spyOn(console, "warn").mockImplementation(() => {});
 
   for (const [name, path] of Object.entries({ XDG_CACHE_HOME: cacheHome, XDG_CONFIG_HOME: join(directory, "host-config") })) {
     previousXdg.set(name, process.env[name]);
@@ -26,6 +28,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  warnSpy?.mockRestore();
+  warnSpy = undefined;
+
   for (const [name, path] of previousXdg) {
     if (path === undefined) {
       delete process.env[name];
@@ -54,6 +59,7 @@ function guardCachePath(): string {
 
 test("dry-runs all tasks and rebuilds the Markdown report identically", async () => {
   expect(await runCli(dryRunArgs())).toBe(0);
+  expect(warnSpy).toHaveBeenCalledWith("No OpenCode catalog client supplied. Model and variant availability is unverified.");
   const input = join(directory, "results.json");
   const results = readResultsJson(input);
   const byRole = Map.groupBy(results, ({ role }) => role);

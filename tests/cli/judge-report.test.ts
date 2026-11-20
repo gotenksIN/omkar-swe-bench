@@ -235,7 +235,14 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
         reviewer_model: "openai/gpt-6.2-astra#medium",
       }),
     ]);
-    expect(await runCli(["report", "--input", input, "--input", extraInput, "--out-dir", bundleDir])).toBe(0);
+    const stderrSpy = spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      expect(await runCli(["report", "--input", input, "--input", extraInput, "--out-dir", bundleDir])).toBe(0);
+    } finally {
+      stderrSpy.mockRestore();
+    }
+
     expect(readFileSync(join(bundleDir, "summary.md"), "utf8")).toContain("Combined Autonomous Coder Index");
     expect(readFileSync(join(bundleDir, "report.html"), "utf8")).toContain("<!doctype html>");
     expect(readFileSync(join(bundleDir, "charts", "coder-cost-pareto.svg"), "utf8")).toContain("<svg ");
