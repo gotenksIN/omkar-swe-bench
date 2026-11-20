@@ -21,7 +21,7 @@ export const scheduleTrials = (matrix: TrialMatrix): readonly TrialJob[] => {
 
   const jobs: TrialJob[] = [];
 
-  for (const task of tasks) {
+  for (const task of tasks.toReversed()) {
     const models = task.role === "code-reviewer" ? reviewerModels : coderModels;
     const reviewers = task.role === "pair" ? pairReviewerModels : [null];
 
