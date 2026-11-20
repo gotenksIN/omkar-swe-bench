@@ -232,3 +232,59 @@ test("excludes the host guard cache from unguarded CLI trials", async () => {
     error.mockRestore();
   }
 }, 30_000);
+
+test("validates phase/task mismatches, 32-bit timeout overflows, and --sandbox auto without bwrap", async () => {
+  const err = spyOn(console, "error").mockImplementation(() => {});
+  const previousPath = process.env.PATH;
+  const emptyBinDir = nodePath.join(directory, "no-bwrap-bin");
+  mkdirSync(emptyBinDir, { recursive: true });
+
+  try {
+    expect(
+      await runCli(
+        dryRunArgs("--phase", "reviewer", "--task", "coder-convention-autonomy")
+      )
+    ).toBe(1);
+
+    expect(
+      await runCli(
+        dryRunArgs(
+          "--task",
+          "coder-convention-autonomy",
+          "--timeout-scale",
+          "5000000"
+        )
+      )
+    ).toBe(1);
+
+    process.env.PATH = emptyBinDir;
+    expect(
+      await runCli([
+        "run",
+        "--dry-run",
+        "--sandbox",
+        "auto",
+        "--phase",
+        "coder",
+        "--task",
+        "coder-convention-autonomy",
+        "--model",
+        "synthetic/coder",
+        "--out",
+        nodePath.join(directory, "no-bwrap-coder"),
+        "--workspace-root",
+        nodePath.join(directory, "no-bwrap-ws"),
+      ])
+    ).toBe(1);
+
+    expect(err).toHaveBeenCalled();
+  } finally {
+    if (previousPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = previousPath;
+    }
+
+    err.mockRestore();
+  }
+});

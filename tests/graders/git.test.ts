@@ -431,3 +431,50 @@ test("verifies SSH signatures, literal scopes, signoffs, commit ordering, and am
     rmSync(repoDir, { recursive: true, force: true });
   }
 });
+
+test("withIsolatedGitDir rejects symlinked or non-regular .git metadata", async () => {
+  const cases = ["objects", "refs", "HEAD", "HEAD-dir"] as const;
+
+  for (const kind of cases) {
+    const repoDir = mkdtempSync("/tmp/opencode/git-symlink-guard-");
+    const decoyDir = mkdtempSync("/tmp/opencode/git-symlink-decoy-");
+
+    try {
+      git(repoDir, "init", "-b", "main");
+      git(repoDir, "config", "user.name", "Eval");
+      git(repoDir, "config", "user.email", "eval@example.invalid");
+      writeFileSync(nodePath.join(repoDir, "a.txt"), "ok\n");
+      git(repoDir, "add", "a.txt");
+      git(repoDir, "commit", "-m", "init");
+      const head = git(repoDir, "rev-parse", "HEAD");
+      const gitDir = nodePath.join(repoDir, ".git");
+
+      if (kind === "objects" || kind === "refs") {
+        rmSync(nodePath.join(gitDir, kind), { recursive: true, force: true });
+        symlinkSync(decoyDir, nodePath.join(gitDir, kind));
+      } else if (kind === "HEAD") {
+        const decoyHead = nodePath.join(decoyDir, "HEAD");
+        writeFileSync(decoyHead, "ref: refs/heads/main\n");
+        rmSync(nodePath.join(gitDir, "HEAD"));
+        symlinkSync(decoyHead, nodePath.join(gitDir, "HEAD"));
+      } else {
+        rmSync(nodePath.join(gitDir, "HEAD"));
+        mkdirSync(nodePath.join(gitDir, "HEAD"));
+      }
+
+      let captured = true;
+
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- Each case tests an independent temp repository.
+        await captureGitState(repoDir, head);
+      } catch {
+        captured = false;
+      }
+
+      expect(captured).toBe(false);
+    } finally {
+      rmSync(repoDir, { recursive: true, force: true });
+      rmSync(decoyDir, { recursive: true, force: true });
+    }
+  }
+});

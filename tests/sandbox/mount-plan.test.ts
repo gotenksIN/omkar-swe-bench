@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readlinkSync,
   realpathSync,
   rmSync,
@@ -22,6 +23,7 @@ import {
   discoverTsCompilerDirs,
   linkHostTsNodeModules,
   prepareTrialTsBin,
+  refreshOpenCodeModelsCache,
 } from "../../src/sandbox/tools.ts";
 
 const sandboxTsConfig = `${JSON.stringify(
@@ -489,3 +491,144 @@ test.skipIf(!sandbox.available)(
     });
   }
 );
+
+test("refreshOpenCodeModelsCache handles overrides, 404 fallback, non-200 preservation, abort, and read-only mount wiring", async () => {
+  const prevPath = process.env.OPENCODE_MODELS_PATH;
+  const prevUrl = process.env.OPENCODE_MODELS_URL;
+  const prevCacheHome = process.env.XDG_CACHE_HOME;
+  let mode: "fallback" | "error" | "non-object" = "fallback";
+
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+
+      if (mode === "fallback") {
+        if (url.pathname.startsWith("/experimental/")) {
+          return new Response("not found", { status: 404 });
+        }
+
+        if (url.pathname === "/api.json") {
+          return Response.json({ openai: { id: "openai" } });
+        }
+      }
+
+      if (mode === "error") {
+        return new Response("upstream down", { status: 503 });
+      }
+
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  try {
+    const { signal } = new AbortController();
+    const cacheHome = nodePath.join(input.hostHome, "cache");
+    const overrideFile = nodePath.join(input.hostHome, "custom-models.json");
+    writeFileSync(overrideFile, '{"custom":true}\n');
+
+    process.env.OPENCODE_MODELS_PATH = overrideFile;
+    expect(await refreshOpenCodeModelsCache(signal)).toBe(
+      realpathSync(overrideFile)
+    );
+
+    process.env.OPENCODE_MODELS_PATH = nodePath.join(
+      input.hostHome,
+      "missing.json"
+    );
+
+    let missingErr = "";
+
+    try {
+      await refreshOpenCodeModelsCache(signal);
+    } catch (error) {
+      missingErr = error instanceof Error ? error.message : "";
+    }
+
+    expect(missingErr).toMatch(/OPENCODE_MODELS_PATH/u);
+
+    delete process.env.OPENCODE_MODELS_PATH;
+    process.env.XDG_CACHE_HOME = cacheHome;
+    process.env.OPENCODE_MODELS_URL = server.url.toString();
+
+    const cachedPath = await refreshOpenCodeModelsCache(signal);
+
+    expect(cachedPath).toBe(
+      realpathSync(nodePath.join(cacheHome, "opencode", "models.json"))
+    );
+
+    if (cachedPath === null) {
+      throw new Error("Expected cachedPath");
+    }
+
+    expect(readFileSync(cachedPath, "utf-8")).toContain('"openai"');
+
+    mode = "error";
+    expect(await refreshOpenCodeModelsCache(signal)).toBe(cachedPath);
+    expect(readFileSync(cachedPath, "utf-8")).toContain('"openai"');
+
+    mode = "non-object";
+    expect(await refreshOpenCodeModelsCache(signal)).toBe(cachedPath);
+    expect(readFileSync(cachedPath, "utf-8")).toContain('"openai"');
+
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    let aborted = false;
+
+    try {
+      await refreshOpenCodeModelsCache(controller.signal);
+    } catch {
+      aborted = true;
+    }
+
+    expect(aborted).toBe(true);
+
+    const plan = compileMountPlan({
+      ...input,
+      opencodeModelsCacheFile: cachedPath,
+    });
+
+    const mountedModelsPath = nodePath.join(
+      input.trialDir,
+      "cache",
+      "opencode",
+      "models.json"
+    );
+
+    expect(plan.bwrapArgs).toContain(mountedModelsPath);
+
+    const env = buildTrialEnv({
+      trialDir: input.trialDir,
+      tsCompilerDirs: [],
+      resolvedHostToolDirs: [],
+      keepWorkspaces: false,
+      extraEnvNames: [],
+      modelsCatalogPath: mountedModelsPath,
+    });
+
+    expect(env.get("OPENCODE_MODELS_PATH")).toBe(mountedModelsPath);
+  } finally {
+    await server.stop(true);
+
+    if (prevPath === undefined) {
+      delete process.env.OPENCODE_MODELS_PATH;
+    } else {
+      process.env.OPENCODE_MODELS_PATH = prevPath;
+    }
+
+    if (prevUrl === undefined) {
+      delete process.env.OPENCODE_MODELS_URL;
+    } else {
+      process.env.OPENCODE_MODELS_URL = prevUrl;
+    }
+
+    if (prevCacheHome === undefined) {
+      delete process.env.XDG_CACHE_HOME;
+    } else {
+      process.env.XDG_CACHE_HOME = prevCacheHome;
+    }
+  }
+});

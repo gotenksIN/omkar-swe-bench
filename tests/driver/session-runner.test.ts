@@ -9,7 +9,7 @@ import {
   isSafeReviewerShellCommand,
   runSession,
 } from "../../src/driver/session-runner.ts";
-import { parseJsonText } from "../../src/util/json.ts";
+import { isJsonObject, isString, parseJsonText } from "../../src/util/json.ts";
 import type { JsonObject } from "../../src/util/json.ts";
 
 const repoDir = "/tmp/opencode/session-fixture";
@@ -983,4 +983,308 @@ test("validates pair reviewer git shell commands strictly against commit ranges 
       { allowWorktreeDiff: true }
     )
   ).toBe(false);
+});
+
+const makeSseResponse = (
+  onController?: (controller: ReadableStreamDefaultController<string>) => void
+): Response => {
+  const stream = new ReadableStream<string>({
+    start(controller) {
+      onController?.(controller);
+      controller.enqueue(
+        `data: ${JSON.stringify({
+          id: "open",
+          type: "server.connected",
+          created: 1000,
+          data: {},
+        })}\n\n`
+      );
+    },
+  });
+
+  return new Response(stream.pipeThrough(new TextEncoderStream()), {
+    status: 200,
+    headers: { "content-type": "text/event-stream" },
+  });
+};
+
+const commonSessionRoute = (
+  method: string,
+  pathname: string,
+  childId?: string
+): Response | null => {
+  if (pathname === "/api/agent") {
+    return Response.json({
+      data: [{ id: "coder" }, { id: "code-reviewer" }],
+    });
+  }
+
+  if (pathname === "/api/provider") {
+    return Response.json({ data: [{ id: "synthetic" }] });
+  }
+
+  if (method === "POST" && pathname === "/api/session") {
+    return Response.json({ data: { id: "root", directory: repoDir } });
+  }
+
+  if (pathname === "/api/session/active") {
+    return Response.json({ data: {} });
+  }
+
+  if (pathname === "/api/experimental/job") {
+    return Response.json({
+      data:
+        childId === undefined
+          ? []
+          : [
+              {
+                id: "job-child",
+                kind: "subagent",
+                sessionID: "root",
+                childSessionID: childId,
+                status: "completed",
+              },
+            ],
+    });
+  }
+
+  if (pathname.endsWith("/inbox")) {
+    return Response.json({ data: [] });
+  }
+
+  if (pathname.endsWith("/message")) {
+    return Response.json({ data: [idle("root-idle")] });
+  }
+
+  return null;
+};
+
+const runPermissionScenario = async (
+  activeRole: "code-reviewer" | "coder",
+  sessionID: string,
+  resources: readonly string[],
+  metadata?: JsonObject
+) => {
+  const replies: {
+    readonly id: string;
+    readonly decision: string;
+  }[] = [];
+
+  let events: ReadableStreamDefaultController<string> | undefined;
+  let seq = 0;
+
+  const emit = (type: string, data: JsonObject): void => {
+    seq += 1;
+    events?.enqueue(
+      `data: ${JSON.stringify({
+        id: `ev-${seq}`,
+        type,
+        created: 1500,
+        data,
+        durable: { aggregateID: "root", seq, version: 1 },
+      })}\n\n`
+    );
+  };
+
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const { pathname } = new URL(request.url);
+
+      if (request.method === "GET" && pathname === "/api/event") {
+        return makeSseResponse((controller) => {
+          events = controller;
+        });
+      }
+
+      const common = commonSessionRoute(
+        request.method,
+        pathname,
+        sessionID === "root" ? undefined : sessionID
+      );
+
+      if (common !== null) {
+        return common;
+      }
+
+      if (
+        request.method === "POST" &&
+        pathname === "/api/session/root/prompt"
+      ) {
+        const permissionData: JsonObject =
+          metadata === undefined
+            ? {
+                id: "perm-shell",
+                sessionID,
+                action: "shell",
+                resources: [...resources],
+              }
+            : {
+                id: "perm-shell",
+                sessionID,
+                action: "shell",
+                resources: [...resources],
+                metadata,
+              };
+
+        emit("permission.asked", permissionData);
+        emit("session.execution.succeeded", { sessionID: "root" });
+
+        return Response.json({ data: {} });
+      }
+
+      if (request.method === "POST" && pathname.includes("/permission/")) {
+        const body = parseJsonText(await request.text());
+
+        if (isJsonObject(body) && isString(body.decision)) {
+          replies.push({
+            id: pathname.split("/").at(-2) ?? "",
+            decision: body.decision,
+          });
+        }
+
+        return new Response(null, { status: 204 });
+      }
+
+      return Response.json({ data: {} });
+    },
+  });
+
+  try {
+    await runSession({
+      client: OpenCode.make({ baseUrl: server.url.origin }),
+      repoDir,
+      trialId: "perm-fixture",
+      activeRole,
+      modelSpec: "synthetic/model",
+      activeProviderIds: ["synthetic"],
+      prompt: "Synthetic task",
+      wallTimeoutMs: 5000,
+      readinessTimeoutMs: 2000,
+      signal: new AbortController().signal,
+    });
+  } finally {
+    await server.stop(true);
+  }
+
+  return replies;
+};
+
+test("runSession approves standalone reviewer worktree git diff and rejects pair/background/multi-resource shell prompts", async () => {
+  expect(
+    await runPermissionScenario("code-reviewer", "root", [
+      "git diff --no-ext-diff --no-textconv HEAD",
+    ])
+  ).toEqual([{ id: "perm-shell", decision: "once" }]);
+
+  expect(
+    await runPermissionScenario("coder", "child", [
+      "git diff --no-ext-diff --no-textconv HEAD",
+    ])
+  ).toEqual([{ id: "perm-shell", decision: "reject" }]);
+
+  expect(
+    await runPermissionScenario(
+      "code-reviewer",
+      "root",
+      ["git diff --no-ext-diff --no-textconv HEAD"],
+      { background: true }
+    )
+  ).toEqual([{ id: "perm-shell", decision: "reject" }]);
+
+  expect(
+    await runPermissionScenario("code-reviewer", "root", [
+      "git diff --no-ext-diff --no-textconv HEAD",
+      "git log --no-ext-diff --no-textconv -n 1",
+    ])
+  ).toEqual([{ id: "perm-shell", decision: "reject" }]);
+});
+
+const runWithExit = async (code: number) => {
+  const { promise: exitPromise, resolve: resolveExit } =
+    Promise.withResolvers<number>();
+
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+
+      if (request.method === "GET" && url.pathname === "/api/event") {
+        const stream = new ReadableStream<string>({
+          start(controller) {
+            controller.enqueue(
+              `data: ${JSON.stringify({
+                id: "open",
+                type: "server.connected",
+                created: 1000,
+                data: {},
+              })}\n\n`
+            );
+          },
+        });
+
+        return new Response(stream.pipeThrough(new TextEncoderStream()), {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }
+
+      if (url.pathname === "/api/agent") {
+        return Response.json({
+          data: [{ id: "coder" }, { id: "code-reviewer" }],
+        });
+      }
+
+      if (url.pathname === "/api/provider") {
+        return Response.json({ data: [{ id: "synthetic" }] });
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/session") {
+        return Response.json({ data: { id: "root", directory: repoDir } });
+      }
+
+      if (
+        request.method === "POST" &&
+        url.pathname === "/api/session/root/prompt"
+      ) {
+        queueMicrotask(() => {
+          resolveExit(code);
+        });
+
+        return Response.json({ data: {} });
+      }
+
+      return Response.json({ data: [] });
+    },
+  });
+
+  try {
+    return await runSession({
+      client: OpenCode.make({ baseUrl: server.url.origin }),
+      repoDir,
+      trialId: "exit-fixture",
+      activeRole: "coder",
+      modelSpec: "synthetic/model",
+      activeProviderIds: ["synthetic"],
+      prompt: "Synthetic task",
+      wallTimeoutMs: 5000,
+      readinessTimeoutMs: 2000,
+      signal: new AbortController().signal,
+      exitPromise,
+    });
+  } finally {
+    await server.stop(true);
+  }
+};
+
+test("runSession maps mid-session exitPromise codes to PrematureSseDisconnectError and UnexpectedServerExitError", async () => {
+  const cleanExit = await runWithExit(0);
+  const crashExit = await runWithExit(1);
+
+  expect(cleanExit.errorDiagnostic?.errorType).toBe(
+    "PrematureSseDisconnectError"
+  );
+  expect(crashExit.errorDiagnostic?.errorType).toBe(
+    "UnexpectedServerExitError"
+  );
 });
