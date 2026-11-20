@@ -150,6 +150,23 @@ const progress = (line: string): void => {
 const modelLabel = (model: string, reviewerModel: string | null): string =>
   reviewerModel === null ? model : `${model} -> ${reviewerModel}`;
 
+const formatDuration = (seconds: number): string => {
+  const totalTenths = Math.max(0, Math.round(seconds * 10));
+  const hours = Math.floor(totalTenths / 36_000);
+  const minutes = Math.floor((totalTenths % 36_000) / 600);
+  const secs = ((totalTenths % 600) / 10).toFixed(1);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  }
+
+  return `${secs}s`;
+};
+
 const failureDetail = (result: TrialResult): string => {
   if (result.error_message !== null) {
     return ` (${result.error_message})`;
@@ -441,6 +458,8 @@ const run = async (args: string[]): Promise<number> => {
       values
     );
 
+    const runStartedAt = performance.now();
+
     if (!dryRun && !signal.aborted) {
       progress(
         `Starting ${jobs.length} trial(s) (${Math.min(workers, jobs.length)} workers) -> ${out}`
@@ -503,8 +522,10 @@ const run = async (args: string[]): Promise<number> => {
         0
       );
 
+      const elapsed = formatDuration((performance.now() - runStartedAt) / 1000);
+
       progress(
-        `Done: ${passed}/${results.length} passed | $${totalCost.toFixed(4)} | ${summaryPath}`
+        `Done: ${passed}/${results.length} passed | ${elapsed} | $${totalCost.toFixed(4)} | ${summaryPath}`
       );
     }
 
