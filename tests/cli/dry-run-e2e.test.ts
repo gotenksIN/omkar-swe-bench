@@ -245,6 +245,9 @@ test("validates phase/task mismatches, 32-bit timeout overflows, and --sandbox a
         dryRunArgs("--phase", "reviewer", "--task", "coder-convention-autonomy")
       )
     ).toBe(1);
+    expect(String(err.mock.calls.at(-1)?.[0] ?? "")).toContain(
+      "does not match --phase"
+    );
 
     expect(
       await runCli(
@@ -256,19 +259,21 @@ test("validates phase/task mismatches, 32-bit timeout overflows, and --sandbox a
         )
       )
     ).toBe(1);
+    expect(String(err.mock.calls.at(-1)?.[0] ?? "")).toContain(
+      "Set --timeout-scale"
+    );
 
     process.env.PATH = emptyBinDir;
     expect(
       await runCli([
         "run",
-        "--dry-run",
         "--sandbox",
         "auto",
         "--phase",
         "coder",
         "--task",
         "coder-convention-autonomy",
-        "--model",
+        "--coder-model",
         "synthetic/coder",
         "--out",
         nodePath.join(directory, "no-bwrap-coder"),
@@ -276,8 +281,9 @@ test("validates phase/task mismatches, 32-bit timeout overflows, and --sandbox a
         nodePath.join(directory, "no-bwrap-ws"),
       ])
     ).toBe(1);
-
-    expect(err).toHaveBeenCalled();
+    expect(String(err.mock.calls.at(-1)?.[0] ?? "")).toContain(
+      "Cannot grade coder or pair trials without bubblewrap"
+    );
   } finally {
     if (previousPath === undefined) {
       delete process.env.PATH;

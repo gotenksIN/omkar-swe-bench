@@ -3,6 +3,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -450,8 +451,9 @@ test("withIsolatedGitDir rejects symlinked or non-regular .git metadata", async 
       const gitDir = nodePath.join(repoDir, ".git");
 
       if (kind === "objects" || kind === "refs") {
-        rmSync(nodePath.join(gitDir, kind), { recursive: true, force: true });
-        symlinkSync(decoyDir, nodePath.join(gitDir, kind));
+        const relocated = nodePath.join(decoyDir, kind);
+        renameSync(nodePath.join(gitDir, kind), relocated);
+        symlinkSync(relocated, nodePath.join(gitDir, kind));
       } else if (kind === "HEAD") {
         const decoyHead = nodePath.join(decoyDir, "HEAD");
         writeFileSync(decoyHead, "ref: refs/heads/main\n");
@@ -462,16 +464,20 @@ test("withIsolatedGitDir rejects symlinked or non-regular .git metadata", async 
         mkdirSync(nodePath.join(gitDir, "HEAD"));
       }
 
-      let captured = true;
+      let errorMessage = "";
 
       try {
         // oxlint-disable-next-line no-await-in-loop -- Each case tests an independent temp repository.
         await captureGitState(repoDir, head);
-      } catch {
-        captured = false;
+      } catch (error) {
+        errorMessage = error instanceof Error ? error.message : "";
       }
 
-      expect(captured).toBe(false);
+      expect(errorMessage).toMatch(
+        kind === "objects" || kind === "refs"
+          ? /Unexpected symlink at/u
+          : /Expected a regular Git metadata file: HEAD/u
+      );
     } finally {
       rmSync(repoDir, { recursive: true, force: true });
       rmSync(decoyDir, { recursive: true, force: true });

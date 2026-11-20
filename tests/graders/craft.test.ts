@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
 import { runCli } from "../../src/cli.ts";
@@ -22,6 +22,7 @@ import {
 let workspace = "";
 
 beforeAll(async () => {
+  await mkdir("/tmp/opencode", { recursive: true });
   workspace = await mkdtemp("/tmp/opencode/craft-test-");
 });
 

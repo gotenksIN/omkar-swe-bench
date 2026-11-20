@@ -6,7 +6,10 @@ export const probeSandbox = async (): Promise<{
   available: boolean;
   reason: string | null;
 }> => {
-  const bwrap = Bun.which("bwrap");
+  const bwrap =
+    process.env.PATH === undefined
+      ? Bun.which("bwrap")
+      : Bun.which("bwrap", { PATH: process.env.PATH });
 
   if (bwrap === null) {
     return { available: false, reason: "bwrap is not on PATH." };

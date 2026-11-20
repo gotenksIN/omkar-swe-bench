@@ -547,6 +547,47 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
     });
     expect(coderPacket.cases[0]?.rubric).toContain("idiomatic_control_flow");
 
+    const normalizedPacket = await exportCoderDiffJudgePacket([
+      trial({
+        task_id: "coder-ts-sse-chunk-crlf",
+        role: "coder",
+        passed: true,
+        git_diff: [
+          "## Unstaged",
+          "diff --git a/src/merge.ts b/src/merge.ts",
+          "--- a/src/merge.ts",
+          "+++ b/src/merge.ts",
+          "@@ -6,3 +6,3 @@ export interface Part {",
+          " export function mergeChunk(parts: string[], chunk: readonly Part[]): void {",
+          "-  for (const part of chunk) parts.push(part.text);",
+          "+  for (const part of chunk) { parts[part.index] = part.text; }",
+          " }",
+          "",
+        ].join("\n"),
+      }),
+      trial({
+        task_id: "coder-ts-sse-chunk-crlf",
+        role: "coder",
+        passed: true,
+        git_diff: [
+          "## Unstaged",
+          "diff --git a/src/merge.ts b/src/merge.ts",
+          "--- a/src/merge.ts",
+          "+++ b/src/merge.ts",
+          "@@ -6,3 +6,5 @@ export interface Part {",
+          " export function mergeChunk(parts: string[], chunk: readonly Part[]): void {",
+          "-  for (const part of chunk) parts.push(part.text);",
+          "+  for (const part of chunk) {",
+          "+    parts[part.index] = part.text;",
+          "+  }",
+          " }",
+          "",
+        ].join("\n"),
+      }),
+    ]);
+
+    expect(normalizedPacket.cases).toHaveLength(1);
+
     const coderInput = path.join(directory, "coder-results.json");
     const coderOut = path.join(directory, "coder-packet.json");
 

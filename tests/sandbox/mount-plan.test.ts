@@ -598,7 +598,12 @@ test("refreshOpenCodeModelsCache handles overrides, 404 fallback, non-200 preser
       "models.json"
     );
 
-    expect(plan.bwrapArgs).toContain(mountedModelsPath);
+    expect(plan.binds).toContainEqual({
+      source: cachedPath,
+      target: mountedModelsPath,
+      readOnly: true,
+      isFile: true,
+    });
 
     const env = buildTrialEnv({
       trialDir: input.trialDir,
