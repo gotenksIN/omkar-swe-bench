@@ -266,20 +266,20 @@ const cases: readonly ReviewCase[] = [
       {
         id: "formatter_rce_and_symlink",
         file: "src/craft-runner.ts",
-        range: [26, 44],
+        range: [32, 44],
         severity: 1,
         needles: ["existsSync(", 'return [oxfmtBin, "--write", ...existing]'],
         finding:
-          "[P1] `src/craft-runner.ts:32` — Invoking oxfmt without `--disable-nested-config` or `--` and using `existsSync` allows nested-config RCE, flag injection, and symlink overwrites.",
+          "[P1] `src/craft-runner.ts:35` — Invoking oxfmt without `--disable-nested-config` or `--` and using `existsSync` allows nested-config RCE, flag injection, and symlink overwrites.",
       },
       {
         id: "untracked_section_prefix",
         file: "src/craft-runner.ts",
-        range: [8, 22],
+        range: [9, 30],
         severity: 2,
         needles: ['else if (line === "Untracked:")'],
         finding:
-          '[P2] `src/craft-runner.ts:16` — Checking `line === "Untracked:"` instead of `startsWith` leaves `git-summary.ts` untracked lines in the unstaged patch and breaks `git apply`.',
+          '[P2] `src/craft-runner.ts:20` — Checking `line === "Untracked:"` instead of `startsWith` leaves `git-summary.ts` untracked lines in the unstaged patch and breaks `git apply`.',
       },
       {
         id: "diagnostics_relative_cwd",
@@ -302,7 +302,7 @@ const cases: readonly ReviewCase[] = [
         id: "preflight_daemon_leak",
         file: "src/preflight.ts",
         range: [7, 19],
-        severity: 1,
+        severity: 2,
         needles: ["await Promise.all("],
         finding:
           "[P1] `src/preflight.ts:8` — `Promise.all` leaks sibling detached daemon processes and token files on early rejection because `controller.shutdown()` never aborts `signal`.",
@@ -319,11 +319,11 @@ const cases: readonly ReviewCase[] = [
       {
         id: "async_poll_recursion",
         file: "src/poller.ts",
-        range: [27, 38],
-        severity: 2,
-        needles: ["return await waitForQuiescence(ctx, deadlineMs);"],
+        range: [26, 44],
+        severity: 3,
+        needles: ["return await waitForQuiescence(ctx, deadlineMs, signal);"],
         finding:
-          "[P2] `src/poller.ts:36` — Recursive `return await waitForQuiescence(...)` retains O(N) async stack frames instead of using an iterative loop.",
+          "[P3] `src/poller.ts:43` — Recursive `return await waitForQuiescence(...)` retains O(N) async stack frames instead of using an iterative loop.",
       },
     ],
   },
@@ -375,11 +375,14 @@ const cases: readonly ReviewCase[] = [
       {
         id: "empty_pdf_clobber",
         file: "archive/sync.py",
-        range: [12, 26],
+        range: [6, 24],
         severity: 1,
-        needles: ["os.replace(tmp, dest)"],
+        needles: [
+          'content_type != "application/pdf"',
+          "os.replace(tmp_name, dest)",
+        ],
         finding:
-          "[P1] `archive/sync.py:13` — Replacing cached PDFs without checking `%PDF-` magic bytes and non-zero size clobbers valid cached files with 0-byte or HTML bodies.",
+          "[P1] `archive/sync.py:12` — Replacing cached PDFs without checking `%PDF-` magic bytes and non-zero size clobbers valid cached files with 0-byte or HTML bodies.",
       },
     ],
   },
@@ -701,6 +704,21 @@ for (const task of REVIEWER_TASKS) {
         expect(
           expandedDenylistReplace.checks.caught_denylist_shell_rewrite
         ).toBe(false);
+      }
+
+      if (reference.id === "rev-ts-sandbox-mount-and-transitive-types") {
+        const unscopedFinding = await task.grade(
+          {
+            ...ev,
+            finalText:
+              "## Findings\n\n- [P2] `src/mounts.ts:7` — `FORBIDDEN_HARNESS_MOUNT` misses `oxlint-tsgolint` and `.oxlintrc.json` due to whole-segment regex matching.",
+          },
+          setup
+        );
+
+        expect(unscopedFinding.checks.caught_forbidden_mount_regex_gap).toBe(
+          true
+        );
       }
 
       if (reference.id === "rev-ts-tautological-and-inverted-test") {
