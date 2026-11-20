@@ -19,43 +19,41 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 ## Rankings
 
 Models are ranked by **Low-Steering Autonomy Score (`LSAS`, 0–100)**—how rarely you must intervene, debug, nudge static compliance, or fight stubborn review refusals—with cost and wall-clock time on separate Pareto axes.
-See the **[full scores, methodology, and 330-trial breakdown](results/summary.md)**, **[Code Craft analysis](results/craft.md)**, or **[interactive HTML dashboard](results/report.html)** (`neutral` profile, `--sandbox require`, OpenCode `2.3.2`, `$46.76` total API spend).
+See the **[full scores, methodology, and 421-trial breakdown](results/summary.md)**, **[Code Craft analysis](results/craft.md)**, or **[interactive HTML dashboard](results/report.html)** (`neutral` profile, `--sandbox require`, `$65.94` total API spend).
 
-### Autonomous Coders (`ACI` across 19 Solo + Pair trials)
+### Autonomous Coders (`ACI` across 26 Solo + Pair trials)
 
 | Rank | Coder                      |      ACI | Pass@1 |       Cost · Wall |
 | ---: | :------------------------- | -------: | -----: | ----------------: |
-|    1 | Gemini 4 Hydrogen (medium) | **99.9** |  19/19 |     $2.79 · 27.6m |
-|    2 | Gemini 4 Hydrogen (high)   | **99.9** |  19/19 |     $4.23 · 40.0m |
-|    3 | Gemini 4 Neon (medium)     | **99.9** |  19/19 |     $5.65 · 45.4m |
-|    4 | Claude Opus 5.5 (medium)   | **98.1** |  18/19 |     $3.51 · 19.4m |
-|    5 | DeepSeek Flash (high)      | **95.1** |  17/19 | **$0.68** · 28.6m |
-|    6 | Gemini 4 Neon (high)       | **93.1** |  17/19 |     $8.96 · 72.3m |
-|    7 | Claude Sonnet 5.5 (high)   | **93.1** |  13/19 | $1.73 · **13.2m** |
-|    8 | GPT-6.2 Sol (high)         | **91.3** |  16/19 |     $1.98 · 28.0m |
-|    9 | GPT-6.2 Sol (medium)       | **89.8** |  16/19 |     $1.65 · 23.4m |
-|   10 | Claude Opus 5.5 (high)     | **89.5** |  16/19 |     $4.51 · 24.0m |
-|   11 | DeepSeek Flash (max)       | **84.2** |  15/19 |     $0.73 · 40.7m |
+|    1 | Claude Opus 5.5 (medium)   | **94.6** |  19/26 |     $5.01 · 29.2m |
+|    2 | Gemini 4 Hydrogen (high)   | **93.1** |  24/26 |     $6.31 · 70.4m |
+|    3 | Gemini 4 Neon (medium)     | **92.9** |  24/26 |     $8.54 · 79.5m |
+|    4 | GPT-6.2 Sol (high)         | **92.6** |  23/26 |     $3.06 · 44.1m |
+|    5 | Gemini 4 Neon (high)       | **92.0** |  24/26 |   $11.78 · 109.7m |
+|    6 | GPT-6.2 Sol (medium)       | **90.2** |  22/26 |     $2.42 · 34.9m |
+|    7 | Gemini 4 Hydrogen (medium) | **89.9** |  22/26 |     $4.19 · 44.7m |
+|    8 | Claude Sonnet 5.5 (high)   | **89.4** |  14/26 | $2.63 · **23.8m** |
+|    9 | DeepSeek Flash (high)      | **88.0** |  20/26 | **$1.24** · 38.4m |
 
 ![Coder Autonomy vs. Cost Pareto Frontier](results/charts/coder-cost-pareto.svg)
 
 ![Coder Autonomy vs. Wall-Clock Time Pareto Frontier](results/charts/coder-speed-pareto.svg)
 
-### Code Reviewers (`LSAS` across 10 calibrated tasks)
+### Code Reviewers (`LSAS` across 17 tasks)
 
-| Rank | Reviewer                 |      LSAS | Recall |      Alarms |     Cost · Wall |
-| ---: | :----------------------- | --------: | -----: | ----------: | --------------: |
-|    1 | Gemini 4 Carbon (low)    | **100.0** |   100% |           0 |     $0.49 · 39s |
-|    2 | Gemini 4 Carbon (medium) | **100.0** |   100% |           0 |     $0.93 · 85s |
-|    3 | Gemini 4 Neon (xhigh)    | **100.0** |   100% |           0 |    $2.67 · 139s |
-|    4 | GPT-6.2 Astra (medium)   |  **99.8** |   100% |           0 |     $0.58 · 16s |
-|    5 | Claude Opus 5.5 (high)   |  **96.8** |   100% | 1 FP · 0 P3 |     $0.49 · 18s |
-|    6 | Claude Opus 5.5 (medium) |  **96.6** |   100% | 1 FP · 0 P3 | $0.42 · **15s** |
-|    7 | GPT-6.2 Astra (high)     |  **95.1** |   100% | 1 FP · 1 P3 |     $0.69 · 20s |
-|    8 | Gemini 4 Neon (high)     |  **95.0** |    93% |           0 |     $1.25 · 61s |
-|    9 | GPT-6.2 Sol (high)       |  **89.0** |    93% | 1 FP · 2 P3 | **$0.18** · 16s |
-|   10 | Claude Fable 5.2 (high)  |  **87.0** |   100% | 3 FP · 2 P3 |     $1.33 · 20s |
-|   11 | GPT-6.2 Sol (xhigh)      |  **87.0** |    86% | 2 FP · 2 P3 |     $0.24 · 23s |
+| Rank | Reviewer                 |     LSAS | Recall |      Alarms |     Cost · Wall |
+| ---: | :----------------------- | -------: | -----: | ----------: | --------------: |
+|    1 | Gemini 4 Carbon (low)    | **99.6** |   100% |           0 |     $0.77 · 47s |
+|    2 | Gemini 4 Neon (high)     | **98.1** |   100% | 1 FP · 0 P3 |    $3.02 · 113s |
+|    3 | Gemini 4 Neon (xhigh)    | **90.5** |    92% | 1 FP · 2 P3 |    $5.44 · 192s |
+|    4 | GPT-6.2 Astra (high)     | **89.5** |   100% | 5 FP · 1 P3 |     $1.89 · 25s |
+|    5 | Gemini 4 Carbon (medium) | **89.1** |    88% | 1 FP · 0 P3 |    $2.16 · 100s |
+|    6 | GPT-6.2 Astra (medium)   | **85.5** |   100% | 5 FP · 1 P3 | $1.45 · **17s** |
+|    7 | Claude Opus 5.5 (high)   | **83.9** |    97% | 6 FP · 3 P3 |     $1.02 · 21s |
+|    8 | Claude Opus 5.5 (medium) | **81.6** |    96% | 5 FP · 4 P3 | $0.96 · **17s** |
+|    9 | Claude Fable 5.2 (high)  | **77.0** |    92% | 7 FP · 4 P3 |     $2.95 · 31s |
+|   10 | GPT-6.2 Sol (high)       | **76.6** |    92% | 9 FP · 3 P3 | **$0.47** · 23s |
+|   11 | GPT-6.2 Sol (xhigh)      | **68.6** |    82% | 9 FP · 3 P3 |     $0.61 · 26s |
 
 ![Code Reviewer Calibration Quadrant](results/charts/reviewer-calibration.svg)
 
@@ -65,7 +63,7 @@ See the **[full scores, methodology, and 330-trial breakdown](results/summary.md
 
 ![Low-Steering Babysitting & Failure Taxonomy](results/charts/failure-taxonomy.svg)
 
-Full per-stage tables, inference overhead & diff discipline charts, and all 330 trial rows live in **[`results/summary.md`](results/summary.md)**, with static Code Craft diagnostics in **[`results/craft.md`](results/craft.md)**.
+Full per-stage tables, inference overhead & diff discipline charts, and all 421 trial rows live in **[`results/summary.md`](results/summary.md)**, with static Code Craft diagnostics in **[`results/craft.md`](results/craft.md)**.
 
 ## How it works
 
@@ -109,7 +107,7 @@ bun install
 uv tool install ruff==0.17.5
 ```
 
-For tasks that enable commit guard (`coder-git-commit-guard-two-task` and all four pair tasks), cache `opencode-commit-guard@1.1.1` on the host at `${XDG_CACHE_HOME:-$HOME/.cache}/opencode/npm/opencode-commit-guard@1.1.1`.
+For tasks that enable commit guard (`coder-git-commit-guard-two-task` and all six pair tasks), cache `opencode-commit-guard@1.1.1` on the host at `${XDG_CACHE_HOME:-$HOME/.cache}/opencode/npm/opencode-commit-guard@1.1.1`.
 
 ### 2. Verify fixtures offline
 
@@ -128,13 +126,13 @@ bun ./src/cli.ts run --dry-run --sandbox off \
 By default, `run` enforces `--sandbox require`, runs `4` total workers capped at `2` concurrent trials per provider, reads credentials from `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`, and writes `results.json` plus `summary.md` under `artifacts/<timestamp>/`.
 
 ```sh
-# Stage 1: standalone coder (88 trials across 8 default models)
+# Stage 1: standalone coder (126 trials across 9 default models)
 bun ./src/cli.ts run --phase coder
 
-# Stage 2: read-only code reviewer (99 trials across 9 default models)
+# Stage 2: read-only code reviewer (187 trials across 11 default models)
 bun ./src/cli.ts run --phase reviewer
 
-# Stage 3: coder + reviewer collaboration (64 trials across 8 coders × 2 default pair reviewers)
+# Stage 3: coder + reviewer collaboration (108 trials across 9 coders × 2 default pair reviewers)
 bun ./src/cli.ts run --phase pair
 ```
 
