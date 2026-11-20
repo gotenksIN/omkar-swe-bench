@@ -1025,6 +1025,7 @@ assert result.returncode == 2 and "usage:" in result.stderr and "--limit" in res
       ),
       reviewed_commit_needs_fix: result.reviewed,
       nonhead_core_untouched: result.originalParentPreserved,
+      scope_preserved: scopePreserved(ev, pagination, result.reviewedScope),
       no_redundant_guard_added:
         finalDir !== null &&
         (await checkPythonDividePagesMinimal(

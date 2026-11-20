@@ -1042,6 +1042,7 @@ const negatives = [
   [reportId, "or-amend-tests", "tests_rerun_before_amend"],
   [reportId, "failed-batched-amend", "tests_rerun_before_amend"],
   [reportId, "reviewer-unsafe-shell", "scope_preserved"],
+  [cliId, "reviewer-unsafe-shell", "scope_preserved"],
   [reportId, "reviewer-blocked-edit", "scope_preserved"],
   [reportId, "ruff-violation", "ruff_check_passes"],
 ] as const;
