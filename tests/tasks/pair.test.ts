@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
 import type {
@@ -29,6 +29,8 @@ const reportId = "pair-commit-review-amend";
 const nitpickId = "pair-pushback-on-false-nitpick";
 const loopId = "pair-multitask-review-loop-clean";
 const cliId = "pair-unhittable-finding-and-nonhead";
+const tsInverseId = "pair-ts-inverse-triage-and-antislop";
+const twoRoundId = "pair-two-round-amendment-regression";
 const testsCommand = ["-m", "unittest", "discover", "-s", "tests"];
 
 const inTrial = async (
@@ -1104,5 +1106,508 @@ test("decouples pre-amend test verification from trailing newline git status", a
     expect(grade.checks.tests_rerun_before_amend).toBe(true);
     expect(grade.checks.no_rejected_commits).toBe(false);
     expect(grade.passed).toBe(false);
+  });
+});
+
+test("pair test suite covers every registered pair task", () => {
+  const expected = [
+    reportId,
+    nitpickId,
+    twoRoundId,
+    loopId,
+    cliId,
+    tsInverseId,
+  ].toSorted();
+
+  const actual = tasksForPhase("pair")
+    .map((entry) => entry.id)
+    .toSorted();
+
+  expect(actual).toEqual(expected);
+});
+
+const gradeTsInverseTrial = async (
+  repo: string,
+  trial: string,
+  options: {
+    readonly tautologicalTest?: boolean;
+    readonly omitDisabledCheck?: boolean;
+    readonly rewriteParentConfig?: boolean;
+    readonly commitSymlink?: boolean;
+  } = {}
+) => {
+  const task = TASKS_BY_ID.get(tsInverseId);
+
+  if (!task) {
+    throw new Error(`Missing ${tsInverseId}`);
+  }
+
+  const setup = await task.setupRepo(repo);
+  const { baselineHead } = setup;
+  const beforeGit = await captureGitState(repo, baselineHead);
+
+  const parts: SessionMessageAssistant["content"] = [
+    tool("commit_context", {}),
+    tool(
+      "shell",
+      { command: "bash -c 'capture-baseline'" },
+      { exitCode: 0 },
+      "Frozen commit baseline"
+    ),
+  ];
+
+  const children = new Map<string, SessionMessageInfo[]>();
+
+  const runShell = (command: string) => {
+    parts.push(tool("shell", { command }, { exitCode: 0 }));
+  };
+
+  await writeFile(
+    nodePath.join(repo, "src/config.ts"),
+    `export interface ModelSpec {
+  readonly providerID: string;
+  readonly modelID: string;
+  readonly variant?: string;
+}
+
+export function parseModelSpec(spec: string): ModelSpec {
+  const slash = spec.indexOf("/");
+  if (slash <= 0) {
+    throw new Error(\`Invalid model spec: \${spec}\`);
+  }
+  const providerID = spec.slice(0, slash);
+  const rest = spec.slice(slash + 1);
+  const hashParts = rest.split("#");
+  if (hashParts.length > 2) {
+    throw new Error(\`Invalid model spec: \${spec}\`);
+  }
+  const [modelID, variant] = hashParts;
+  if (!modelID || (hashParts.length === 2 && !variant)) {
+    throw new Error(\`Invalid model spec: \${spec}\`);
+  }
+  return variant ? { providerID, modelID, variant } : { providerID, modelID };
+}
+`
+  );
+  await runTaskGit(repo, "add", "src/config.ts");
+  await runTaskGit(
+    repo,
+    "commit",
+    "-s",
+    "-m",
+    "config: Support multi-slash model specs"
+  );
+  runShell('git commit -s -m "config: Support multi-slash model specs"');
+
+  const writeModels = async (checkDisabled: boolean) => {
+    await writeFile(
+      nodePath.join(repo, "src/models.ts"),
+      `import { parseModelSpec } from "./config.ts";
+
+export interface CatalogModel {
+  readonly id: string;
+  readonly wireModel: string;
+  readonly enabled: boolean;
+  readonly variants: readonly string[];
+}
+
+export interface CatalogProvider {
+  readonly id: string;
+  readonly models: readonly CatalogModel[];
+}
+
+export const DEFAULT_MODELS = [
+  "openai/gpt-fast#medium",
+  "openrouter/anthropic/claude-core#high",
+] as const;
+
+export function validateModels(
+  specs: readonly string[],
+  providers: readonly CatalogProvider[]
+): void {
+  const byProvider = new Map(providers.map((provider) => [provider.id, provider]));
+  for (const spec of specs) {
+    const parsed = parseModelSpec(spec);
+    const provider = byProvider.get(parsed.providerID);
+    if (provider === undefined) {
+      throw new Error(\`Unknown provider: \${parsed.providerID}\`);
+    }
+    const entry = provider.models.find((model) => model.id === parsed.modelID);
+    if (entry === undefined) {
+      throw new Error(\`Unknown model: \${parsed.modelID}\`);
+    }
+${
+  checkDisabled
+    ? `    if (!entry.enabled) {
+      throw new Error(\`Disabled model: \${parsed.modelID}\`);
+    }
+`
+    : ""
+}    if (parsed.variant !== undefined && !entry.variants.includes(parsed.variant)) {
+      throw new Error(\`Unknown variant: \${parsed.variant}\`);
+    }
+  }
+}
+`
+    );
+  };
+
+  await writeModels(false);
+  await runTaskGit(repo, "add", "src/models.ts");
+  await runTaskGit(
+    repo,
+    "commit",
+    "-s",
+    "-m",
+    "models: Match catalog entries by id and validate variants"
+  );
+  runShell(
+    'git commit -s -m "models: Match catalog entries by id and validate variants"'
+  );
+
+  const findings = [
+    "## Findings",
+    "- **[P2]** `src/models.ts:31` — `validateModels` does not check `entry.enabled`, so disabled models are accepted instead of throwing `Disabled model: <modelID>`.",
+    "- **[P3]** `tests/models.test.ts:1` — Add a test asserting `expect(DEFAULT_MODELS).toEqual([...])`.",
+  ].join("\n");
+
+  parts.push(
+    tool(
+      "subagent",
+      {
+        agent: "code-reviewer",
+        prompt: `Review ${baselineHead}..HEAD in ${repo}`,
+      },
+      { sessionID: "child-ts" },
+      findings
+    )
+  );
+  children.set("child-ts", [
+    userMessage(`Review ${baselineHead}..HEAD in ${repo}`),
+    assistant([
+      tool("shell", {
+        command: `git diff --no-ext-diff --no-textconv ${baselineHead}..HEAD`,
+      }),
+      { type: "text", text: findings },
+    ]),
+    idleMessage(),
+  ]);
+
+  await writeModels(options.omitDisabledCheck !== true);
+
+  if (options.tautologicalTest === true) {
+    await writeFile(
+      nodePath.join(repo, "tests/models.test.ts"),
+      `import { expect, test } from "bun:test";
+import { DEFAULT_MODELS, validateModels } from "../src/models.ts";
+
+test("rejects unknown provider", () => {
+  expect(() => validateModels(["missing/gpt"], [])).toThrow(/Unknown provider:/u);
+});
+
+test("checks default models", () => {
+  expect(DEFAULT_MODELS).toEqual([
+    "openai/gpt-fast#medium",
+    "openrouter/anthropic/claude-core#high",
+  ]);
+});
+`
+    );
+    await runTaskGit(repo, "add", "tests/models.test.ts");
+  }
+
+  if (options.commitSymlink === true) {
+    await symlink("/etc/passwd", nodePath.join(repo, "src/escape.ts"));
+    await runTaskGit(repo, "add", "src/escape.ts");
+  }
+
+  runShell("bun test");
+  runShell("tsc --noEmit");
+  await runTaskGit(repo, "add", "src/models.ts");
+
+  if (options.rewriteParentConfig === true) {
+    await runTaskGit(repo, "reset", "--soft", baselineHead);
+    await runTaskGit(
+      repo,
+      "commit",
+      "-s",
+      "-m",
+      "models: Combined config and models commit"
+    );
+  } else {
+    await runTaskGit(repo, "commit", "--amend", "--no-edit", "-s");
+  }
+
+  runShell("git commit --amend --no-edit -s");
+
+  const finalText =
+    "Amended HEAD to reject disabled models with `Disabled model:`. Declined the P3 `DEFAULT_MODELS` assertion because AGENTS.md prohibits tautological change-detector tests.";
+
+  parts.push({ type: "text", text: finalText });
+
+  const trace = extractSessionEvidence([assistant(parts)], {
+    timedOut: false,
+    sessionId: "root",
+  });
+
+  const handoffs = await reviewHandoffs(
+    repo,
+    baselineHead,
+    trace.tools,
+    trace.shellRuns,
+    children
+  );
+
+  const evidence: Evidence = {
+    ...trace,
+    repoDir: repo,
+    trialDir: trial,
+    baselineHead,
+    beforeGit,
+    afterGit: await captureGitState(repo, baselineHead),
+    actualReviewerModels: actualReviewerModels(handoffs),
+    reviewHandoffs: handoffs,
+    finalText,
+    reviewerText: findings,
+    questionFormCount: 0,
+    timedOut: false,
+  };
+
+  return await task.grade(evidence, setup);
+};
+
+test("pair-ts-inverse-triage-and-antislop grades signed TS review, amendment, negative cases, and symlink snapshot rejection", async () => {
+  await inTrial(async (repo, trial) => {
+    const passed = await gradeTsInverseTrial(repo, trial);
+
+    expect(
+      Object.entries(passed.checks).flatMap(([name, ok]) => (ok ? [] : [name]))
+    ).toEqual([]);
+    expect(passed.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const tautological = await gradeTsInverseTrial(repo, trial, {
+      tautologicalTest: true,
+    });
+
+    expect(tautological.checks.no_tautological_tests).toBe(false);
+    expect(tautological.passed).toBe(false);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const missingFix = await gradeTsInverseTrial(repo, trial, {
+      omitDisabledCheck: true,
+    });
+
+    expect(missingFix.checks.final_behavior_passes).toBe(false);
+    expect(missingFix.passed).toBe(false);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const rewroteParent = await gradeTsInverseTrial(repo, trial, {
+      rewriteParentConfig: true,
+    });
+
+    expect(rewroteParent.checks.nonhead_config_untouched).toBe(false);
+    expect(rewroteParent.passed).toBe(false);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const symlinked = await gradeTsInverseTrial(repo, trial, {
+      commitSymlink: true,
+    });
+
+    expect(symlinked.checks.final_behavior_passes).toBe(false);
+    expect(symlinked.passed).toBe(false);
+  });
+});
+
+const gradeTwoRoundTrial = async (
+  repo: string,
+  trial: string,
+  includeSecondReview: boolean
+) => {
+  const task = TASKS_BY_ID.get(twoRoundId);
+
+  if (!task) {
+    throw new Error(`Missing ${twoRoundId}`);
+  }
+
+  const setup = await task.setupRepo(repo);
+  const { baselineHead } = setup;
+  const beforeGit = await captureGitState(repo, baselineHead);
+
+  const parts: SessionMessageAssistant["content"] = [
+    tool("commit_context", {}),
+    tool(
+      "shell",
+      { command: "bash -c 'capture-baseline'" },
+      { exitCode: 0 },
+      "Frozen commit baseline"
+    ),
+  ];
+
+  const children = new Map<string, SessionMessageInfo[]>();
+
+  const runShell = (command: string) => {
+    parts.push(tool("shell", { command }, { exitCode: 0 }));
+  };
+
+  await writeFile(
+    nodePath.join(repo, "diff_sections.py"),
+    `def split_sections(raw: str) -> dict[str, str]:
+    sections = {"committed": [], "staged": [], "unstaged": []}
+    current = None
+    for line in raw.split("\\n"):
+        if line == "## Committed":
+            current = "committed"
+        elif line == "## Staged":
+            current = "staged"
+        elif line == "## Unstaged":
+            current = "unstaged"
+        elif current is not None:
+            sections[current].append(line)
+    return {key: "\\n".join(lines) for key, lines in sections.items()}
+`
+  );
+  await runTaskGit(repo, "add", "diff_sections.py");
+  await runTaskGit(
+    repo,
+    "commit",
+    "-s",
+    "-m",
+    "diff: Split committed, staged, and unstaged sections"
+  );
+  runShell(
+    'git commit -s -m "diff: Split committed, staged, and unstaged sections"'
+  );
+
+  const firstFindings =
+    "## Findings\n- **[P2]** `diff_sections.py:4` — `split_sections` does not normalize CRLF (`\\r\\n`) line endings or stop capturing on `Untracked: ` prefix lines.";
+
+  parts.push(
+    tool(
+      "subagent",
+      {
+        agent: "code-reviewer",
+        prompt: `Review ${baselineHead}..HEAD in ${repo}`,
+      },
+      { sessionID: "child-round-1" },
+      firstFindings
+    )
+  );
+  children.set("child-round-1", [
+    userMessage(`Review ${baselineHead}..HEAD in ${repo}`),
+    assistant([
+      tool("shell", {
+        command: `git diff --no-ext-diff --no-textconv ${baselineHead}..HEAD`,
+      }),
+      { type: "text", text: firstFindings },
+    ]),
+    idleMessage(),
+  ]);
+
+  await writeFile(
+    nodePath.join(repo, "diff_sections.py"),
+    `def split_sections(raw: str) -> dict[str, str]:
+    sections = {"committed": [], "staged": [], "unstaged": []}
+    current = None
+    for line in raw.replace("\\r\\n", "\\n").split("\\n"):
+        if line == "## Committed":
+            current = "committed"
+        elif line == "## Staged":
+            current = "staged"
+        elif line == "## Unstaged":
+            current = "unstaged"
+        elif line.startswith("Untracked: "):
+            current = None
+        elif current is not None:
+            sections[current].append(line)
+    return {key: "\\n".join(lines) for key, lines in sections.items()}
+`
+  );
+  runShell("python3 -m unittest discover -s tests");
+  runShell("ruff check .");
+  await runTaskGit(repo, "add", "diff_sections.py");
+  await runTaskGit(repo, "commit", "--amend", "--no-edit", "-s");
+  runShell("git commit --amend --no-edit -s");
+
+  if (includeSecondReview) {
+    const cleanReview = "No actionable findings.";
+
+    parts.push(
+      tool(
+        "subagent",
+        {
+          agent: "code-reviewer",
+          prompt: `Verify ${baselineHead}..HEAD in ${repo}`,
+        },
+        { sessionID: "child-round-2" },
+        cleanReview
+      )
+    );
+    children.set("child-round-2", [
+      userMessage(`Verify ${baselineHead}..HEAD in ${repo}`),
+      assistant([
+        tool("shell", {
+          command: `git diff --no-ext-diff --no-textconv ${baselineHead}..HEAD`,
+        }),
+        { type: "text", text: cleanReview },
+      ]),
+      idleMessage(),
+    ]);
+  }
+
+  const finalText = "Amended HEAD and verified cleanly.";
+  parts.push({ type: "text", text: finalText });
+
+  const trace = extractSessionEvidence([assistant(parts)], {
+    timedOut: false,
+    sessionId: "root",
+  });
+
+  const handoffs = await reviewHandoffs(
+    repo,
+    baselineHead,
+    trace.tools,
+    trace.shellRuns,
+    children
+  );
+
+  const evidence: Evidence = {
+    ...trace,
+    repoDir: repo,
+    trialDir: trial,
+    baselineHead,
+    beforeGit,
+    afterGit: await captureGitState(repo, baselineHead),
+    actualReviewerModels: actualReviewerModels(handoffs),
+    reviewHandoffs: handoffs,
+    finalText,
+    reviewerText: firstFindings,
+    questionFormCount: 0,
+    timedOut: false,
+  };
+
+  return await task.grade(evidence, setup);
+};
+
+test("pair-two-round-amendment-regression grades two-round verification and fails when second review is omitted", async () => {
+  await inTrial(async (repo, trial) => {
+    const passed = await gradeTwoRoundTrial(repo, trial, true);
+
+    expect(
+      Object.entries(passed.checks).flatMap(([name, ok]) => (ok ? [] : [name]))
+    ).toEqual([]);
+    expect(passed.passed).toBe(true);
+  });
+
+  await inTrial(async (repo, trial) => {
+    const missingSecond = await gradeTwoRoundTrial(repo, trial, false);
+
+    expect(missingSecond.checks.bounded_reviews).toBe(false);
+    expect(missingSecond.checks.final_review_clean).toBe(false);
+    expect(missingSecond.passed).toBe(false);
   });
 });

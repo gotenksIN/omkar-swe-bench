@@ -1225,7 +1225,7 @@ assert.throws(() => validateModels(["openai/gpt-old#medium"], providers), /Disab
             .replaceAll(/\/\*[\s\S]*?\*\//gu, "")
             .replaceAll(/\/\/[^\n]*/gu, "");
 
-          return /(?:expect\(\s*DEFAULT_MODELS\s*\)\s*\.\s*(?:toEqual|toStrictEqual)|deep(?:Strict)?Equal\(\s*DEFAULT_MODELS\s*,)\s*\[/u.test(
+          return /(?:expect\(\s*DEFAULT_MODELS\s*\)\s*\.\s*(?:toEqual|toStrictEqual)\(\s*|deep(?:Strict)?Equal\(\s*DEFAULT_MODELS\s*,\s*)\[/u.test(
             stripped
           );
         })
