@@ -32,9 +32,10 @@ const NEUTRAL_CODER_PROMPT = [
 ].join("\n");
 
 const REVIEWER_GIT_RULE =
-  "Your working directory is already the repository root. When inspecting diffs or history with shell, run one standalone git diff --no-ext-diff --no-textconv <range> or git log --no-ext-diff --no-textconv <range> command per shell call without -C, cd, git status, git show, or command chaining. Omit file pathspecs or place them after --.";
+  "Your working directory is already the repository root. When inspecting diffs or history with shell, run one standalone git diff --no-ext-diff --no-textconv [<range> | <rev>] or git log --no-ext-diff --no-textconv [<range> | <rev>] command per shell call without -C, cd, git status, git show, or command chaining. Omit file pathspecs or place them after --.";
 
-const PAIR_REVIEWER_GIT_RULE = `${REVIEWER_GIT_RULE} Always pass an explicit <start>..<end> commit range to git diff; do not run working-tree git diff, git diff HEAD, or git diff --cached.`;
+const PAIR_REVIEWER_GIT_RULE =
+  "Your working directory is already the repository root. When inspecting diffs or history with shell, run one standalone git diff --no-ext-diff --no-textconv <start>..<end> or git log --no-ext-diff --no-textconv <range> command per shell call without -C, cd, git status, git show, or command chaining. Omit file pathspecs or place them after --. Always pass an explicit <start>..<end> commit range to git diff; do not run working-tree git diff, git diff HEAD, or git diff --cached.";
 
 const neutralReviewerPrompt = (role: TrialConfigOptions["role"]): string => {
   const isPair = role === "pair";
@@ -121,28 +122,13 @@ const REVIEWER_COMMON_RULES: readonly PermissionRule[] = [
   { action: "shell", resource: "*", effect: "deny" },
 ];
 
-const REVIEWER_FLAG_DENIALS: readonly PermissionRule[] = [
-  { action: "shell", resource: "*--output*", effect: "deny" },
-  { action: "shell", resource: "*--ext-diff*", effect: "deny" },
-  { action: "shell", resource: "*--textconv*", effect: "deny" },
-  { action: "shell", resource: "*--no-index*", effect: "deny" },
-  { action: "shell", resource: "*--show-signature*", effect: "deny" },
+const reviewerRules = (): readonly PermissionRule[] => [
+  // Require runtime AST approval (`ask`) on reviewer git diff/log commands so
+  // session-runner enforces the strict allowlist regardless of flag order.
+  ...REVIEWER_COMMON_RULES,
+  { action: "shell", resource: "git diff *", effect: "ask" },
+  { action: "shell", resource: "git log *", effect: "ask" },
 ];
-
-const reviewerRules = (
-  role: TrialConfigOptions["role"]
-): readonly PermissionRule[] => {
-  // In writable pair trials, require runtime AST approval (`ask`) on reviewer git
-  // diff/log commands so session-runner enforces the strict allowlist regardless of flag order.
-  const effect: PermissionRule["effect"] = role === "pair" ? "ask" : "allow";
-
-  return [
-    ...REVIEWER_COMMON_RULES,
-    { action: "shell", resource: "git diff *", effect },
-    { action: "shell", resource: "git log *", effect },
-    ...(role === "pair" ? [] : REVIEWER_FLAG_DENIALS),
-  ];
-};
 
 const readAgent = (
   agents: JsonValue | undefined,
@@ -263,7 +249,7 @@ export const buildTrialConfig = ({
     permissions: [
       ...reviewerBase.permissions,
       ...COMMON_DENIALS,
-      ...reviewerRules(role),
+      ...reviewerRules(),
     ],
   };
 

@@ -6,6 +6,7 @@ import {
   errorDiagnostic,
   isRetryableApiFailure,
   isSafePairReviewerShellCommand,
+  isSafeReviewerShellCommand,
   runSession,
 } from "../../src/driver/session-runner.ts";
 import { parseJsonText } from "../../src/util/json.ts";
@@ -942,6 +943,44 @@ test("validates pair reviewer git shell commands strictly against commit ranges 
   expect(
     isSafePairReviewerShellCommand(
       "git diff --no-ext-diff --no-textconv a1b2c3d4..HEAD && rm -rf ."
+    )
+  ).toBe(false);
+
+  expect(
+    isSafeReviewerShellCommand("git diff --no-ext-diff --no-textconv", {
+      allowWorktreeDiff: true,
+    })
+  ).toBe(true);
+  expect(
+    isSafeReviewerShellCommand("git diff --no-ext-diff --no-textconv HEAD", {
+      allowWorktreeDiff: true,
+    })
+  ).toBe(true);
+  expect(
+    isSafeReviewerShellCommand(
+      "git diff --no-ext-diff --no-textconv a1b2c3d4",
+      { allowWorktreeDiff: true }
+    )
+  ).toBe(true);
+  expect(
+    isSafeReviewerShellCommand(
+      "git diff --no-ext-diff --no-textconv --cached HEAD",
+      { allowWorktreeDiff: true }
+    )
+  ).toBe(true);
+  expect(
+    isSafeReviewerShellCommand("git diff HEAD", { allowWorktreeDiff: true })
+  ).toBe(false);
+  expect(
+    isSafeReviewerShellCommand(
+      "git diff --no-ext-diff --no-textconv HEAD && id",
+      { allowWorktreeDiff: true }
+    )
+  ).toBe(false);
+  expect(
+    isSafeReviewerShellCommand(
+      "git diff --no-ext-diff --no-textconv HEAD > /tmp/out",
+      { allowWorktreeDiff: true }
     )
   ).toBe(false);
 });

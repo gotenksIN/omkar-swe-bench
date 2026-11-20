@@ -1,3 +1,5 @@
+import { isSafeReviewerShellCommand } from "../driver/session-runner.ts";
+import { isString } from "../util/json.ts";
 import { gitStatesEqual } from "./git.ts";
 import { computeGradeResult } from "./types.ts";
 import type {
@@ -542,7 +544,17 @@ export const reviewGrade = (
   checks.bounce_correctness = scopeBounced === spec.bounce;
   checks.read_only_clean_repo =
     gitStatesEqual(evidence.afterGit, evidence.beforeGit) &&
-    !evidence.tools.some(({ tool }) => mutatingTools.has(tool));
+    !evidence.tools.some(
+      ({ tool, status, input }) =>
+        mutatingTools.has(tool) ||
+        (tool === "shell" &&
+          status === "completed" &&
+          (input.background === true ||
+            !isString(input.command) ||
+            !isSafeReviewerShellCommand(input.command, {
+              allowWorktreeDiff: true,
+            })))
+    );
 
   if (spec.bounce) {
     checks.lists_missing_inputs = listsMissingInputs(evidence.finalText);

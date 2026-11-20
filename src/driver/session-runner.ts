@@ -421,12 +421,25 @@ const consumeReviewerLogFlag = (
 
 const isValidReviewerRevisions = (
   subcommand: "diff" | "log",
-  revisions: readonly string[]
+  revisions: readonly string[],
+  allowWorktreeDiff: boolean
 ): boolean => {
-  const [first] = revisions;
+  const [first, second] = revisions;
 
   if (subcommand === "diff") {
-    return revisions.length === 1 && commitRangeArg.test(first ?? "");
+    if (!allowWorktreeDiff) {
+      return revisions.length === 1 && commitRangeArg.test(first ?? "");
+    }
+
+    return (
+      revisions.length === 0 ||
+      (revisions.length === 1 &&
+        (commitRangeArg.test(first ?? "") ||
+          singleRevisionArg.test(first ?? ""))) ||
+      (revisions.length === 2 &&
+        singleRevisionArg.test(first ?? "") &&
+        singleRevisionArg.test(second ?? ""))
+    );
   }
 
   return (
@@ -440,9 +453,16 @@ const consumeSafeReviewerArg = (
   subcommand: "diff" | "log",
   arg: string,
   nextValue: string | undefined,
-  revisions: string[]
+  revisions: string[],
+  allowWorktreeDiff: boolean
 ): "invalid" | "skip1" | "skip2" => {
-  if (safeReviewerGitFlags.has(arg) || /^(?:-U\d+|--unified=\d+)$/u.test(arg)) {
+  if (
+    safeReviewerGitFlags.has(arg) ||
+    /^(?:-U\d+|--unified=\d+)$/u.test(arg) ||
+    (allowWorktreeDiff &&
+      subcommand === "diff" &&
+      (arg === "--cached" || arg === "--staged"))
+  ) {
     return "skip1";
   }
 
@@ -504,7 +524,11 @@ const extractSafeReviewerGitCommand = (
   return { subcommand, rest: cmd.words.slice(2).map(({ text }) => text) };
 };
 
-export const isSafePairReviewerShellCommand = (command: string): boolean => {
+export const isSafeReviewerShellCommand = (
+  command: string,
+  options?: { readonly allowWorktreeDiff?: boolean }
+): boolean => {
+  const allowWorktreeDiff = options?.allowWorktreeDiff === true;
   const extracted = extractSafeReviewerGitCommand(command);
 
   if (extracted === null) {
@@ -539,7 +563,8 @@ export const isSafePairReviewerShellCommand = (command: string): boolean => {
         subcommand,
         arg,
         rest[index + 1],
-        revisions
+        revisions,
+        allowWorktreeDiff
       );
 
       if (outcome === "invalid") {
@@ -555,9 +580,12 @@ export const isSafePairReviewerShellCommand = (command: string): boolean => {
   return (
     hasNoExtDiff &&
     hasNoTextconv &&
-    isValidReviewerRevisions(subcommand, revisions)
+    isValidReviewerRevisions(subcommand, revisions, allowWorktreeDiff)
   );
 };
+
+export const isSafePairReviewerShellCommand = (command: string): boolean =>
+  isSafeReviewerShellCommand(command, { allowWorktreeDiff: false });
 
 type OwnedEvent = Extract<
   OpenCodeEvent,
@@ -572,14 +600,17 @@ type OwnedEvent = Extract<
 
 const permissionRejectReason = (
   rejectExternal: boolean,
-  rejectReviewerShell: boolean
+  rejectReviewerShell: boolean,
+  allowWorktreeDiff: boolean
 ): string => {
   if (rejectExternal) {
     return "Access outside the trial repository is disabled in benchmark runs.";
   }
 
   if (rejectReviewerShell) {
-    return "Run one foreground git diff --no-ext-diff --no-textconv <rev>..<rev> or git log --no-ext-diff --no-textconv command per shell call.";
+    return allowWorktreeDiff
+      ? "Run one foreground git diff --no-ext-diff --no-textconv [<rev>..<rev> | <rev>] or git log --no-ext-diff --no-textconv command per shell call."
+      : "Run one foreground git diff --no-ext-diff --no-textconv <rev>..<rev> or git log --no-ext-diff --no-textconv command per shell call.";
   }
 
   return "Write and execution actions are disabled for read-only reviews.";
@@ -778,12 +809,17 @@ export const runSession = async ({
         isReviewerSession &&
         ["edit", "write", "patch", "execute"].includes(event.data.action);
 
+      const allowWorktreeDiff =
+        activeRole === "code-reviewer" && sessionID === rootSessionId;
+
       const rejectReviewerShell =
         isReviewerSession &&
         event.data.action === "shell" &&
         (event.data.resources.length !== 1 ||
           event.data.metadata?.background === true ||
-          !isSafePairReviewerShellCommand(event.data.resources[0] ?? ""));
+          !isSafeReviewerShellCommand(event.data.resources[0] ?? "", {
+            allowWorktreeDiff,
+          }));
 
       if (rejectExternal || rejectReviewerMutation || rejectReviewerShell) {
         reply(
@@ -794,7 +830,8 @@ export const runSession = async ({
               decision: "reject",
               message: permissionRejectReason(
                 rejectExternal,
-                rejectReviewerShell
+                rejectReviewerShell,
+                allowWorktreeDiff
               ),
             },
             request

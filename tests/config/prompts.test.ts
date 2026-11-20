@@ -158,8 +158,8 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(
       evaluatePermission(reviewer.permissions, "skill", "code-review")
     ).toBe("deny");
-    const expectedGitEffect = role === "pair" ? "ask" : "allow";
-    const expectedFlagEffect = role === "pair" ? "ask" : "deny";
+    const expectedGitEffect = "ask";
+    const expectedFlagEffect = "ask";
     expect(evaluatePermission(reviewer.permissions, "shell", "rm -rf .")).toBe(
       "deny"
     );
