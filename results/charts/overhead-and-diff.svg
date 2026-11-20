@@ -1,4 +1,4 @@
-<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 436" width="1040" height="436" role="img" aria-label="Inference Overhead &amp; Diff Discipline (Coders)">
+<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 538" width="1040" height="538" role="img" aria-label="Inference Overhead &amp; Diff Discipline (Coders)">
 <title>Inference Overhead &amp; Diff Discipline (Coders)</title>
 <desc>Left: Active model throughput (total tok/s, shaded reasoning share, cold TTFT) · Right: Passing diff size relative to task median (1.0× = median)</desc>
 <style>
@@ -77,92 +77,122 @@
   }
 }
 </style>
-<rect x="0.5" y="0.5" width="1039" height="435" rx="10" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>
+<rect x="0.5" y="0.5" width="1039" height="537" rx="10" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>
 <text x="28" y="36" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="-0.02em">Inference Overhead &amp; Diff Discipline (Coders)</text>
 <text x="28" y="56" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Left: Active model throughput (total tok/s, shaded reasoning share, cold TTFT) · Right: Passing diff size relative to task median (1.0× = median)</text>
 <text x="224" y="92" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Active Throughput (total tok/s) &amp; Reasoning Share</text>
 <text x="668" y="92" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Normalized Diff Size (added lines / median)</text>
-<line x1="828.0" y1="104" x2="828.0" y2="382" stroke="var(--c-axis)" stroke-width="1.2" stroke-dasharray="4 3"/>
-<text x="828.0" y="398" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10">1.0× median</text>
-<text x="210" y="128" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Hydrogen (high)</text>
+<line x1="826.8" y1="104" x2="826.8" y2="484" stroke="var(--c-axis)" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="826.8" y="500" text-anchor="middle" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10">1.0× median</text>
+<text x="210" y="128" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Hydrogen (medium)</text>
+<g class="chart-point" data-tip="Gemini 4 Hydrogen (medium) | 101 total tok/s | Reasoning 58% | Cold TTFT 2.6s">
+<rect x="224" y="115" width="195.2" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
+<rect x="224" y="115" width="112.6" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+</g>
+<text x="427.2" y="128" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">101 t/s (58% R · 2.6s)</text>
+<g class="chart-point" data-tip="Gemini 4 Hydrogen (medium) | Median diff 0.99× task median (balanced)">
+<rect x="668" y="115" width="157.1" height="18" rx="3.5" fill="var(--d-balanced)"/>
+</g>
+<text x="833.1" y="128" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.99× (balanced)</text>
+<text x="210" y="162" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Hydrogen (high)</text>
 <g class="chart-point" data-tip="Gemini 4 Hydrogen (high) | 110 total tok/s | Reasoning 67% | Cold TTFT 2.4s">
-<rect x="224" y="115" width="212.8" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
-<rect x="224" y="115" width="143.0" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="149" width="212.8" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
+<rect x="224" y="149" width="143.0" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="444.8" y="128" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">110 t/s (67% R · 2.4s)</text>
-<g class="chart-point" data-tip="Gemini 4 Hydrogen (high) | Median diff 1.16× task median (balanced)">
-<rect x="668" y="115" width="185.7" height="18" rx="3.5" fill="var(--d-balanced)"/>
+<text x="444.8" y="162" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">110 t/s (67% R · 2.4s)</text>
+<g class="chart-point" data-tip="Gemini 4 Hydrogen (high) | Median diff 1.14× task median (balanced)">
+<rect x="668" y="149" width="181.0" height="18" rx="3.5" fill="var(--d-balanced)"/>
 </g>
-<text x="861.7" y="128" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.16× (balanced)</text>
-<text x="210" y="162" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (medium)</text>
+<text x="857.0" y="162" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.14× (balanced)</text>
+<text x="210" y="196" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (medium)</text>
 <g class="chart-point" data-tip="Gemini 4 Neon (medium) | 67 total tok/s | Reasoning 53% | Cold TTFT 4.3s">
-<rect x="224" y="149" width="130.2" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
-<rect x="224" y="149" width="69.5" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="183" width="130.2" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
+<rect x="224" y="183" width="69.5" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="362.2" y="162" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">67 t/s (53% R · 4.3s)</text>
+<text x="362.2" y="196" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">67 t/s (53% R · 4.3s)</text>
 <g class="chart-point" data-tip="Gemini 4 Neon (medium) | Median diff 1.00× task median (balanced)">
-<rect x="668" y="149" width="160.0" height="18" rx="3.5" fill="var(--d-balanced)"/>
+<rect x="668" y="183" width="158.8" height="18" rx="3.5" fill="var(--d-balanced)"/>
 </g>
-<text x="836.0" y="162" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.00× (balanced)</text>
-<text x="210" y="196" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Opus 5.5 (medium)</text>
+<text x="834.8" y="196" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.00× (balanced)</text>
+<text x="210" y="230" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Opus 5.5 (medium)</text>
 <g class="chart-point" data-tip="Claude Opus 5.5 (medium) | 91 total tok/s | Reasoning 10% | Cold TTFT 1.9s">
-<rect x="224" y="183" width="176.2" height="18" rx="3.5" fill="var(--p-anthropic)" fill-opacity="0.86"/>
-<rect x="224" y="183" width="18.0" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="217" width="176.2" height="18" rx="3.5" fill="var(--p-anthropic)" fill-opacity="0.86"/>
+<rect x="224" y="217" width="18.0" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="408.2" y="196" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">91 t/s (10% R · 1.9s)</text>
-<g class="chart-point" data-tip="Claude Opus 5.5 (medium) | Median diff 1.06× task median (balanced)">
-<rect x="668" y="183" width="169.9" height="18" rx="3.5" fill="var(--d-balanced)"/>
+<text x="408.2" y="230" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">91 t/s (10% R · 1.9s)</text>
+<g class="chart-point" data-tip="Claude Opus 5.5 (medium) | Median diff 1.04× task median (balanced)">
+<rect x="668" y="217" width="165.7" height="18" rx="3.5" fill="var(--d-balanced)"/>
 </g>
-<text x="845.9" y="196" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.06× (balanced)</text>
-<text x="210" y="230" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">DeepSeek Flash (high)</text>
+<text x="841.7" y="230" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.04× (balanced)</text>
+<text x="210" y="264" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">DeepSeek Flash (high)</text>
 <g class="chart-point" data-tip="DeepSeek Flash (high) | 130 total tok/s | Reasoning 57% | Cold TTFT 1.8s">
-<rect x="224" y="217" width="252.2" height="18" rx="3.5" fill="var(--p-deepseek)" fill-opacity="0.86"/>
-<rect x="224" y="217" width="142.9" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="251" width="252.2" height="18" rx="3.5" fill="var(--p-deepseek)" fill-opacity="0.86"/>
+<rect x="224" y="251" width="142.9" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="484.2" y="230" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">130 t/s (57% R · 1.8s)</text>
+<text x="484.2" y="264" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">130 t/s (57% R · 1.8s)</text>
 <g class="chart-point" data-tip="DeepSeek Flash (high) | Median diff 1.00× task median (balanced)">
-<rect x="668" y="217" width="160.0" height="18" rx="3.5" fill="var(--d-balanced)"/>
+<rect x="668" y="251" width="158.8" height="18" rx="3.5" fill="var(--d-balanced)"/>
 </g>
-<text x="836.0" y="230" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.00× (balanced)</text>
-<text x="210" y="264" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (high)</text>
+<text x="834.8" y="264" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.00× (balanced)</text>
+<text x="210" y="298" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (high)</text>
 <g class="chart-point" data-tip="Gemini 4 Neon (high) | 65 total tok/s | Reasoning 68% | Cold TTFT 2.9s">
-<rect x="224" y="251" width="125.7" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
-<rect x="224" y="251" width="85.2" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="285" width="125.7" height="18" rx="3.5" fill="var(--p-google)" fill-opacity="0.86"/>
+<rect x="224" y="285" width="85.2" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="357.7" y="264" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">65 t/s (68% R · 2.9s)</text>
-<g class="chart-point" data-tip="Gemini 4 Neon (high) | Median diff 1.30× task median (verbose)">
-<rect x="668" y="251" width="207.7" height="18" rx="3.5" fill="var(--d-verbose)"/>
+<text x="357.7" y="298" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">65 t/s (68% R · 2.9s)</text>
+<g class="chart-point" data-tip="Gemini 4 Neon (high) | Median diff 1.31× task median (verbose)">
+<rect x="668" y="285" width="208.7" height="18" rx="3.5" fill="var(--d-verbose)"/>
 </g>
-<text x="883.7" y="264" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.30× (verbose)</text>
-<text x="210" y="298" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Sonnet 5.5 (high)</text>
+<text x="884.7" y="298" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.31× (verbose)</text>
+<text x="210" y="332" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Sonnet 5.5 (high)</text>
 <g class="chart-point" data-tip="Claude Sonnet 5.5 (high) | 104 total tok/s | Reasoning 13% | Cold TTFT 2.0s">
-<rect x="224" y="285" width="201.3" height="18" rx="3.5" fill="var(--p-anthropic)" fill-opacity="0.86"/>
-<rect x="224" y="285" width="26.7" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="319" width="201.3" height="18" rx="3.5" fill="var(--p-anthropic)" fill-opacity="0.86"/>
+<rect x="224" y="319" width="26.7" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="433.3" y="298" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">104 t/s (13% R · 2.0s)</text>
+<text x="433.3" y="332" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">104 t/s (13% R · 2.0s)</text>
 <g class="chart-point" data-tip="Claude Sonnet 5.5 (high) | Median diff 0.77× task median (compressed)">
-<rect x="668" y="285" width="123.8" height="18" rx="3.5" fill="var(--d-compressed)"/>
+<rect x="668" y="319" width="123.0" height="18" rx="3.5" fill="var(--d-compressed)"/>
 </g>
-<text x="799.8" y="298" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.77× (compressed)</text>
-<text x="210" y="332" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (high)</text>
+<text x="799.0" y="332" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.77× (compressed)</text>
+<text x="210" y="366" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (high)</text>
 <g class="chart-point" data-tip="GPT-6.2 Sol (high) | 58 total tok/s | Reasoning 33% | Cold TTFT 3.3s">
-<rect x="224" y="319" width="112.6" height="18" rx="3.5" fill="var(--p-openai)" fill-opacity="0.86"/>
-<rect x="224" y="319" width="37.5" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="353" width="112.6" height="18" rx="3.5" fill="var(--p-openai)" fill-opacity="0.86"/>
+<rect x="224" y="353" width="37.5" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="344.6" y="332" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">58 t/s (33% R · 3.3s)</text>
-<g class="chart-point" data-tip="GPT-6.2 Sol (high) | Median diff 0.84× task median (balanced)">
-<rect x="668" y="319" width="133.6" height="18" rx="3.5" fill="var(--d-balanced)"/>
+<text x="344.6" y="366" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">58 t/s (33% R · 3.3s)</text>
+<g class="chart-point" data-tip="GPT-6.2 Sol (high) | Median diff 0.82× task median (balanced)">
+<rect x="668" y="353" width="130.9" height="18" rx="3.5" fill="var(--d-balanced)"/>
 </g>
-<text x="809.6" y="332" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.84× (balanced)</text>
-<text x="210" y="366" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (medium)</text>
+<text x="806.9" y="366" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.82× (balanced)</text>
+<text x="210" y="400" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (medium)</text>
 <g class="chart-point" data-tip="GPT-6.2 Sol (medium) | 55 total tok/s | Reasoning 15% | Cold TTFT 3.3s">
-<rect x="224" y="353" width="106.9" height="18" rx="3.5" fill="var(--p-openai)" fill-opacity="0.86"/>
-<rect x="224" y="353" width="16.6" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+<rect x="224" y="387" width="106.9" height="18" rx="3.5" fill="var(--p-openai)" fill-opacity="0.86"/>
+<rect x="224" y="387" width="16.6" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
 </g>
-<text x="338.9" y="366" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">55 t/s (15% R · 3.3s)</text>
-<g class="chart-point" data-tip="GPT-6.2 Sol (medium) | Median diff 0.69× task median (compressed)">
-<rect x="668" y="353" width="110.8" height="18" rx="3.5" fill="var(--d-compressed)"/>
+<text x="338.9" y="400" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">55 t/s (15% R · 3.3s)</text>
+<g class="chart-point" data-tip="GPT-6.2 Sol (medium) | Median diff 0.67× task median (compressed)">
+<rect x="668" y="387" width="105.9" height="18" rx="3.5" fill="var(--d-compressed)"/>
 </g>
-<text x="786.8" y="366" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.69× (compressed)</text>
-<text x="224" y="420" fill="var(--c-subtle)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10">Shaded left bar portion = reasoning token share (R). Uses total_model_tok_per_s across providers.</text>
+<text x="781.9" y="400" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.67× (compressed)</text>
+<text x="210" y="434" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Opus 5.5 (high)</text>
+<g class="chart-point" data-tip="Claude Opus 5.5 (high) | 97 total tok/s | Reasoning 15% | Cold TTFT 2.3s">
+<rect x="224" y="421" width="187.9" height="18" rx="3.5" fill="var(--p-anthropic)" fill-opacity="0.86"/>
+<rect x="224" y="421" width="27.5" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+</g>
+<text x="419.9" y="434" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">97 t/s (15% R · 2.3s)</text>
+<g class="chart-point" data-tip="Claude Opus 5.5 (high) | Median diff 1.28× task median (verbose)">
+<rect x="668" y="421" width="203.1" height="18" rx="3.5" fill="var(--d-verbose)"/>
+</g>
+<text x="879.1" y="434" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">1.28× (verbose)</text>
+<text x="210" y="468" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">DeepSeek Flash (max)</text>
+<g class="chart-point" data-tip="DeepSeek Flash (max) | 122 total tok/s | Reasoning 57% | Cold TTFT 1.9s">
+<rect x="224" y="455" width="235.5" height="18" rx="3.5" fill="var(--p-deepseek)" fill-opacity="0.86"/>
+<rect x="224" y="455" width="133.2" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>
+</g>
+<text x="467.5" y="468" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">122 t/s (57% R · 1.9s)</text>
+<g class="chart-point" data-tip="DeepSeek Flash (max) | Median diff 0.95× task median (balanced)">
+<rect x="668" y="455" width="151.0" height="18" rx="3.5" fill="var(--d-balanced)"/>
+</g>
+<text x="827.0" y="468" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5">0.95× (balanced)</text>
+<text x="224" y="522" fill="var(--c-subtle)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10">Shaded left bar portion = reasoning token share (R). Uses total_model_tok_per_s across providers.</text>
 </svg>

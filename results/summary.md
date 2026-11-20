@@ -1,6 +1,6 @@
 # OmkarSWE bench — Full Evaluation Report
 
-Evaluated **251** trials (**211/251** strict Pass@1, **84.1%**, **$37.74** total API cost).
+Evaluated **330** trials (**280/330** strict Pass@1, **84.8%**, **$46.76** total API cost).
 
 Open [`report.html`](report.html) in a browser for the interactive dashboard with hover tooltips and phase tabs.
 
@@ -15,14 +15,17 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 
 | Rank | Coder | ACI | Solo LSAS | Pair LSAS | ZSDR | Pass@1 | 19-trial cost | $/clean pass | Total wall | Active tok/s | Diff ratio |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `google/gemini-4-hydrogen#high` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $4.23 | $0.223 | 2400s | 110 | 1.16× |
-| 2 | `google/gemini-4-neon#medium` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $5.65 | $0.298 | 2722s | 67 | 1.00× |
-| 3 | `anthropic/claude-opus-5-5#medium` | 98.1 | 96.8 | 100.0 | 94.7% (18/19) | 94.7% (18/19) | $3.51 | $0.195 | 1166s | 91 | 1.06× |
-| 4 | `deepseek/deepseek-flash#high` | 95.1 | 99.8 | 88.1 | 94.7% (18/19) | 89.5% (17/19) | $0.68 | $0.040 | 1718s | 130 | 1.00× |
-| 5 | `google/gemini-4-neon#high` | 93.1 | 90.9 | 96.5 | 94.7% (18/19) | 89.5% (17/19) | $8.96 | $0.527 | 4341s | 65 | 1.30× |
-| 6 | `anthropic/claude-sonnet-5-5#high` | 93.1 | 91.9 | 95.0 | 94.7% (18/19) | 68.4% (13/19) | $1.73 | $0.133 | 792s | 104 | 0.77× |
-| 7 | `openai/gpt-6.2-sol#high` | 91.3 | 99.1 | 79.7 | 89.5% (17/19) | 84.2% (16/19) | $1.98 | $0.124 | 1678s | 58 | 0.84× |
-| 8 | `openai/gpt-6.2-sol#medium` | 89.8 | 96.6 | 79.7 | 84.2% (16/19) | 84.2% (16/19) | $1.65 | $0.103 | 1405s | 55 | 0.69× |
+| 1 | `google/gemini-4-hydrogen#medium` | 99.9 | 99.8 | 100.0 | 100.0% (19/19) | 100.0% (19/19) | $2.79 | $0.147 | 1656s | 101 | 0.99× |
+| 2 | `google/gemini-4-hydrogen#high` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $4.23 | $0.223 | 2400s | 110 | 1.14× |
+| 3 | `google/gemini-4-neon#medium` | 99.9 | 100.0 | 99.8 | 100.0% (19/19) | 100.0% (19/19) | $5.65 | $0.298 | 2722s | 67 | 1.00× |
+| 4 | `anthropic/claude-opus-5-5#medium` | 98.1 | 96.8 | 100.0 | 94.7% (18/19) | 94.7% (18/19) | $3.51 | $0.195 | 1166s | 91 | 1.04× |
+| 5 | `deepseek/deepseek-flash#high` | 95.1 | 99.8 | 88.1 | 94.7% (18/19) | 89.5% (17/19) | $0.68 | $0.040 | 1718s | 130 | 1.00× |
+| 6 | `google/gemini-4-neon#high` | 93.1 | 90.9 | 96.5 | 94.7% (18/19) | 89.5% (17/19) | $8.96 | $0.527 | 4341s | 65 | 1.31× |
+| 7 | `anthropic/claude-sonnet-5-5#high` | 93.1 | 91.9 | 95.0 | 94.7% (18/19) | 68.4% (13/19) | $1.73 | $0.133 | 792s | 104 | 0.77× |
+| 8 | `openai/gpt-6.2-sol#high` | 91.3 | 99.1 | 79.7 | 89.5% (17/19) | 84.2% (16/19) | $1.98 | $0.124 | 1678s | 58 | 0.82× |
+| 9 | `openai/gpt-6.2-sol#medium` | 89.8 | 96.6 | 79.7 | 84.2% (16/19) | 84.2% (16/19) | $1.65 | $0.103 | 1405s | 55 | 0.67× |
+| 10 | `anthropic/claude-opus-5-5#high` | 89.5 | 89.2 | 90.0 | 84.2% (16/19) | 84.2% (16/19) | $4.51 | $0.282 | 1437s | 97 | 1.28× |
+| 11 | `deepseek/deepseek-flash#max` | 84.2 | 87.7 | 78.9 | 78.9% (15/19) | 78.9% (15/19) | $0.73 | $0.049 | 2444s | 122 | 0.95× |
 
 ![Coder Autonomy vs. Cost Pareto Frontier](charts/coder-cost-pareto.svg)
 
@@ -34,28 +37,33 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 
 | Rank | Model | LSAS | ZSDR | Pass@1 | Passed | Mean check | Diff ratio | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `google/gemini-4-hydrogen#high` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.12× | $2.35 | 80.1s | 2.18s | 155 | 76% |
-| 2 | `google/gemini-4-neon#medium` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.15× | $2.96 | 96.0s | 4.25s | 87 | 68% |
+| 1 | `google/gemini-4-hydrogen#high` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.02× | $2.35 | 80.1s | 2.18s | 155 | 76% |
+| 2 | `google/gemini-4-neon#medium` | 100.0 | 100.0% | 100.0% | 11/11 | 100.0% | 1.13× | $2.96 | 96.0s | 4.25s | 87 | 68% |
 | 3 | `deepseek/deepseek-flash#high` | 99.8 | 100.0% | 100.0% | 11/11 | 100.0% | 1.00× | $0.11 | 59.2s | 1.91s | 163 | 71% |
-| 4 | `openai/gpt-6.2-sol#high` | 99.1 | 100.0% | 90.9% | 10/11 | 99.3% | 0.78× | $0.74 | 46.1s | 3.10s | 63 | 33% |
-| 5 | `anthropic/claude-opus-5-5#medium` | 96.8 | 90.9% | 90.9% | 10/11 | 98.7% | 1.04× | $1.79 | 32.6s | 1.90s | 107 | 10% |
-| 6 | `openai/gpt-6.2-sol#medium` | 96.6 | 90.9% | 90.9% | 10/11 | 99.0% | 0.61× | $0.49 | 33.6s | 3.00s | 58 | 15% |
-| 7 | `anthropic/claude-sonnet-5-5#high` | 91.9 | 90.9% | 81.8% | 9/11 | 98.3% | 0.77× | $0.66 | 21.5s | 1.89s | 148 | 13% |
-| 8 | `google/gemini-4-neon#high` | 90.9 | 90.9% | 90.9% | 10/11 | 94.8% | 1.49× | $5.01 | 195.6s | 3.43s | 93 | 73% |
+| 4 | `google/gemini-4-hydrogen#medium` | 99.8 | 100.0% | 100.0% | 11/11 | 100.0% | 1.00× | $1.30 | 71.7s | 3.33s | 122 | 65% |
+| 5 | `openai/gpt-6.2-sol#high` | 99.1 | 100.0% | 90.9% | 10/11 | 99.3% | 0.75× | $0.74 | 46.1s | 3.10s | 63 | 33% |
+| 6 | `anthropic/claude-opus-5-5#medium` | 96.8 | 90.9% | 90.9% | 10/11 | 98.7% | 1.01× | $1.79 | 32.6s | 1.90s | 107 | 10% |
+| 7 | `openai/gpt-6.2-sol#medium` | 96.6 | 90.9% | 90.9% | 10/11 | 99.0% | 0.60× | $0.49 | 33.6s | 3.00s | 58 | 15% |
+| 8 | `anthropic/claude-sonnet-5-5#high` | 91.9 | 90.9% | 81.8% | 9/11 | 98.3% | 0.72× | $0.66 | 21.5s | 1.89s | 148 | 13% |
+| 9 | `google/gemini-4-neon#high` | 90.9 | 90.9% | 90.9% | 10/11 | 94.8% | 1.46× | $5.01 | 195.6s | 3.43s | 93 | 73% |
+| 10 | `anthropic/claude-opus-5-5#high` | 89.2 | 81.8% | 81.8% | 9/11 | 97.4% | 1.15× | $2.43 | 36.4s | 2.33s | 107 | 15% |
+| 11 | `deepseek/deepseek-flash#max` | 87.7 | 81.8% | 81.8% | 9/11 | 93.0% | 0.92× | $0.11 | 84.4s | 2.11s | 160 | 76% |
 
 ## Phase 2 — Code reviewer leaderboard (calibrated, excluding `rev-missing-scope-true-bounce`)
 
 | Rank | Model | LSAS | Pass@1 | Passed | Defect recall | P0–P2 FPs | P3 nits | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `google/gemini-4-carbon#medium` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.93 | 85.2s | 8.52s | 63 | 87% |
-| 2 | `google/gemini-4-neon#xhigh` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $2.67 | 138.8s | 9.26s | 106 | 94% |
-| 3 | `openai/gpt-6.2-astra#medium` | 99.8 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.58 | 15.8s | 5.79s | 26 | 1% |
-| 4 | `anthropic/claude-opus-5-5#high` | 96.8 | 90.0% | 9/10 | 100.0% | 1 | 0 | $0.49 | 18.0s | 2.23s | 78 | 28% |
-| 5 | `openai/gpt-6.2-astra#high` | 95.1 | 80.0% | 8/10 | 100.0% | 1 | 1 | $0.69 | 20.0s | 5.69s | 34 | 12% |
-| 6 | `google/gemini-4-neon#high` | 95.0 | 90.0% | 9/10 | 92.9% | 0 | 0 | $1.25 | 60.8s | 6.67s | 90 | 89% |
-| 7 | `openai/gpt-6.2-sol#high` | 89.0 | 60.0% | 6/10 | 92.9% | 1 | 2 | $0.18 | 16.2s | 4.67s | 45 | 37% |
-| 8 | `anthropic/claude-fable-5-2#high` | 87.0 | 70.0% | 7/10 | 100.0% | 3 | 2 | $1.33 | 19.6s | 1.76s | 92 | 29% |
-| 9 | `openai/gpt-6.2-sol#xhigh` | 87.0 | 70.0% | 7/10 | 85.7% | 2 | 2 | $0.24 | 23.2s | 4.70s | 48 | 60% |
+| 1 | `google/gemini-4-carbon#low` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.49 | 39.0s | 5.37s | 22 | 0% |
+| 2 | `google/gemini-4-carbon#medium` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.93 | 85.2s | 8.52s | 63 | 87% |
+| 3 | `google/gemini-4-neon#xhigh` | 100.0 | 100.0% | 10/10 | 100.0% | 0 | 0 | $2.67 | 138.8s | 9.26s | 106 | 94% |
+| 4 | `openai/gpt-6.2-astra#medium` | 99.8 | 100.0% | 10/10 | 100.0% | 0 | 0 | $0.58 | 15.8s | 5.79s | 26 | 1% |
+| 5 | `anthropic/claude-opus-5-5#high` | 96.8 | 90.0% | 9/10 | 100.0% | 1 | 0 | $0.49 | 18.0s | 2.23s | 78 | 28% |
+| 6 | `anthropic/claude-opus-5-5#medium` | 96.6 | 90.0% | 9/10 | 100.0% | 1 | 0 | $0.42 | 15.4s | 1.93s | 76 | 15% |
+| 7 | `openai/gpt-6.2-astra#high` | 95.1 | 80.0% | 8/10 | 100.0% | 1 | 1 | $0.69 | 20.0s | 5.69s | 34 | 12% |
+| 8 | `google/gemini-4-neon#high` | 95.0 | 90.0% | 9/10 | 92.9% | 0 | 0 | $1.25 | 60.8s | 6.67s | 90 | 89% |
+| 9 | `openai/gpt-6.2-sol#high` | 89.0 | 60.0% | 6/10 | 92.9% | 1 | 2 | $0.18 | 16.2s | 4.67s | 45 | 37% |
+| 10 | `anthropic/claude-fable-5-2#high` | 87.0 | 70.0% | 7/10 | 100.0% | 3 | 2 | $1.33 | 19.6s | 1.76s | 92 | 29% |
+| 11 | `openai/gpt-6.2-sol#xhigh` | 87.0 | 70.0% | 7/10 | 85.7% | 2 | 2 | $0.24 | 23.2s | 4.70s | 48 | 60% |
 
 ![Code Reviewer Autonomy vs. Cost Pareto Frontier](charts/reviewer-cost-pareto.svg)
 
@@ -65,15 +73,17 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 
 | Rank | Model | LSAS | Pass@1 | Passed | Defect recall | P0–P2 FPs | P3 nits | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `google/gemini-4-carbon#medium` | 90.9 | 90.9% | 10/11 | 100.0% | 0 | 0 | $1.31 | 88.8s | 8.35s | 65 | 88% |
-| 2 | `google/gemini-4-neon#xhigh` | 90.9 | 90.9% | 10/11 | 100.0% | 1 | 0 | $2.97 | 154.6s | 9.19s | 104 | 95% |
-| 3 | `openai/gpt-6.2-astra#medium` | 90.7 | 90.9% | 10/11 | 100.0% | 1 | 0 | $0.61 | 15.2s | 5.65s | 26 | 0% |
-| 4 | `anthropic/claude-opus-5-5#high` | 89.4 | 81.8% | 9/11 | 100.0% | 1 | 0 | $0.52 | 15.4s | 2.20s | 78 | 27% |
-| 5 | `openai/gpt-6.2-astra#high` | 86.5 | 72.7% | 8/11 | 100.0% | 2 | 1 | $0.73 | 20.0s | 5.74s | 32 | 9% |
-| 6 | `google/gemini-4-neon#high` | 86.4 | 81.8% | 9/11 | 92.9% | 1 | 0 | $1.35 | 55.3s | 6.57s | 89 | 90% |
-| 7 | `openai/gpt-6.2-sol#high` | 80.9 | 54.5% | 6/11 | 92.9% | 2 | 2 | $0.20 | 15.8s | 4.63s | 44 | 33% |
-| 8 | `anthropic/claude-fable-5-2#high` | 80.5 | 63.6% | 7/11 | 100.0% | 3 | 2 | $1.41 | 19.5s | 1.87s | 91 | 28% |
-| 9 | `openai/gpt-6.2-sol#xhigh` | 79.1 | 63.6% | 7/11 | 85.7% | 3 | 2 | $0.25 | 23.1s | 4.69s | 46 | 59% |
+| 1 | `google/gemini-4-carbon#low` | 90.9 | 90.9% | 10/11 | 100.0% | 1 | 0 | $0.55 | 43.0s | 4.73s | 20 | 0% |
+| 2 | `google/gemini-4-carbon#medium` | 90.9 | 90.9% | 10/11 | 100.0% | 0 | 0 | $1.31 | 88.8s | 8.35s | 65 | 88% |
+| 3 | `google/gemini-4-neon#xhigh` | 90.9 | 90.9% | 10/11 | 100.0% | 1 | 0 | $2.97 | 154.6s | 9.19s | 104 | 95% |
+| 4 | `openai/gpt-6.2-astra#medium` | 90.7 | 90.9% | 10/11 | 100.0% | 1 | 0 | $0.61 | 15.2s | 5.65s | 26 | 0% |
+| 5 | `anthropic/claude-opus-5-5#high` | 89.4 | 81.8% | 9/11 | 100.0% | 1 | 0 | $0.52 | 15.4s | 2.20s | 78 | 27% |
+| 6 | `anthropic/claude-opus-5-5#medium` | 89.2 | 81.8% | 9/11 | 100.0% | 1 | 0 | $0.44 | 13.7s | 1.98s | 74 | 15% |
+| 7 | `openai/gpt-6.2-astra#high` | 86.5 | 72.7% | 8/11 | 100.0% | 2 | 1 | $0.73 | 20.0s | 5.74s | 32 | 9% |
+| 8 | `google/gemini-4-neon#high` | 86.4 | 81.8% | 9/11 | 92.9% | 1 | 0 | $1.35 | 55.3s | 6.57s | 89 | 90% |
+| 9 | `openai/gpt-6.2-sol#high` | 80.9 | 54.5% | 6/11 | 92.9% | 2 | 2 | $0.20 | 15.8s | 4.63s | 44 | 33% |
+| 10 | `anthropic/claude-fable-5-2#high` | 80.5 | 63.6% | 7/11 | 100.0% | 3 | 2 | $1.41 | 19.5s | 1.87s | 91 | 28% |
+| 11 | `openai/gpt-6.2-sol#xhigh` | 79.1 | 63.6% | 7/11 | 85.7% | 3 | 2 | $0.25 | 23.1s | 4.69s | 46 | 59% |
 
 ## Phase 3 — Pair collaboration leaderboard
 
@@ -81,22 +91,28 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 
 | Rank | Model | LSAS | ZSDR | Pass@1 | Passed | Mean check | Diff ratio | Suite cost | Med wall | Cold TTFT | Active tok/s | Reasoning % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `anthropic/claude-opus-5-5#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.08× | $0.86 | 55.7s | 2.23s | 77 | 3% |
-| 2 | `anthropic/claude-opus-5-5#medium -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.09× | $0.86 | 96.5s | 1.79s | 68 | 35% |
-| 3 | `google/gemini-4-hydrogen#high -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.04× | $0.89 | 107.2s | 2.42s | 88 | 56% |
-| 4 | `deepseek/deepseek-flash#high -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.11× | $0.30 | 122.5s | 1.80s | 97 | 54% |
-| 5 | `google/gemini-4-neon#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 0.88× | $1.31 | 156.5s | 5.20s | 40 | 44% |
-| 6 | `google/gemini-4-hydrogen#high -> google/gemini-4-carbon#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 1.32× | $1.00 | 154.7s | 2.41s | 82 | 65% |
-| 7 | `google/gemini-4-neon#medium -> google/gemini-4-carbon#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 0.97× | $1.38 | 188.4s | 3.68s | 52 | 52% |
-| 8 | `google/gemini-4-neon#high -> openai/gpt-6.2-astra#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 1.31× | $1.78 | 211.0s | 2.97s | 49 | 56% |
-| 9 | `anthropic/claude-sonnet-5-5#high -> google/gemini-4-carbon#medium` | 96.0 | 100.0% | 50.0% | 2/4 | 96.7% | 0.95× | $0.50 | 63.7s | 1.47s | 96 | 34% |
-| 10 | `anthropic/claude-sonnet-5-5#high -> openai/gpt-6.2-astra#medium` | 94.0 | 100.0% | 50.0% | 2/4 | 94.0% | 0.75× | $0.58 | 55.0s | 2.59s | 79 | 6% |
-| 11 | `google/gemini-4-neon#high -> google/gemini-4-carbon#medium` | 93.5 | 100.0% | 75.0% | 3/4 | 95.8% | 1.09× | $2.18 | 239.1s | 2.82s | 63 | 69% |
-| 12 | `openai/gpt-6.2-sol#medium -> openai/gpt-6.2-astra#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.83× | $0.51 | 64.2s | 3.31s | 44 | 7% |
-| 13 | `openai/gpt-6.2-sol#high -> openai/gpt-6.2-astra#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.89× | $0.62 | 90.3s | 3.39s | 43 | 13% |
-| 14 | `openai/gpt-6.2-sol#high -> google/gemini-4-carbon#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.89× | $0.62 | 141.1s | 4.03s | 57 | 49% |
-| 15 | `openai/gpt-6.2-sol#medium -> google/gemini-4-carbon#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 87.5% | 0.80× | $0.65 | 142.9s | 3.52s | 56 | 60% |
-| 16 | `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium` | 76.3 | 75.0% | 50.0% | 2/4 | 88.8% | 1.04× | $0.28 | 61.0s | 1.72s | 117 | 29% |
+| 1 | `anthropic/claude-opus-5-5#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.10× | $0.86 | 55.7s | 2.23s | 77 | 3% |
+| 2 | `google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 0.91× | $0.77 | 74.4s | 2.27s | 87 | 43% |
+| 3 | `anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.43× | $1.04 | 90.7s | 2.35s | 81 | 29% |
+| 4 | `anthropic/claude-opus-5-5#medium -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.10× | $0.86 | 96.5s | 1.79s | 68 | 35% |
+| 5 | `google/gemini-4-hydrogen#high -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.05× | $0.89 | 107.2s | 2.42s | 88 | 56% |
+| 6 | `deepseek/deepseek-flash#high -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 1.11× | $0.30 | 122.5s | 1.80s | 97 | 54% |
+| 7 | `google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 0.86× | $0.72 | 134.9s | 2.33s | 65 | 58% |
+| 8 | `google/gemini-4-neon#medium -> openai/gpt-6.2-astra#medium` | 100.0 | 100.0% | 100.0% | 4/4 | 100.0% | 0.90× | $1.31 | 156.5s | 5.20s | 40 | 44% |
+| 9 | `google/gemini-4-hydrogen#high -> google/gemini-4-carbon#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 1.31× | $1.00 | 154.7s | 2.41s | 82 | 65% |
+| 10 | `google/gemini-4-neon#medium -> google/gemini-4-carbon#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 0.98× | $1.38 | 188.4s | 3.68s | 52 | 52% |
+| 11 | `google/gemini-4-neon#high -> openai/gpt-6.2-astra#medium` | 99.5 | 100.0% | 100.0% | 4/4 | 100.0% | 1.33× | $1.78 | 211.0s | 2.97s | 49 | 56% |
+| 12 | `anthropic/claude-sonnet-5-5#high -> google/gemini-4-carbon#medium` | 96.0 | 100.0% | 50.0% | 2/4 | 96.7% | 0.93× | $0.50 | 63.7s | 1.47s | 96 | 34% |
+| 13 | `anthropic/claude-sonnet-5-5#high -> openai/gpt-6.2-astra#medium` | 94.0 | 100.0% | 50.0% | 2/4 | 94.0% | 0.77× | $0.58 | 55.0s | 2.59s | 79 | 6% |
+| 14 | `google/gemini-4-neon#high -> google/gemini-4-carbon#medium` | 93.5 | 100.0% | 75.0% | 3/4 | 95.8% | 1.11× | $2.18 | 239.1s | 2.82s | 63 | 69% |
+| 15 | `anthropic/claude-opus-5-5#high -> openai/gpt-6.2-astra#medium` | 80.0 | 75.0% | 75.0% | 3/4 | 98.2% | 1.58× | $1.05 | 55.9s | 1.99s | 90 | 4% |
+| 16 | `openai/gpt-6.2-sol#medium -> openai/gpt-6.2-astra#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.87× | $0.51 | 64.2s | 3.31s | 44 | 7% |
+| 17 | `openai/gpt-6.2-sol#high -> openai/gpt-6.2-astra#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.93× | $0.62 | 90.3s | 3.39s | 43 | 13% |
+| 18 | `openai/gpt-6.2-sol#high -> google/gemini-4-carbon#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 89.6% | 0.89× | $0.62 | 141.1s | 4.03s | 57 | 49% |
+| 19 | `openai/gpt-6.2-sol#medium -> google/gemini-4-carbon#medium` | 79.7 | 75.0% | 75.0% | 3/4 | 87.5% | 0.80× | $0.65 | 142.9s | 3.52s | 56 | 60% |
+| 20 | `deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium` | 79.0 | 75.0% | 75.0% | 3/4 | 98.2% | 0.95× | $0.33 | 99.2s | 1.39s | 117 | 37% |
+| 21 | `deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium` | 78.8 | 75.0% | 75.0% | 3/4 | 92.9% | 1.05× | $0.29 | 123.0s | 1.89s | 100 | 54% |
+| 22 | `deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium` | 76.3 | 75.0% | 50.0% | 2/4 | 88.8% | 1.02× | $0.28 | 61.0s | 1.72s | 117 | 29% |
 
 ## Diagnostics
 
@@ -359,3 +375,82 @@ Open [`report.html`](report.html) in a browser for the interactive dashboard wit
 | pair-unhittable-finding-and-nonhead | pair | anthropic/claude-opus-5-5#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 73.8s | $0.2052 |  |
 | pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#high -> openai/gpt-6.2-astra#medium | broken_deliverable | 15.0 | No | 61.5% | 51.4s | $0.0618 | failed: nonhead_core_untouched, final_behavior_passes, amendment_count, no_rejected_commits, reviewed_commit_needs_fix |
 | pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#high -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 109.0s | $0.0548 |  |
+| coder-py-stitch-collapse | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 34.3s | $0.1237 |  |
+| coder-py-stitch-collapse | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 42.4s | $0.0854 |  |
+| coder-py-stitch-collapse | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 91.0s | $0.0102 |  |
+| coder-py-stream-stop-and-feedback | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 33.9s | $0.1270 |  |
+| coder-py-stream-stop-and-feedback | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 46.3s | $0.0890 |  |
+| coder-py-stream-stop-and-feedback | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 71.3s | $0.0081 |  |
+| coder-ts-sse-chunk-crlf | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 73.4s | $0.2061 |  |
+| coder-ts-sse-chunk-crlf | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 87.4s | $0.1167 |  |
+| coder-ts-sse-chunk-crlf | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 84.4s | $0.0091 |  |
+| coder-ts-shell-heredoc-subst | coder | anthropic/claude-opus-5-5#high | broken_deliverable | 16.7 | No | 85.7% | 314.8s | $0.9251 | failed: heredoc_boundaries |
+| coder-ts-shell-heredoc-subst | coder | google/gemini-4-hydrogen#medium | clean_pass | 98.0 | Yes | 100.0% | 183.8s | $0.3632 |  |
+| coder-ts-shell-heredoc-subst | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 310.9s | $0.0330 |  |
+| coder-py-ssrf-ip-pinning | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 80.9s | $0.2487 |  |
+| coder-py-ssrf-ip-pinning | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 126.3s | $0.1853 |  |
+| coder-py-ssrf-ip-pinning | coder | deepseek/deepseek-flash#max | timeout_crash | 0.0 | No | 37.5% | 480.5s | $0.0035 | WallClockTimeoutError: The trial exceeded its wall-clock timeout. |
+| coder-git-commit-guard-two-task | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 32.0s | $0.1084 |  |
+| coder-git-commit-guard-two-task | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 71.7s | $0.0886 |  |
+| coder-git-commit-guard-two-task | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 46.9s | $0.0053 |  |
+| coder-blocker-honesty-v2 | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 19.2s | $0.0767 |  |
+| coder-blocker-honesty-v2 | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 25.9s | $0.0407 |  |
+| coder-blocker-honesty-v2 | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 21.8s | $0.0031 |  |
+| coder-convention-autonomy-v2 | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 11.1s | $0.0410 |  |
+| coder-convention-autonomy-v2 | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 19.7s | $0.0276 |  |
+| coder-convention-autonomy-v2 | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 12.9s | $0.0015 |  |
+| coder-py-atomic-async-lifecycle | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 80.9s | $0.2419 |  |
+| coder-py-atomic-async-lifecycle | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 78.0s | $0.1033 |  |
+| coder-py-atomic-async-lifecycle | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 128.3s | $0.0141 |  |
+| coder-ts-boundary-decoder-http | coder | anthropic/claude-opus-5-5#high | hygiene_nudge | 65.0 | No | 85.7% | 62.3s | $0.1934 | failed: ts_ast_hygiene |
+| coder-ts-boundary-decoder-http | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 72.2s | $0.1260 |  |
+| coder-ts-boundary-decoder-http | coder | deepseek/deepseek-flash#max | hygiene_nudge | 65.0 | No | 85.7% | 121.4s | $0.0135 | failed: ts_ast_hygiene |
+| coder-ts-catalog-alias-and-test-rigor | coder | anthropic/claude-opus-5-5#high | clean_pass | 100.0 | Yes | 100.0% | 36.4s | $0.1334 |  |
+| coder-ts-catalog-alias-and-test-rigor | coder | google/gemini-4-hydrogen#medium | clean_pass | 100.0 | Yes | 100.0% | 57.3s | $0.0712 |  |
+| coder-ts-catalog-alias-and-test-rigor | coder | deepseek/deepseek-flash#max | clean_pass | 100.0 | Yes | 100.0% | 49.7s | $0.0065 |  |
+| rev-clean-personal-script-v2 | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 9.5s | $0.0407 |  |
+| rev-clean-personal-script-v2 | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 17.9s | $0.0262 |  |
+| rev-soft-commit-range-no-filelist | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 13.5s | $0.0544 |  |
+| rev-soft-commit-range-no-filelist | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 43.0s | $0.0506 |  |
+| rev-missing-scope-true-bounce | code-reviewer | anthropic/claude-opus-5-5#medium | broken_deliverable | 15.0 | No | 60.0% | 8.5s | $0.0211 | failed: bounce_correctness |
+| rev-missing-scope-true-bounce | code-reviewer | google/gemini-4-carbon#low | broken_deliverable | 0.0 | No | 40.0% | 61.1s | $0.0552 | failed: bounce_correctness |
+| rev-ts-redirect-leak-and-antislop | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 18.0s | $0.0440 |  |
+| rev-ts-redirect-leak-and-antislop | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 18.1s | $0.0289 |  |
+| rev-py-cache-discard-and-monkeypatch | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 17.0s | $0.0464 |  |
+| rev-py-cache-discard-and-monkeypatch | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 35.1s | $0.0333 |  |
+| rev-py-ytdlp-thread-leak-and-ratelimit | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 98.0 | Yes | 100.0% | 17.3s | $0.0435 |  |
+| rev-py-ytdlp-thread-leak-and-ratelimit | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 145.4s | $0.0356 |  |
+| rev-mixed-committed-plus-worktree | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 11.4s | $0.0349 |  |
+| rev-mixed-committed-plus-worktree | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 14.8s | $0.0278 |  |
+| rev-calibration-trap-clean-idiomatic | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 98.0 | Yes | 100.0% | 12.0s | $0.0319 |  |
+| rev-calibration-trap-clean-idiomatic | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 109.5s | $0.0349 |  |
+| rev-py-denylist-bandaid-rewrite | code-reviewer | anthropic/claude-opus-5-5#medium | broken_deliverable | 70.0 | No | 80.0% | 18.5s | $0.0374 | failed: precision_no_false_alarms |
+| rev-py-denylist-bandaid-rewrite | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 168.8s | $0.1362 |  |
+| rev-ts-tautological-and-inverted-test | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 17.1s | $0.0461 |  |
+| rev-ts-tautological-and-inverted-test | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 78.4s | $0.0936 |  |
+| rev-py-clean-security-rewrite-restraint | code-reviewer | anthropic/claude-opus-5-5#medium | clean_pass | 100.0 | Yes | 100.0% | 13.7s | $0.0422 |  |
+| rev-py-clean-security-rewrite-restraint | code-reviewer | google/gemini-4-carbon#low | clean_pass | 100.0 | Yes | 100.0% | 33.9s | $0.0268 |  |
+| pair-commit-review-amend | pair | anthropic/claude-opus-5-5#high -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 54.5s | $0.2497 |  |
+| pair-commit-review-amend | pair | anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 99.6s | $0.2748 |  |
+| pair-commit-review-amend | pair | google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 60.4s | $0.1692 |  |
+| pair-commit-review-amend | pair | google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 84.5s | $0.1576 |  |
+| pair-commit-review-amend | pair | deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 58.1s | $0.0601 |  |
+| pair-commit-review-amend | pair | deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 113.8s | $0.0591 |  |
+| pair-pushback-on-false-nitpick | pair | anthropic/claude-opus-5-5#high -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 57.3s | $0.2264 |  |
+| pair-pushback-on-false-nitpick | pair | anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 74.7s | $0.2173 |  |
+| pair-pushback-on-false-nitpick | pair | google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 66.7s | $0.1702 |  |
+| pair-pushback-on-false-nitpick | pair | google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 116.4s | $0.1777 |  |
+| pair-pushback-on-false-nitpick | pair | deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 104.9s | $0.0618 |  |
+| pair-pushback-on-false-nitpick | pair | deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 124.1s | $0.0658 |  |
+| pair-multitask-review-loop-clean | pair | anthropic/claude-opus-5-5#high -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 75.9s | $0.3321 |  |
+| pair-multitask-review-loop-clean | pair | anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 161.2s | $0.3323 |  |
+| pair-multitask-review-loop-clean | pair | google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 82.0s | $0.2004 |  |
+| pair-multitask-review-loop-clean | pair | google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 180.0s | $0.2024 |  |
+| pair-multitask-review-loop-clean | pair | deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium | clean_pass | 96.0 | Yes | 100.0% | 128.9s | $0.1111 |  |
+| pair-multitask-review-loop-clean | pair | deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 280.0s | $0.1162 |  |
+| pair-unhittable-finding-and-nonhead | pair | anthropic/claude-opus-5-5#high -> openai/gpt-6.2-astra#medium | broken_deliverable | 20.0 | No | 92.9% | 52.8s | $0.2400 | failed: declined_unhittable_with_reason |
+| pair-unhittable-finding-and-nonhead | pair | anthropic/claude-opus-5-5#high -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 81.9s | $0.2153 |  |
+| pair-unhittable-finding-and-nonhead | pair | google/gemini-4-hydrogen#medium -> openai/gpt-6.2-astra#medium | clean_pass | 100.0 | Yes | 100.0% | 101.4s | $0.2340 |  |
+| pair-unhittable-finding-and-nonhead | pair | google/gemini-4-hydrogen#medium -> google/gemini-4-carbon#medium | clean_pass | 100.0 | Yes | 100.0% | 153.3s | $0.1803 |  |
+| pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#max -> openai/gpt-6.2-astra#medium | broken_deliverable | 20.0 | No | 92.9% | 93.6s | $0.0988 | failed: declined_unhittable_with_reason |
+| pair-unhittable-finding-and-nonhead | pair | deepseek/deepseek-flash#max -> google/gemini-4-carbon#medium | broken_deliverable | 15.0 | No | 71.4% | 121.9s | $0.0483 | failed: nonhead_core_untouched, final_behavior_passes, amendment_count, reviewed_commit_needs_fix |
