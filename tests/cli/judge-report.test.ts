@@ -636,7 +636,7 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 const poolJobs = () =>
   scheduleTrials({
@@ -987,6 +987,7 @@ await server.stop(true);
           providersFile,
           timeoutScale: 1,
           apiRetries: 2,
+          retryBaseMs: 0,
           keepWorkspaces: false,
           dryRun: false,
           signal,

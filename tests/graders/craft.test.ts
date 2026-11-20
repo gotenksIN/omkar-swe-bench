@@ -296,27 +296,26 @@ test("analyzeTrialCodeCraft scores touched TypeScript lines and rejects symlink 
   ).toBeNull();
 });
 
-test("analyzeTrialsCodeCraft and craft CLI filter passing trials by default and anchor medians to passing trials under --all", async () => {
+test.concurrent("analyzeTrialsCodeCraft and craft CLI filter passing trials by default and anchor medians to passing trials under --all", async () => {
   const shortDiff = await buildTaskDiff(
-    "coder-ts-sse-chunk-crlf",
+    "coder-convention-autonomy",
     async (repoDir) => {
       await writeFile(
-        nodePath.join(repoDir, "src/merge.ts"),
+        nodePath.join(repoDir, "cli/commands.py"),
         [
-          "interface Part {",
-          "  readonly index: number;",
-          "  readonly text: string;",
-          "}",
+          "import json",
           "",
-          "export function mergeChunk(parts: string[], chunk: readonly Part[]): void {",
-          "  for (const part of chunk) {",
-          "    parts[part.index] = part.text;",
-          "  }",
-          "}",
           "",
-          "export function citedText(parts: readonly string[], part: number, start: number, end: number): string {",
-          '  return parts[part]?.slice(start, end) ?? "";',
-          "}",
+          "def envelope(command: str, data: dict) -> str:",
+          '    return json.dumps({"ok": True, "command": command, "data": data})',
+          "",
+          "",
+          "def run_status(as_json: bool = False) -> str:",
+          '    return envelope("status", {"healthy": True}) if as_json else "ok"',
+          "",
+          "",
+          "def run_doctor(as_json: bool = False) -> str:",
+          '    return envelope("doctor", {"checks": 3}) if as_json else "3 checks passed"',
           "",
         ].join("\n")
       );
@@ -324,31 +323,31 @@ test("analyzeTrialsCodeCraft and craft CLI filter passing trials by default and 
   );
 
   const longDiff = await buildTaskDiff(
-    "coder-ts-sse-chunk-crlf",
+    "coder-convention-autonomy",
     async (repoDir) => {
       await writeFile(
-        nodePath.join(repoDir, "src/merge.ts"),
+        nodePath.join(repoDir, "cli/commands.py"),
         [
-          "interface Part {",
-          "  readonly index: number;",
-          "  readonly text: string;",
-          "}",
+          "import json",
           "",
-          "export function mergeChunk(parts: string[], chunk: readonly Part[]): void {",
-          "  for (const part of chunk) {",
-          "    const target = part.index;",
-          "    const value = part.text;",
-          "    parts[target] = value;",
-          "  }",
-          "}",
           "",
-          "export function citedText(parts: readonly string[], part: number, start: number, end: number): string {",
-          "  const chunk = parts[part];",
-          "  if (chunk === undefined) {",
-          '    return "";',
-          "  }",
-          "  return chunk.slice(start, end);",
-          "}",
+          "def envelope(command: str, data: dict) -> str:",
+          '    payload = {"ok": True, "command": command, "data": data}',
+          "    return json.dumps(payload)",
+          "",
+          "",
+          "def run_status(as_json: bool = False) -> str:",
+          "    if as_json:",
+          '        return envelope("status", {"healthy": True})',
+          '    return "ok"',
+          "",
+          "",
+          "def run_doctor(as_json: bool = False) -> str:",
+          "    checks = 3",
+          "    if as_json:",
+          '        data = {"checks": checks}',
+          '        return envelope("doctor", data)',
+          '    return f"{checks} checks passed"',
           "",
         ].join("\n")
       );
@@ -357,11 +356,15 @@ test("analyzeTrialsCodeCraft and craft CLI filter passing trials by default and 
 
   const trials: TrialResult[] = [
     makeTrial({
+      task_id: "coder-convention-autonomy",
+      category: "python",
       model: "openai/gpt-6.2-sol#medium",
       passed: true,
       git_diff: shortDiff,
     }),
     makeTrial({
+      task_id: "coder-convention-autonomy",
+      category: "python",
       model: "anthropic/claude-opus-5-5#medium",
       passed: false,
       git_diff: longDiff,

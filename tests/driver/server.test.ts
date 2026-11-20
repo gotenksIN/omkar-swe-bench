@@ -209,6 +209,7 @@ wait
           ["CHILD_FILE", childFile],
         ]),
         startupTimeoutMs: 150,
+        shutdownGraceMs: 100,
         signal: new AbortController().signal,
       }),
       "Timed out waiting for OpenCode server startup"

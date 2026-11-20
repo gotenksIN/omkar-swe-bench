@@ -111,6 +111,7 @@ export interface RunConfig {
   readonly agentsFile?: string;
   readonly timeoutScale: number;
   readonly apiRetries: number;
+  readonly retryBaseMs?: number;
   readonly keepWorkspaces: boolean;
   readonly dryRun: boolean;
   readonly signal: AbortSignal;

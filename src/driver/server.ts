@@ -15,6 +15,7 @@ export interface StartServerOptions {
   readonly mountPlan: MountPlan | null;
   readonly envVars: ReadonlyMap<string, string>;
   readonly startupTimeoutMs: number;
+  readonly shutdownGraceMs?: number;
   readonly signal: AbortSignal;
 }
 
@@ -142,7 +143,9 @@ export const startOpenCodeServer = async (
     try {
       const exited = await Promise.race([
         exitPromise.then(() => true),
-        delay(3000, false, { signal: deadline.signal }),
+        delay(options.shutdownGraceMs ?? 3000, false, {
+          signal: deadline.signal,
+        }),
       ]);
 
       if (!exited && proc.exitCode === null && proc.signalCode === null) {

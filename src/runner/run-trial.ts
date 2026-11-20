@@ -111,10 +111,14 @@ const unlinkProvider = (path: string | undefined): void => {
 const backoff = async (
   attempt: number,
   retryAfterMs: number | null,
-  signal: AbortSignal
+  signal: AbortSignal,
+  retryBaseMs = 1000
 ): Promise<void> => {
   const jitteredMs =
-    2 ** (attempt - 1) * 1000 + Math.floor(Math.random() * 500);
+    retryBaseMs <= 0
+      ? 0
+      : 2 ** (attempt - 1) * retryBaseMs +
+        Math.floor(Math.random() * Math.min(500, retryBaseMs));
 
   try {
     await delay(
@@ -656,7 +660,7 @@ const runTrialLifecycle = async (
         setup = undefined;
         resetAttempt(trialDir);
         state = await prepareAttempt();
-        await backoff(attempt, retryAfterMs, signal);
+        await backoff(attempt, retryAfterMs, signal, options.retryBaseMs);
       }
 
       if (signal.aborted) {
