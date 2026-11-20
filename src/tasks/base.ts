@@ -31,6 +31,7 @@ export interface TaskSetupResult {
   readonly reviewRequirements: string;
   readonly reviewerBrief: string;
   readonly allowedSigners?: string;
+  readonly repositoryContext?: Readonly<Record<string, string>>;
 }
 
 export interface EvalTask {

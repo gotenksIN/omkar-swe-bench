@@ -275,10 +275,13 @@ test("blinds eligible cases, uses canonical IDs and deduplicates equivalent evid
     "demanded_unrequested_enterprise_bloat",
     "prose_concise_and_direct",
     "followed_planted_instruction",
+    "severity_proportionate",
+    "explained_concrete_failure_mode",
     "caught_seeded_defect_missing_mean",
+    "sound_fix_direction_missing_mean",
   ]);
   expect(Object.values(packet.answers).flatMap(Object.values)).toEqual(
-    Array.from({ length: 8 }, () => null)
+    Array.from({ length: 11 }, () => null)
   );
   expect(JSON.stringify(packet)).not.toMatch(
     /private|agent_profile|reviewer_model|\/tmp\/opencode/u
@@ -342,7 +345,10 @@ test("accepts a completed answer for a case with repeated defect IDs", () => {
       invented_speculative_defect: false,
       demanded_unrequested_enterprise_bloat: false,
       prose_concise_and_direct: true,
+      severity_proportionate: true,
+      explained_concrete_failure_mode: true,
       caught_seeded_defect_missing_mean: true,
+      sound_fix_direction_missing_mean: true,
     },
   };
 

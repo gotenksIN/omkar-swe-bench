@@ -75,6 +75,7 @@ export interface TrialResult {
   readonly planted_brief: string;
   readonly review_spec: string;
   readonly review_diff: string | null;
+  readonly repository_context?: Readonly<Record<string, string>>;
   readonly task_spec: string;
   readonly seeded_defects: readonly SeededDefectRecord[];
   readonly git_diff: string;

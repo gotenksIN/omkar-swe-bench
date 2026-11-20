@@ -779,7 +779,7 @@ const runTrialLifecycle = async (
 
       const error = formatRunError(partial, run.errorDiagnostic);
 
-      return {
+      const finalResult: TrialResult = {
         ...resultIdentity(),
         exit_code: exitCode,
         partial,
@@ -803,6 +803,15 @@ const runTrialLifecycle = async (
         git_diff: summarizeGit(afterGit),
         error_message: error,
       };
+
+      if (fixture.repositoryContext !== undefined) {
+        return {
+          ...finalResult,
+          repository_context: fixture.repositoryContext,
+        };
+      }
+
+      return finalResult;
     };
 
     const { fixture, beforeGit } = await executeWithRetries(

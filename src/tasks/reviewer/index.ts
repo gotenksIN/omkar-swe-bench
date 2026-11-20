@@ -123,7 +123,43 @@ const reviewerTask = (fixture: ReviewFixture): EvalTask => {
             "If there are none, say “No actionable findings.”",
           ].join("\n");
 
-      return {
+      const excludedSet = new Set(spec.excluded);
+      const changedFiles = new Set<string>();
+
+      for (const commit of fixture.commits) {
+        for (const file of Object.keys(commit.files)) {
+          changedFiles.add(file);
+        }
+      }
+
+      if (fixture.dirty) {
+        for (const file of Object.keys(fixture.dirty)) {
+          changedFiles.add(file);
+        }
+      }
+
+      const contextEntries: [string, string][] = [];
+
+      for (const [file, content] of Object.entries(fixture.initial)) {
+        if (excludedSet.has(file)) {
+          continue;
+        }
+
+        if (
+          !changedFiles.has(file) ||
+          file === "AGENTS.md" ||
+          file === "CONTEXT.md"
+        ) {
+          contextEntries.push([file, content]);
+        }
+      }
+
+      const repositoryContext =
+        contextEntries.length > 0
+          ? Object.fromEntries(contextEntries)
+          : undefined;
+
+      const baseResult = {
         baselineHead: head,
         prompt,
         reviewSpecText,
@@ -132,6 +168,12 @@ const reviewerTask = (fixture: ReviewFixture): EvalTask => {
         reviewRequirements: "",
         reviewerBrief: "",
       };
+
+      if (repositoryContext !== undefined) {
+        return { ...baseResult, repositoryContext };
+      }
+
+      return baseResult;
     },
     async grade(evidence, setup) {
       return await Promise.resolve(
