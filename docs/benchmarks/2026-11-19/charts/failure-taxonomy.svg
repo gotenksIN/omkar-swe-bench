@@ -1,130 +1,205 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 630" width="920" height="630" role="img" aria-label="Low-Steering Babysitting &amp; Failure Taxonomy">
+<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 738" width="960" height="738" role="img" aria-label="Low-Steering Babysitting &amp; Failure Taxonomy">
 <title>Low-Steering Babysitting &amp; Failure Taxonomy</title>
 <desc>Share of trials by outcome tier — separates clean passes and self-healed tool friction from human nudges, broken deliverables, and timeouts</desc>
-<rect x="0" y="0" width="920" height="630" fill="#0b1120"/>
-<rect x="12" y="12" width="896" height="606" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
-<text x="32" y="42" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Low-Steering Babysitting &amp; Failure Taxonomy</text>
-<text x="32" y="62" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Share of trials by outcome tier — separates clean passes and self-healed tool friction from human nudges, broken deliverables, and timeouts</text>
-<rect x="32" y="76" width="11" height="11" rx="2" fill="#10b981"/>
-<text x="48" y="86" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Clean first-shot pass</text>
-<rect x="196.4" y="76" width="11" height="11" rx="2" fill="#06b6d4"/>
-<text x="212.4" y="86" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Self-healed friction</text>
-<rect x="354.4" y="76" width="11" height="11" rx="2" fill="#f59e0b"/>
-<text x="370.4" y="86" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Hygiene / lint nudge</text>
-<rect x="512.4" y="76" width="11" height="11" rx="2" fill="#ef4444"/>
-<text x="528.4" y="86" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Broken / stubborn refusal</text>
-<rect x="702.4" y="76" width="11" height="11" rx="2" fill="#475569"/>
-<text x="718.4" y="86" fill="#94a3b8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Timeout / crash</text>
-<text x="32" y="116" fill="#38bdf8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700">CODERS (SOLO + PAIR)</text>
-<text x="175" y="143" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">hydrogen#h</text>
-<rect class="chart-point" data-tip="hydrogen#h | Clean first-shot pass: 19/19 (100.0%)" x="188.0" y="131" width="621.0" height="16" rx="2" fill="#10b981"/>
-<text x="499.0" y="143" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">19</text>
-<text x="820" y="143" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 99.9</text>
-<text x="175" y="169" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">neon#m</text>
-<rect class="chart-point" data-tip="neon#m | Clean first-shot pass: 19/19 (100.0%)" x="188.0" y="157" width="621.0" height="16" rx="2" fill="#10b981"/>
-<text x="499.0" y="169" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">19</text>
-<text x="820" y="169" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 99.9</text>
-<text x="175" y="195" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">opus-5-5#m</text>
-<rect class="chart-point" data-tip="opus-5-5#m | Clean first-shot pass: 18/19 (94.7%)" x="188.0" y="183" width="588.3" height="16" rx="2" fill="#10b981"/>
-<text x="482.6" y="195" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">18</text>
-<rect class="chart-point" data-tip="opus-5-5#m | Hygiene / lint nudge: 1/19 (5.3%)" x="777.3" y="183" width="31.7" height="16" rx="2" fill="#f59e0b"/>
-<text x="793.6" y="195" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="195" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 98.1</text>
-<text x="175" y="221" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">flash#h</text>
-<rect class="chart-point" data-tip="flash#h | Clean first-shot pass: 17/19 (89.5%)" x="188.0" y="209" width="555.5" height="16" rx="2" fill="#10b981"/>
-<text x="466.3" y="221" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">17</text>
-<rect class="chart-point" data-tip="flash#h | Self-healed friction: 1/19 (5.3%)" x="744.5" y="209" width="31.7" height="16" rx="2" fill="#06b6d4"/>
-<text x="760.9" y="221" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="flash#h | Broken / stubborn refusal: 1/19 (5.3%)" x="777.3" y="209" width="31.7" height="16" rx="2" fill="#ef4444"/>
-<text x="793.6" y="221" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="221" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 95.1</text>
-<text x="175" y="247" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">neon#h</text>
-<rect class="chart-point" data-tip="neon#h | Clean first-shot pass: 17/19 (89.5%)" x="188.0" y="235" width="555.5" height="16" rx="2" fill="#10b981"/>
-<text x="466.3" y="247" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">17</text>
-<rect class="chart-point" data-tip="neon#h | Self-healed friction: 1/19 (5.3%)" x="744.5" y="235" width="31.7" height="16" rx="2" fill="#06b6d4"/>
-<text x="760.9" y="247" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="neon#h | Timeout / crash: 1/19 (5.3%)" x="777.3" y="235" width="31.7" height="16" rx="2" fill="#475569"/>
-<text x="793.6" y="247" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="247" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 93.1</text>
-<text x="175" y="273" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">sonnet-5-5#h</text>
-<rect class="chart-point" data-tip="sonnet-5-5#h | Clean first-shot pass: 13/19 (68.4%)" x="188.0" y="261" width="424.6" height="16" rx="2" fill="#10b981"/>
-<text x="400.8" y="273" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">13</text>
-<rect class="chart-point" data-tip="sonnet-5-5#h | Self-healed friction: 5/19 (26.3%)" x="613.6" y="261" width="162.7" height="16" rx="2" fill="#06b6d4"/>
-<text x="695.4" y="273" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">5</text>
-<rect class="chart-point" data-tip="sonnet-5-5#h | Broken / stubborn refusal: 1/19 (5.3%)" x="777.3" y="261" width="31.7" height="16" rx="2" fill="#ef4444"/>
-<text x="793.6" y="273" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="273" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 93.1</text>
-<text x="175" y="299" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">sol#h</text>
-<rect class="chart-point" data-tip="sol#h | Clean first-shot pass: 16/19 (84.2%)" x="188.0" y="287" width="522.8" height="16" rx="2" fill="#10b981"/>
-<text x="449.9" y="299" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">16</text>
-<rect class="chart-point" data-tip="sol#h | Self-healed friction: 1/19 (5.3%)" x="711.8" y="287" width="31.7" height="16" rx="2" fill="#06b6d4"/>
-<text x="728.2" y="299" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="sol#h | Broken / stubborn refusal: 2/19 (10.5%)" x="744.5" y="287" width="64.5" height="16" rx="2" fill="#ef4444"/>
-<text x="777.3" y="299" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<text x="820" y="299" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 91.3</text>
-<text x="175" y="325" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">sol#m</text>
-<rect class="chart-point" data-tip="sol#m | Clean first-shot pass: 16/19 (84.2%)" x="188.0" y="313" width="522.8" height="16" rx="2" fill="#10b981"/>
-<text x="449.9" y="325" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">16</text>
-<rect class="chart-point" data-tip="sol#m | Hygiene / lint nudge: 1/19 (5.3%)" x="711.8" y="313" width="31.7" height="16" rx="2" fill="#f59e0b"/>
-<text x="728.2" y="325" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="sol#m | Broken / stubborn refusal: 2/19 (10.5%)" x="744.5" y="313" width="64.5" height="16" rx="2" fill="#ef4444"/>
-<text x="777.3" y="325" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<text x="820" y="325" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 89.8</text>
-<text x="32" y="358" fill="#38bdf8" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700">CODE REVIEWERS (CALIBRATED)</text>
-<text x="175" y="385" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">carbon#m</text>
-<rect class="chart-point" data-tip="carbon#m | Clean first-shot pass: 10/10 (100.0%)" x="188.0" y="373" width="621.0" height="16" rx="2" fill="#10b981"/>
-<text x="499.0" y="385" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">10</text>
-<text x="820" y="385" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 100.0</text>
-<text x="175" y="411" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">neon#xh</text>
-<rect class="chart-point" data-tip="neon#xh | Clean first-shot pass: 10/10 (100.0%)" x="188.0" y="399" width="621.0" height="16" rx="2" fill="#10b981"/>
-<text x="499.0" y="411" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">10</text>
-<text x="820" y="411" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 100.0</text>
-<text x="175" y="437" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">astra#m</text>
-<rect class="chart-point" data-tip="astra#m | Clean first-shot pass: 10/10 (100.0%)" x="188.0" y="425" width="621.0" height="16" rx="2" fill="#10b981"/>
-<text x="499.0" y="437" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">10</text>
-<text x="820" y="437" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 99.8</text>
-<text x="175" y="463" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">opus-5-5#h</text>
-<rect class="chart-point" data-tip="opus-5-5#h | Clean first-shot pass: 9/10 (90.0%)" x="188.0" y="451" width="558.8" height="16" rx="2" fill="#10b981"/>
-<text x="467.9" y="463" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">9</text>
-<rect class="chart-point" data-tip="opus-5-5#h | Broken / stubborn refusal: 1/10 (10.0%)" x="747.8" y="451" width="61.2" height="16" rx="2" fill="#ef4444"/>
-<text x="778.9" y="463" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="463" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 96.8</text>
-<text x="175" y="489" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">astra#h</text>
-<rect class="chart-point" data-tip="astra#h | Clean first-shot pass: 8/10 (80.0%)" x="188.0" y="477" width="496.6" height="16" rx="2" fill="#10b981"/>
-<text x="436.8" y="489" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">8</text>
-<rect class="chart-point" data-tip="astra#h | Hygiene / lint nudge: 1/10 (10.0%)" x="685.6" y="477" width="61.2" height="16" rx="2" fill="#f59e0b"/>
-<text x="716.7" y="489" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="astra#h | Broken / stubborn refusal: 1/10 (10.0%)" x="747.8" y="477" width="61.2" height="16" rx="2" fill="#ef4444"/>
-<text x="778.9" y="489" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="489" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 95.1</text>
-<text x="175" y="515" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">neon#h</text>
-<rect class="chart-point" data-tip="neon#h | Clean first-shot pass: 9/10 (90.0%)" x="188.0" y="503" width="558.8" height="16" rx="2" fill="#10b981"/>
-<text x="467.9" y="515" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">9</text>
-<rect class="chart-point" data-tip="neon#h | Broken / stubborn refusal: 1/10 (10.0%)" x="747.8" y="503" width="61.2" height="16" rx="2" fill="#ef4444"/>
-<text x="778.9" y="515" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="515" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 95.0</text>
-<text x="175" y="541" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">sol#h</text>
-<rect class="chart-point" data-tip="sol#h | Clean first-shot pass: 6/10 (60.0%)" x="188.0" y="529" width="372.2" height="16" rx="2" fill="#10b981"/>
-<text x="374.6" y="541" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">6</text>
-<rect class="chart-point" data-tip="sol#h | Hygiene / lint nudge: 2/10 (20.0%)" x="561.2" y="529" width="123.4" height="16" rx="2" fill="#f59e0b"/>
-<text x="623.4" y="541" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<rect class="chart-point" data-tip="sol#h | Broken / stubborn refusal: 2/10 (20.0%)" x="685.6" y="529" width="123.4" height="16" rx="2" fill="#ef4444"/>
-<text x="747.8" y="541" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<text x="820" y="541" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 89.0</text>
-<text x="175" y="567" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">fable-5-2#h</text>
-<rect class="chart-point" data-tip="fable-5-2#h | Clean first-shot pass: 7/10 (70.0%)" x="188.0" y="555" width="434.4" height="16" rx="2" fill="#10b981"/>
-<text x="405.7" y="567" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">7</text>
-<rect class="chart-point" data-tip="fable-5-2#h | Hygiene / lint nudge: 1/10 (10.0%)" x="623.4" y="555" width="61.2" height="16" rx="2" fill="#f59e0b"/>
-<text x="654.5" y="567" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<rect class="chart-point" data-tip="fable-5-2#h | Broken / stubborn refusal: 2/10 (20.0%)" x="685.6" y="555" width="123.4" height="16" rx="2" fill="#ef4444"/>
-<text x="747.8" y="567" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<text x="820" y="567" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 87.0</text>
-<text x="175" y="593" text-anchor="end" fill="#f8fafc" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">sol#xh</text>
-<rect class="chart-point" data-tip="sol#xh | Clean first-shot pass: 7/10 (70.0%)" x="188.0" y="581" width="434.4" height="16" rx="2" fill="#10b981"/>
-<text x="405.7" y="593" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">7</text>
-<rect class="chart-point" data-tip="sol#xh | Hygiene / lint nudge: 2/10 (20.0%)" x="623.4" y="581" width="123.4" height="16" rx="2" fill="#f59e0b"/>
-<text x="685.6" y="593" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">2</text>
-<rect class="chart-point" data-tip="sol#xh | Broken / stubborn refusal: 1/10 (10.0%)" x="747.8" y="581" width="61.2" height="16" rx="2" fill="#ef4444"/>
-<text x="778.9" y="593" text-anchor="middle" fill="#0b1120" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="700">1</text>
-<text x="820" y="593" fill="#94a3b8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 87.0</text>
+<style>
+.omkar-chart {
+  --c-bg: #fcfcfc;
+  --c-card: #ffffff;
+  --c-muted-bg: #f5f5f5;
+  --c-border: #e5e5e5;
+  --c-grid: #efefef;
+  --c-axis: #d4d4d4;
+  --c-text: #000000;
+  --c-muted: #525252;
+  --c-subtle: #737373;
+  --c-frontier: #000000;
+  --c-quadrant: #f5f5f5;
+  --c-reason-overlay: rgba(0, 0, 0, 0.24);
+  --p-anthropic: #d97706;
+  --p-google: #2563eb;
+  --p-openai: #09090b;
+  --p-deepseek: #737373;
+  --p-other: #525252;
+  --t-clean: #18181b;
+  --t-clean-ink: #ffffff;
+  --t-friction: #3167f6;
+  --t-friction-ink: #ffffff;
+  --t-nudge: #f5a623;
+  --t-nudge-ink: #000000;
+  --t-broken: #e5484d;
+  --t-broken-ink: #ffffff;
+  --t-timeout: #a3a3a3;
+  --t-timeout-ink: #000000;
+  --m-top: #18181b;
+  --m-high: #3167f6;
+  --m-mid: #f5a623;
+  --m-low: #e5484d;
+  --d-balanced: #18181b;
+  --d-compressed: #f5a623;
+  --d-verbose: #e5484d;
+}
+@media (prefers-color-scheme: dark) {
+  .omkar-chart {
+    --c-bg: #000000;
+    --c-card: #0a0a0a;
+    --c-muted-bg: #171717;
+    --c-border: #262626;
+    --c-grid: #1a1a1a;
+    --c-axis: #3a3a3a;
+    --c-text: #ffffff;
+    --c-muted: #a3a3a3;
+    --c-subtle: #737373;
+    --c-frontier: #ffffff;
+    --c-quadrant: #171717;
+    --c-reason-overlay: rgba(0, 0, 0, 0.45);
+    --p-anthropic: #f5a623;
+    --p-google: #3b82f6;
+    --p-openai: #f5f5f5;
+    --p-deepseek: #a3a3a3;
+    --p-other: #737373;
+    --t-clean: #e5e5e5;
+    --t-clean-ink: #000000;
+    --t-friction: #3b82f6;
+    --t-friction-ink: #ffffff;
+    --t-nudge: #f5a623;
+    --t-nudge-ink: #000000;
+    --t-broken: #f2555a;
+    --t-broken-ink: #000000;
+    --t-timeout: #525252;
+    --t-timeout-ink: #ffffff;
+    --m-top: #ffffff;
+    --m-high: #3b82f6;
+    --m-mid: #f5a623;
+    --m-low: #f2555a;
+    --d-balanced: #e5e5e5;
+    --d-compressed: #f5a623;
+    --d-verbose: #f2555a;
+  }
+}
+</style>
+<rect x="0.5" y="0.5" width="959" height="737" rx="10" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>
+<text x="28" y="36" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" letter-spacing="-0.02em">Low-Steering Babysitting &amp; Failure Taxonomy</text>
+<text x="28" y="56" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12">Share of trials by outcome tier — separates clean passes and self-healed tool friction from human nudges, broken deliverables, and timeouts</text>
+<rect x="28" y="73" width="11" height="11" rx="2.5" fill="var(--t-clean)"/>
+<text x="44" y="82.5" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Clean first-shot pass</text>
+<rect x="190.29999999999998" y="73" width="11" height="11" rx="2.5" fill="var(--t-friction)"/>
+<text x="206.29999999999998" y="82.5" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Self-healed friction</text>
+<rect x="346.29999999999995" y="73" width="11" height="11" rx="2.5" fill="var(--t-nudge)"/>
+<text x="362.29999999999995" y="82.5" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Hygiene / lint nudge</text>
+<rect x="502.29999999999995" y="73" width="11" height="11" rx="2.5" fill="var(--t-broken)"/>
+<text x="518.3" y="82.5" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Broken / stubborn refusal</text>
+<rect x="689.8" y="73" width="11" height="11" rx="2.5" fill="var(--t-timeout)"/>
+<text x="705.8" y="82.5" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11">Timeout / crash</text>
+<text x="28" y="116" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.06em">CODERS (SOLO + PAIR)</text>
+<text x="220" y="148" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Hydrogen (high)</text>
+<rect class="chart-point" data-tip="Gemini 4 Hydrogen (high) | Clean first-shot pass: 19/19 (100.0%)" x="232.0" y="135" width="612.5" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="539.0" y="147.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">19</text>
+<text x="856" y="148" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 99.9</text>
+<text x="220" y="180" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (medium)</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (medium) | Clean first-shot pass: 19/19 (100.0%)" x="232.0" y="167" width="612.5" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="539.0" y="179.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">19</text>
+<text x="856" y="180" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 99.9</text>
+<text x="220" y="212" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Opus 5.5 (medium)</text>
+<rect class="chart-point" data-tip="Claude Opus 5.5 (medium) | Clean first-shot pass: 18/19 (94.7%)" x="232.0" y="199" width="580.2" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="522.8" y="211.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">18</text>
+<rect class="chart-point" data-tip="Claude Opus 5.5 (medium) | Hygiene / lint nudge: 1/19 (5.3%)" x="813.7" y="199" width="30.8" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="829.8" y="211.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="212" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 98.1</text>
+<text x="220" y="244" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">DeepSeek Flash (high)</text>
+<rect class="chart-point" data-tip="DeepSeek Flash (high) | Clean first-shot pass: 17/19 (89.5%)" x="232.0" y="231" width="547.9" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="506.7" y="243.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">17</text>
+<rect class="chart-point" data-tip="DeepSeek Flash (high) | Self-healed friction: 1/19 (5.3%)" x="781.4" y="231" width="30.8" height="18" rx="3" fill="var(--t-friction)"/>
+<text x="797.5" y="243.5" text-anchor="middle" fill="var(--t-friction-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="DeepSeek Flash (high) | Broken / stubborn refusal: 1/19 (5.3%)" x="813.7" y="231" width="30.8" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="829.8" y="243.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="244" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 95.1</text>
+<text x="220" y="276" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (high)</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (high) | Clean first-shot pass: 17/19 (89.5%)" x="232.0" y="263" width="547.9" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="506.7" y="275.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">17</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (high) | Self-healed friction: 1/19 (5.3%)" x="781.4" y="263" width="30.8" height="18" rx="3" fill="var(--t-friction)"/>
+<text x="797.5" y="275.5" text-anchor="middle" fill="var(--t-friction-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (high) | Timeout / crash: 1/19 (5.3%)" x="813.7" y="263" width="30.8" height="18" rx="3" fill="var(--t-timeout)"/>
+<text x="829.8" y="275.5" text-anchor="middle" fill="var(--t-timeout-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="276" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 93.1</text>
+<text x="220" y="308" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Sonnet 5.5 (high)</text>
+<rect class="chart-point" data-tip="Claude Sonnet 5.5 (high) | Clean first-shot pass: 13/19 (68.4%)" x="232.0" y="295" width="418.6" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="442.1" y="307.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">13</text>
+<rect class="chart-point" data-tip="Claude Sonnet 5.5 (high) | Self-healed friction: 5/19 (26.3%)" x="652.1" y="295" width="160.1" height="18" rx="3" fill="var(--t-friction)"/>
+<text x="732.9" y="307.5" text-anchor="middle" fill="var(--t-friction-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">5</text>
+<rect class="chart-point" data-tip="Claude Sonnet 5.5 (high) | Broken / stubborn refusal: 1/19 (5.3%)" x="813.7" y="295" width="30.8" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="829.8" y="307.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="308" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 93.1</text>
+<text x="220" y="340" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (high)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Clean first-shot pass: 16/19 (84.2%)" x="232.0" y="327" width="515.6" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="490.5" y="339.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">16</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Self-healed friction: 1/19 (5.3%)" x="749.1" y="327" width="30.8" height="18" rx="3" fill="var(--t-friction)"/>
+<text x="765.2" y="339.5" text-anchor="middle" fill="var(--t-friction-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Broken / stubborn refusal: 2/19 (10.5%)" x="781.4" y="327" width="63.1" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="813.7" y="339.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<text x="856" y="340" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 91.3</text>
+<text x="220" y="372" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (medium)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (medium) | Clean first-shot pass: 16/19 (84.2%)" x="232.0" y="359" width="515.6" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="490.5" y="371.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">16</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (medium) | Hygiene / lint nudge: 1/19 (5.3%)" x="749.1" y="359" width="30.8" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="765.2" y="371.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (medium) | Broken / stubborn refusal: 2/19 (10.5%)" x="781.4" y="359" width="63.1" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="813.7" y="371.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<text x="856" y="372" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">ACI 89.8</text>
+<text x="28" y="410" fill="var(--c-muted)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.06em">CODE REVIEWERS (CALIBRATED)</text>
+<text x="220" y="442" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Carbon (medium)</text>
+<rect class="chart-point" data-tip="Gemini 4 Carbon (medium) | Clean first-shot pass: 10/10 (100.0%)" x="232.0" y="429" width="612.5" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="539.0" y="441.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">10</text>
+<text x="856" y="442" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 100.0</text>
+<text x="220" y="474" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (xhigh)</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (xhigh) | Clean first-shot pass: 10/10 (100.0%)" x="232.0" y="461" width="612.5" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="539.0" y="473.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">10</text>
+<text x="856" y="474" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 100.0</text>
+<text x="220" y="506" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Astra (medium)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Astra (medium) | Clean first-shot pass: 10/10 (100.0%)" x="232.0" y="493" width="612.5" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="539.0" y="505.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">10</text>
+<text x="856" y="506" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 99.8</text>
+<text x="220" y="538" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Opus 5.5 (high)</text>
+<rect class="chart-point" data-tip="Claude Opus 5.5 (high) | Clean first-shot pass: 9/10 (90.0%)" x="232.0" y="525" width="551.1" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="508.3" y="537.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">9</text>
+<rect class="chart-point" data-tip="Claude Opus 5.5 (high) | Broken / stubborn refusal: 1/10 (10.0%)" x="784.6" y="525" width="59.9" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="815.3" y="537.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="538" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 96.8</text>
+<text x="220" y="570" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Astra (high)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Astra (high) | Clean first-shot pass: 8/10 (80.0%)" x="232.0" y="557" width="489.7" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="477.6" y="569.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">8</text>
+<rect class="chart-point" data-tip="GPT-6.2 Astra (high) | Hygiene / lint nudge: 1/10 (10.0%)" x="723.2" y="557" width="59.9" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="753.9" y="569.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="GPT-6.2 Astra (high) | Broken / stubborn refusal: 1/10 (10.0%)" x="784.6" y="557" width="59.9" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="815.3" y="569.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="570" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 95.1</text>
+<text x="220" y="602" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Gemini 4 Neon (high)</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (high) | Clean first-shot pass: 9/10 (90.0%)" x="232.0" y="589" width="551.1" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="508.3" y="601.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">9</text>
+<rect class="chart-point" data-tip="Gemini 4 Neon (high) | Broken / stubborn refusal: 1/10 (10.0%)" x="784.6" y="589" width="59.9" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="815.3" y="601.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="602" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 95.0</text>
+<text x="220" y="634" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (high)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Clean first-shot pass: 6/10 (60.0%)" x="232.0" y="621" width="366.9" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="416.2" y="633.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">6</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Hygiene / lint nudge: 2/10 (20.0%)" x="600.4" y="621" width="121.3" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="661.8" y="633.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (high) | Broken / stubborn refusal: 2/10 (20.0%)" x="723.2" y="621" width="121.3" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="784.6" y="633.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<text x="856" y="634" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 89.0</text>
+<text x="220" y="666" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">Claude Fable 5.2 (high)</text>
+<rect class="chart-point" data-tip="Claude Fable 5.2 (high) | Clean first-shot pass: 7/10 (70.0%)" x="232.0" y="653" width="428.3" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="446.9" y="665.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">7</text>
+<rect class="chart-point" data-tip="Claude Fable 5.2 (high) | Hygiene / lint nudge: 1/10 (10.0%)" x="661.8" y="653" width="59.9" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="692.5" y="665.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<rect class="chart-point" data-tip="Claude Fable 5.2 (high) | Broken / stubborn refusal: 2/10 (20.0%)" x="723.2" y="653" width="121.3" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="784.6" y="665.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<text x="856" y="666" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 87.0</text>
+<text x="220" y="698" text-anchor="end" fill="var(--c-text)" font-family="Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5">GPT-6.2 Sol (xhigh)</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (xhigh) | Clean first-shot pass: 7/10 (70.0%)" x="232.0" y="685" width="428.3" height="18" rx="3" fill="var(--t-clean)"/>
+<text x="446.9" y="697.5" text-anchor="middle" fill="var(--t-clean-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">7</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (xhigh) | Hygiene / lint nudge: 2/10 (20.0%)" x="661.8" y="685" width="121.3" height="18" rx="3" fill="var(--t-nudge)"/>
+<text x="723.2" y="697.5" text-anchor="middle" fill="var(--t-nudge-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">2</text>
+<rect class="chart-point" data-tip="GPT-6.2 Sol (xhigh) | Broken / stubborn refusal: 1/10 (10.0%)" x="784.6" y="685" width="59.9" height="18" rx="3" fill="var(--t-broken)"/>
+<text x="815.3" y="697.5" text-anchor="middle" fill="var(--t-broken-ink)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10.5" font-weight="600">1</text>
+<text x="856" y="698" fill="var(--c-muted)" font-family="'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11">LSAS 87.0</text>
 </svg>

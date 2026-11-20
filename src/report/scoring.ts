@@ -194,6 +194,121 @@ export const shortModelLabel = (spec: string): string => {
     .replace(/#low$/u, "#l");
 };
 
+const titleCaseWord = (word: string): string => {
+  if (word.length === 0) {
+    return word;
+  }
+
+  const lower = word.toLowerCase();
+
+  if (lower === "gpt" || lower === "ai") {
+    return lower.toUpperCase();
+  }
+
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+};
+
+const formatModelName = (rawName: string): string => {
+  const gptMatch = /^gpt-(?<ver>[\d.]+)-(?<tier>[a-z0-9-]+)$/iu.exec(rawName);
+
+  if (
+    gptMatch?.groups?.ver !== undefined &&
+    gptMatch.groups.tier !== undefined
+  ) {
+    const tier = gptMatch.groups.tier.split("-").map(titleCaseWord).join(" ");
+
+    return `GPT-${gptMatch.groups.ver} ${tier}`;
+  }
+
+  const claudeMatch =
+    /^claude-(?<family>[a-z]+)-(?<major>\d+)-(?<minor>\d+)$/iu.exec(rawName);
+
+  if (
+    claudeMatch?.groups?.family !== undefined &&
+    claudeMatch.groups.major !== undefined &&
+    claudeMatch.groups.minor !== undefined
+  ) {
+    return `Claude ${titleCaseWord(claudeMatch.groups.family)} ${claudeMatch.groups.major}.${claudeMatch.groups.minor}`;
+  }
+
+  const geminiMatch = /^gemini-(?<ver>[\d.]+)-(?<tier>[a-z0-9-]+)$/iu.exec(
+    rawName
+  );
+
+  if (
+    geminiMatch?.groups?.ver !== undefined &&
+    geminiMatch.groups.tier !== undefined
+  ) {
+    const tier = geminiMatch.groups.tier
+      .split("-")
+      .map(titleCaseWord)
+      .join(" ");
+
+    return `Gemini ${geminiMatch.groups.ver} ${tier}`;
+  }
+
+  const deepseekMatch = /^deepseek-(?<tier>[a-z0-9-]+)$/iu.exec(rawName);
+
+  if (deepseekMatch?.groups?.tier !== undefined) {
+    const tier = deepseekMatch.groups.tier
+      .split("-")
+      .map(titleCaseWord)
+      .join(" ");
+
+    return `DeepSeek ${tier}`;
+  }
+
+  return rawName.split("-").map(titleCaseWord).join(" ");
+};
+
+const formatSingleDisplayModel = (spec: string, compact: boolean): string => {
+  const hash = spec.lastIndexOf("#");
+  const base = hash === -1 ? spec : spec.slice(0, hash);
+  const variant = hash === -1 ? null : spec.slice(hash + 1);
+  const slash = base.lastIndexOf("/");
+  const rawName = slash === -1 ? base : base.slice(slash + 1);
+
+  let name = formatModelName(rawName);
+
+  if (compact) {
+    name = name
+      .replace(/^Claude /u, "")
+      .replace(/^Gemini 4 /u, "Gemini ")
+      .replace(/^GPT-6\.2 /u, "GPT-6.2 ")
+      .replace(/^DeepSeek /u, "DS ");
+  }
+
+  if (variant === null || variant.length === 0) {
+    return name;
+  }
+
+  const variantLabel = compact && variant === "medium" ? "med" : variant;
+
+  return `${name} (${variantLabel})`;
+};
+
+export const displayModelLabel = (spec: string): string => {
+  if (spec.includes(" -> ")) {
+    return spec
+      .split(" -> ")
+      .map((part) => formatSingleDisplayModel(part.trim(), false))
+      .join(" → ");
+  }
+
+  return formatSingleDisplayModel(spec, false);
+};
+
+export const compactModelLabel = (spec: string): string => {
+  if (spec.includes(" -> ")) {
+    return spec
+      .split(" -> ")
+      .map((part) => formatSingleDisplayModel(part.trim(), true))
+      .join(" → ");
+  }
+
+  return formatSingleDisplayModel(spec, true);
+};
+
 export const modelLabelForTrial = (
   trial: Pick<TrialResult, "model" | "reviewer_model">
 ): string =>

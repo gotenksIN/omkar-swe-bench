@@ -1,5 +1,5 @@
 import type { GeneratedChart } from "./charts.ts";
-import { shortModelLabel } from "./scoring.ts";
+import { displayModelLabel } from "./scoring.ts";
 import type {
   BenchmarkSummary,
   CombinedCoderSummary,
@@ -58,7 +58,7 @@ const renderCombinedCoderTable = (
       (row, index) => `
     <tr>
       <td class="mono dim">${index + 1}</td>
-      <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name">${esc(row.model)}</span></td>
+      <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name" title="${esc(row.model)}">${esc(displayModelLabel(row.model))}</span></td>
       <td class="mono strong">${row.aci.toFixed(1)}</td>
       <td class="mono">${row.solo.lsas.toFixed(1)}</td>
       <td class="mono">${row.pair.lsas.toFixed(1)}</td>
@@ -101,7 +101,7 @@ const renderRoleTable = (
       (row, index) => `
     <tr>
       <td class="mono dim">${index + 1}</td>
-      <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name">${esc(row.label)}</span></td>
+      <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name" title="${esc(row.label)}">${esc(displayModelLabel(row.label))}</span></td>
       <td class="mono strong">${row.lsas.toFixed(1)}</td>
       <td class="mono">${pct(row.passRate)} <span class="dim">(${row.passedCount}/${row.trials})</span></td>
       ${
@@ -149,6 +149,141 @@ const chartBlock = (chart: GeneratedChart | undefined): string => {
   return `<div class="chart-card" data-chart-id="${esc(chart.id)}">${chart.svg}</div>`;
 };
 
+const HTML_STYLES = `
+  :root {
+    color-scheme: light dark;
+    --bg: #fcfcfc;
+    --card: #ffffff;
+    --card-subtle: #fafafa;
+    --muted-bg: #f5f5f5;
+    --secondary: #ebebeb;
+    --border: #e5e5e5;
+    --text: #000000;
+    --muted: #525252;
+    --dim: #737373;
+    --primary: #000000;
+    --primary-fg: #ffffff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --p-anthropic: #d97706;
+    --p-google: #2563eb;
+    --p-openai: #09090b;
+    --p-deepseek: #737373;
+    --p-other: #525252;
+    --sans: Geist, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000;
+      --card: #0a0a0a;
+      --card-subtle: #111111;
+      --muted-bg: #171717;
+      --secondary: #222222;
+      --border: #262626;
+      --text: #ffffff;
+      --muted: #a3a3a3;
+      --dim: #737373;
+      --primary: #ffffff;
+      --primary-fg: #000000;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --p-anthropic: #f5a623;
+      --p-google: #3b82f6;
+      --p-openai: #f5f5f5;
+      --p-deepseek: #a3a3a3;
+      --p-other: #737373;
+    }
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #000000;
+    --card: #0a0a0a;
+    --card-subtle: #111111;
+    --muted-bg: #171717;
+    --secondary: #222222;
+    --border: #262626;
+    --text: #ffffff;
+    --muted: #a3a3a3;
+    --dim: #737373;
+    --primary: #ffffff;
+    --primary-fg: #000000;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --p-anthropic: #f5a623;
+    --p-google: #3b82f6;
+    --p-openai: #f5f5f5;
+    --p-deepseek: #a3a3a3;
+    --p-other: #737373;
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+  html[data-theme="light"] .omkar-chart {
+    --c-bg: #fcfcfc; --c-card: #ffffff; --c-muted-bg: #f5f5f5; --c-border: #e5e5e5;
+    --c-grid: #efefef; --c-axis: #d4d4d4; --c-text: #000000; --c-muted: #525252;
+    --c-subtle: #737373; --c-frontier: #000000; --c-quadrant: #f5f5f5;
+    --c-reason-overlay: rgba(0, 0, 0, 0.24);
+    --p-anthropic: #d97706; --p-google: #2563eb; --p-openai: #09090b; --p-deepseek: #737373; --p-other: #525252;
+    --t-clean: #18181b; --t-clean-ink: #ffffff; --t-friction: #3167f6; --t-friction-ink: #ffffff;
+    --t-nudge: #f5a623; --t-nudge-ink: #000000; --t-broken: #e5484d; --t-broken-ink: #ffffff;
+    --t-timeout: #a3a3a3; --t-timeout-ink: #000000;
+    --m-top: #18181b; --m-high: #3167f6; --m-mid: #f5a623; --m-low: #e5484d;
+    --d-balanced: #18181b; --d-compressed: #f5a623; --d-verbose: #e5484d;
+  }
+  html[data-theme="dark"] .omkar-chart {
+    --c-bg: #000000; --c-card: #0a0a0a; --c-muted-bg: #171717; --c-border: #262626;
+    --c-grid: #1a1a1a; --c-axis: #3a3a3a; --c-text: #ffffff; --c-muted: #a3a3a3;
+    --c-subtle: #737373; --c-frontier: #ffffff; --c-quadrant: #171717;
+    --c-reason-overlay: rgba(0, 0, 0, 0.45);
+    --p-anthropic: #f5a623; --p-google: #3b82f6; --p-openai: #f5f5f5; --p-deepseek: #a3a3a3; --p-other: #737373;
+    --t-clean: #e5e5e5; --t-clean-ink: #000000; --t-friction: #3b82f6; --t-friction-ink: #ffffff;
+    --t-nudge: #f5a623; --t-nudge-ink: #000000; --t-broken: #f2555a; --t-broken-ink: #000000;
+    --t-timeout: #525252; --t-timeout-ink: #ffffff;
+    --m-top: #ffffff; --m-high: #3b82f6; --m-mid: #f5a623; --m-low: #f2555a;
+    --d-balanced: #e5e5e5; --d-compressed: #f5a623; --d-verbose: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.025em; }
+  h2 { margin: 28px 0 12px; font-size: 16px; font-weight: 600; letter-spacing: -0.015em; color: var(--text); }
+  .subtitle { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+  .theme-switch { display: inline-flex; background: var(--muted-bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
+  .theme-btn { background: transparent; color: var(--muted); border: none; border-radius: 6px; padding: 5px 10px; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; }
+  .theme-btn.active { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .kpi-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .kpi-value { font-size: 17px; font-weight: 600; letter-spacing: -0.015em; margin: 6px 0 4px; color: var(--text); }
+  .kpi-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--muted-bg); border: 1px solid var(--border); border-radius: 9px; padding: 4px; margin-bottom: 20px; }
+  .tab { background: transparent; color: var(--muted); border: none; border-radius: 6px; padding: 6px 13px; font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--primary); color: var(--primary-fg); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .chart-card { margin: 20px 0; overflow-x: auto; border-radius: 10px; }
+  .chart-card svg { display: block; width: 100%; height: auto; }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin: 14px 0 22px; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; background: var(--card-subtle); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--muted-bg); }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .strong { font-weight: 600; color: var(--text); }
+  .dim { color: var(--dim); }
+  .model-name { font-weight: 500; font-size: 13px; }
+  .badge { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 8px; vertical-align: middle; }
+  .p-anthropic { background: var(--p-anthropic); } .p-google { background: var(--p-google); } .p-openai { background: var(--p-openai); } .p-deepseek { background: var(--p-deepseek); } .p-other { background: var(--p-other); }
+  .note { background: var(--card-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 28px; }
+  .note-title { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 10px; letter-spacing: -0.01em; }
+  .note p { margin: 0 0 8px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note strong { color: var(--text); font-weight: 600; }
+  .chart-point { cursor: pointer; }
+  #tooltip { position: fixed; pointer-events: none; z-index: 999; display: none; max-width: 440px; background: var(--primary); color: var(--primary-fg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; font-family: var(--mono); font-size: 11.5px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); }
+`;
+
 export const renderHtmlReport = (
   summary: BenchmarkSummary,
   charts: readonly GeneratedChart[]
@@ -174,13 +309,13 @@ export const renderHtmlReport = (
   if (topCoder !== undefined) {
     kpis.push({
       label: "Top Autonomous Coder (ACI)",
-      value: shortModelLabel(topCoder.model),
+      value: displayModelLabel(topCoder.model),
       sub: `ACI ${topCoder.aci.toFixed(1)} · ZSDR ${pct(topCoder.zsdrRate)} · $${topCoder.totalCostUsd.toFixed(2)}`,
     });
   } else if (topSolo !== undefined) {
     kpis.push({
       label: "Top Standalone Coder (LSAS)",
-      value: shortModelLabel(topSolo.model),
+      value: displayModelLabel(topSolo.model),
       sub: `LSAS ${topSolo.lsas.toFixed(1)} · Pass ${topSolo.passedCount}/${topSolo.trials} · $${topSolo.totalCostUsd.toFixed(2)}`,
     });
   }
@@ -188,7 +323,7 @@ export const renderHtmlReport = (
   if (topReviewer !== undefined) {
     kpis.push({
       label: "Top Code Reviewer (LSAS)",
-      value: shortModelLabel(topReviewer.model),
+      value: displayModelLabel(topReviewer.model),
       sub: `LSAS ${topReviewer.lsas.toFixed(1)} · ${topReviewer.passedCount}/${topReviewer.trials} pass · med ${topReviewer.medianWallS.toFixed(1)}s`,
     });
   }
@@ -196,7 +331,7 @@ export const renderHtmlReport = (
   if (topPair !== undefined) {
     kpis.push({
       label: "Top Pair Cell",
-      value: topPair.label.split(" -> ").map(shortModelLabel).join(" → "),
+      value: displayModelLabel(topPair.label),
       sub: `LSAS ${topPair.lsas.toFixed(1)} · ${topPair.passedCount}/${topPair.trials} · med ${topPair.medianWallS.toFixed(1)}s`,
     });
   }
@@ -224,48 +359,7 @@ export const renderHtmlReport = (
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OmkarSWE Bench — Low-Steering Autonomy Report</title>
-<style>
-  :root {
-    --bg: #0b1120; --card: #0f172a; --card-alt: #131c31; --border: #1e293b;
-    --text: #f8fafc; --muted: #94a3b8; --dim: #64748b; --accent: #38bdf8;
-    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
-  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 20px; }
-  h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
-  h2 { margin: 28px 0 12px; font-size: 18px; color: var(--text); }
-  .subtitle { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 22px; }
-  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
-  .kpi-label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-  .kpi-value { font-size: 20px; font-weight: 700; margin: 4px 0; color: var(--text); }
-  .kpi-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); }
-  .tabs { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px; }
-  .tab { background: var(--card); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
-  .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-  .panel { display: none; }
-  .panel.active { display: block; }
-  .chart-card { margin: 16px 0; overflow-x: auto; border-radius: 12px; }
-  .chart-card svg { display: block; max-width: 100%; height: auto; }
-  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin: 14px 0 22px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; background: var(--card-alt); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(56, 189, 248, 0.05); }
-  .mono { font-family: var(--mono); }
-  .strong { font-weight: 700; color: var(--accent); }
-  .dim { color: var(--dim); }
-  .model-name { font-family: var(--mono); font-size: 12.5px; }
-  .badge { display: inline-block; width: 9px; height: 9px; border-radius: 999px; margin-right: 8px; vertical-align: middle; }
-  .p-anthropic { background: #f59e0b; } .p-google { background: #38bdf8; } .p-openai { background: #34d399; } .p-deepseek { background: #a78bfa; } .p-other { background: #f472b6; }
-  .note { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 14px; color: var(--muted); font-size: 12.5px; margin-top: 24px; }
-  .chart-point { cursor: pointer; }
-  #tooltip { position: fixed; pointer-events: none; z-index: 999; display: none; max-width: 420px; background: #020617; color: var(--text); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 11.5px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
-</style>
+<style>${HTML_STYLES}</style>
 </head>
 <body>
 <div class="wrap">
@@ -273,6 +367,11 @@ export const renderHtmlReport = (
     <div>
       <h1>OmkarSWE Bench</h1>
       <p class="subtitle">Low-steering autonomy rankings, Pareto frontiers, and babysitting diagnostics across deterministic OpenCode evaluations.</p>
+    </div>
+    <div class="theme-switch" role="group" aria-label="Color theme">
+      <button class="theme-btn active" data-theme-set="system" type="button">System</button>
+      <button class="theme-btn" data-theme-set="light" type="button">Light</button>
+      <button class="theme-btn" data-theme-set="dark" type="button">Dark</button>
     </div>
   </header>
 
@@ -338,12 +437,33 @@ export const renderHtmlReport = (
   </section>
 
   <div class="note">
-    <strong>Methodology:</strong> <strong>LSAS (Low-Steering Autonomy Score, 0–100)</strong> zeroes timeouts, crashes, and partial runs; caps broken deliverables or scope violations at ≤25; deducts 35 pts for static/test hygiene misses, 20 pts for skipped verification, and 8 pts for self-healed in-session friction (e.g., commit-guard rejections recovered autonomously). For Code Reviewers, LSAS starts at 100× recall (100 on clean diffs) minus 30 pts per blocking P0–P2 false alarm and 15 pts per P3 nitpick. <strong>ZSDR (Zero-Steering Deliverable Rate)</strong> is the share of trials requiring zero human intervention after the session ends. Cost and Wall Time are kept strictly on orthogonal Pareto axes.
+    <div class="note-title">Methodology</div>
+    <p><strong>LSAS (Low-Steering Autonomy Score, 0–100)</strong><br>Zeroes timeouts, crashes, and partial runs; caps broken deliverables or scope violations at ≤25; deducts 35 pts for static/test hygiene misses, 20 pts for skipped verification, and 8 pts for self-healed in-session friction (such as commit-guard rejections recovered autonomously).</p>
+    <p><strong>Code Reviewer LSAS</strong><br>Starts at 100× defect recall (100 on clean diffs), minus 30 pts per blocking P0–P2 false alarm and 15 pts per P3 nitpick.</p>
+    <p><strong>ZSDR (Zero-Steering Deliverable Rate)</strong><br>Share of trials requiring zero human intervention after the session ends. Cost and Wall Time stay on orthogonal Pareto axes.</p>
   </div>
 </div>
 <div id="tooltip"></div>
 <script>
 (() => {
+  const root = document.documentElement;
+  const themeBtns = document.querySelectorAll("[data-theme-set]");
+  const applyTheme = (mode) => {
+    if (mode === "light" || mode === "dark") {
+      root.setAttribute("data-theme", mode);
+    } else {
+      root.removeAttribute("data-theme");
+    }
+    themeBtns.forEach((b) => b.classList.toggle("active", b.dataset.themeSet === mode));
+  };
+  const saved = (() => { try { return localStorage.getItem("omkar-theme"); } catch { return null; } })();
+  applyTheme(saved === "light" || saved === "dark" ? saved : "system");
+  themeBtns.forEach((btn) => btn.addEventListener("click", () => {
+    const mode = btn.dataset.themeSet || "system";
+    applyTheme(mode);
+    try { localStorage.setItem("omkar-theme", mode); } catch {}
+  }));
+
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".panel");
   tabs.forEach((btn) => btn.addEventListener("click", () => {
@@ -353,6 +473,7 @@ export const renderHtmlReport = (
     const target = document.getElementById("tab-" + btn.dataset.tab);
     if (target) target.classList.add("active");
   }));
+
   const tip = document.getElementById("tooltip");
   document.addEventListener("mousemove", (event) => {
     const el = event.target instanceof Element ? event.target.closest("[data-tip]") : null;

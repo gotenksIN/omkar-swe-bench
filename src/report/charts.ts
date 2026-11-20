@@ -1,4 +1,8 @@
-import { computeParetoFrontier, shortModelLabel } from "./scoring.ts";
+import {
+  compactModelLabel,
+  computeParetoFrontier,
+  displayModelLabel,
+} from "./scoring.ts";
 import type {
   BenchmarkSummary,
   FailureTier,
@@ -40,41 +44,108 @@ interface Rect {
 }
 
 const FONT_SANS =
-  "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  "Geist, Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 const FONT_MONO =
-  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  "'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
-const BG = "#0b1120";
-const CARD = "#0f172a";
-const BORDER = "#1e293b";
-const GRID = "#1e293b";
-const AXIS = "#334155";
-const TEXT = "#f8fafc";
-const MUTED = "#94a3b8";
-const SUBTLE = "#64748b";
-const PARETO = "#38bdf8";
+const SVG_THEME_STYLE = `<style>
+.omkar-chart {
+  --c-bg: #fcfcfc;
+  --c-card: #ffffff;
+  --c-muted-bg: #f5f5f5;
+  --c-border: #e5e5e5;
+  --c-grid: #efefef;
+  --c-axis: #d4d4d4;
+  --c-text: #000000;
+  --c-muted: #525252;
+  --c-subtle: #737373;
+  --c-frontier: #000000;
+  --c-quadrant: #f5f5f5;
+  --c-reason-overlay: rgba(0, 0, 0, 0.24);
+  --p-anthropic: #d97706;
+  --p-google: #2563eb;
+  --p-openai: #09090b;
+  --p-deepseek: #737373;
+  --p-other: #525252;
+  --t-clean: #18181b;
+  --t-clean-ink: #ffffff;
+  --t-friction: #3167f6;
+  --t-friction-ink: #ffffff;
+  --t-nudge: #f5a623;
+  --t-nudge-ink: #000000;
+  --t-broken: #e5484d;
+  --t-broken-ink: #ffffff;
+  --t-timeout: #a3a3a3;
+  --t-timeout-ink: #000000;
+  --m-top: #18181b;
+  --m-high: #3167f6;
+  --m-mid: #f5a623;
+  --m-low: #e5484d;
+  --d-balanced: #18181b;
+  --d-compressed: #f5a623;
+  --d-verbose: #e5484d;
+}
+@media (prefers-color-scheme: dark) {
+  .omkar-chart {
+    --c-bg: #000000;
+    --c-card: #0a0a0a;
+    --c-muted-bg: #171717;
+    --c-border: #262626;
+    --c-grid: #1a1a1a;
+    --c-axis: #3a3a3a;
+    --c-text: #ffffff;
+    --c-muted: #a3a3a3;
+    --c-subtle: #737373;
+    --c-frontier: #ffffff;
+    --c-quadrant: #171717;
+    --c-reason-overlay: rgba(0, 0, 0, 0.45);
+    --p-anthropic: #f5a623;
+    --p-google: #3b82f6;
+    --p-openai: #f5f5f5;
+    --p-deepseek: #a3a3a3;
+    --p-other: #737373;
+    --t-clean: #e5e5e5;
+    --t-clean-ink: #000000;
+    --t-friction: #3b82f6;
+    --t-friction-ink: #ffffff;
+    --t-nudge: #f5a623;
+    --t-nudge-ink: #000000;
+    --t-broken: #f2555a;
+    --t-broken-ink: #000000;
+    --t-timeout: #525252;
+    --t-timeout-ink: #ffffff;
+    --m-top: #ffffff;
+    --m-high: #3b82f6;
+    --m-mid: #f5a623;
+    --m-low: #f2555a;
+    --d-balanced: #e5e5e5;
+    --d-compressed: #f5a623;
+    --d-verbose: #f2555a;
+  }
+}
+</style>`;
 
-const providerColor = (provider: string): string => {
+const providerVar = (provider: string): string => {
   switch (provider) {
     case "anthropic": {
-      return "#f59e0b";
+      return "var(--p-anthropic)";
     }
 
     case "google": {
-      return "#38bdf8";
+      return "var(--p-google)";
     }
 
     case "openai": {
-      return "#34d399";
+      return "var(--p-openai)";
     }
 
     case "deepseek": {
-      return "#a78bfa";
+      return "var(--p-deepseek)";
     }
 
     default: {
-      return "#f472b6";
+      return "var(--p-other)";
     }
   }
 };
@@ -82,29 +153,58 @@ const providerColor = (provider: string): string => {
 const TIER_META: readonly {
   readonly key: FailureTier;
   readonly label: string;
-  readonly color: string;
+  readonly fillVar: string;
+  readonly inkVar: string;
 }[] = [
-  { key: "clean_pass", label: "Clean first-shot pass", color: "#10b981" },
+  {
+    key: "clean_pass",
+    label: "Clean first-shot pass",
+    fillVar: "var(--t-clean)",
+    inkVar: "var(--t-clean-ink)",
+  },
   {
     key: "self_healed_friction",
     label: "Self-healed friction",
-    color: "#06b6d4",
+    fillVar: "var(--t-friction)",
+    inkVar: "var(--t-friction-ink)",
   },
-  { key: "hygiene_nudge", label: "Hygiene / lint nudge", color: "#f59e0b" },
+  {
+    key: "hygiene_nudge",
+    label: "Hygiene / lint nudge",
+    fillVar: "var(--t-nudge)",
+    inkVar: "var(--t-nudge-ink)",
+  },
   {
     key: "broken_deliverable",
     label: "Broken / stubborn refusal",
-    color: "#ef4444",
+    fillVar: "var(--t-broken)",
+    inkVar: "var(--t-broken-ink)",
   },
-  { key: "timeout_crash", label: "Timeout / crash", color: "#475569" },
+  {
+    key: "timeout_crash",
+    label: "Timeout / crash",
+    fillVar: "var(--t-timeout)",
+    inkVar: "var(--t-timeout-ink)",
+  },
 ];
 
-const TIER_COLORS: Readonly<Record<FailureTier, string>> = {
-  clean_pass: "#10b981",
-  self_healed_friction: "#06b6d4",
-  hygiene_nudge: "#f59e0b",
-  broken_deliverable: "#ef4444",
-  timeout_crash: "#475569",
+const TIER_BY_KEY: Readonly<
+  Record<FailureTier, { readonly fillVar: string; readonly inkVar: string }>
+> = {
+  clean_pass: { fillVar: "var(--t-clean)", inkVar: "var(--t-clean-ink)" },
+  self_healed_friction: {
+    fillVar: "var(--t-friction)",
+    inkVar: "var(--t-friction-ink)",
+  },
+  hygiene_nudge: { fillVar: "var(--t-nudge)", inkVar: "var(--t-nudge-ink)" },
+  broken_deliverable: {
+    fillVar: "var(--t-broken)",
+    inkVar: "var(--t-broken-ink)",
+  },
+  timeout_crash: {
+    fillVar: "var(--t-timeout)",
+    inkVar: "var(--t-timeout-ink)",
+  },
 };
 
 const esc = (text: string): string =>
@@ -144,27 +244,27 @@ const markerPath = (
   cy: number,
   radius: number
 ): string => {
-  const color = providerColor(provider);
+  const color = providerVar(provider);
 
   if (provider === "anthropic") {
     const r = radius * 1.18;
 
-    return `<polygon points="${cx.toFixed(1)},${(cy - r).toFixed(1)} ${(cx + r).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + r).toFixed(1)} ${(cx - r).toFixed(1)},${cy.toFixed(1)}" fill="${color}" stroke="${BG}" stroke-width="1.5"/>`;
+    return `<polygon points="${cx.toFixed(1)},${(cy - r).toFixed(1)} ${(cx + r).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + r).toFixed(1)} ${(cx - r).toFixed(1)},${cy.toFixed(1)}" fill="var(--c-card)" stroke="${color}" stroke-width="2.4"/>`;
   }
 
   if (provider === "openai") {
-    const half = radius * 0.92;
+    const half = radius * 0.9;
 
-    return `<rect x="${(cx - half).toFixed(1)}" y="${(cy - half).toFixed(1)}" width="${(half * 2).toFixed(1)}" height="${(half * 2).toFixed(1)}" rx="2" fill="${color}" stroke="${BG}" stroke-width="1.5"/>`;
+    return `<rect x="${(cx - half).toFixed(1)}" y="${(cy - half).toFixed(1)}" width="${(half * 2).toFixed(1)}" height="${(half * 2).toFixed(1)}" rx="1.8" fill="var(--c-card)" stroke="${color}" stroke-width="2.4"/>`;
   }
 
   if (provider === "deepseek") {
-    const r = radius * 1.15;
+    const r = radius * 1.12;
 
-    return `<polygon points="${cx.toFixed(1)},${(cy - r).toFixed(1)} ${(cx + r).toFixed(1)},${(cy + r * 0.82).toFixed(1)} ${(cx - r).toFixed(1)},${(cy + r * 0.82).toFixed(1)}" fill="${color}" stroke="${BG}" stroke-width="1.5"/>`;
+    return `<polygon points="${cx.toFixed(1)},${(cy - r).toFixed(1)} ${(cx + r).toFixed(1)},${(cy + r * 0.82).toFixed(1)} ${(cx - r).toFixed(1)},${(cy + r * 0.82).toFixed(1)}" fill="var(--c-card)" stroke="${color}" stroke-width="2.4"/>`;
   }
 
-  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius.toFixed(1)}" fill="${color}" stroke="${BG}" stroke-width="1.5"/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius.toFixed(1)}" fill="var(--c-card)" stroke="${color}" stroke-width="2.4"/>`;
 };
 
 const svgHeader = (
@@ -174,13 +274,13 @@ const svgHeader = (
   subtitle: string
 ): string =>
   [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(title)}">`,
+    `<svg class="omkar-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(title)}">`,
     `<title>${esc(title)}</title>`,
     `<desc>${esc(subtitle)}</desc>`,
-    `<rect x="0" y="0" width="${width}" height="${height}" fill="${BG}"/>`,
-    `<rect x="12" y="12" width="${width - 24}" height="${height - 24}" rx="12" fill="${CARD}" stroke="${BORDER}" stroke-width="1"/>`,
-    `<text x="32" y="42" fill="${TEXT}" font-family="${FONT_SANS}" font-size="18" font-weight="700">${esc(title)}</text>`,
-    `<text x="32" y="62" fill="${MUTED}" font-family="${FONT_SANS}" font-size="12">${esc(subtitle)}</text>`,
+    SVG_THEME_STYLE,
+    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" fill="var(--c-card)" stroke="var(--c-border)" stroke-width="1"/>`,
+    `<text x="28" y="36" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="17" font-weight="600" letter-spacing="-0.02em">${esc(title)}</text>`,
+    `<text x="28" y="56" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="12">${esc(subtitle)}</text>`,
   ].join("\n");
 
 const rectsOverlap = (a: Rect, b: Rect): boolean =>
@@ -200,7 +300,7 @@ const labelRect = (
     x1 = x - textWidth;
   }
 
-  return { x1: x1 - 3, y1: y - 12, x2: x1 + textWidth + 3, y2: y + 4 };
+  return { x1: x1 - 4, y1: y - 14, x2: x1 + textWidth + 4, y2: y + 6 };
 };
 
 const placeLabels = (
@@ -212,22 +312,23 @@ const placeLabels = (
   }[],
   bounds: Rect
 ): readonly PlacedLabel[] => {
-  const placed: Rect[] = [];
+  const pointBoxes: Rect[] = [];
+  const labelBoxes: Rect[] = [];
 
   for (const point of coords) {
-    placed.push({
-      x1: point.cx - point.r - 3,
-      y1: point.cy - point.r - 3,
-      x2: point.cx + point.r + 3,
-      y2: point.cy + point.r + 3,
+    pointBoxes.push({
+      x1: point.cx - point.r - 5,
+      y1: point.cy - point.r - 5,
+      x2: point.cx + point.r + 5,
+      y2: point.cy + point.r + 5,
     });
   }
 
   const results: PlacedLabel[] = [];
 
   for (const point of coords) {
-    const textWidth = point.label.length * 6.7 + 6;
-    const gap = point.r + 7;
+    const textWidth = point.label.length * 6.4 + 10;
+    const gap = point.r + 8;
 
     const candidates: readonly {
       readonly x: number;
@@ -237,18 +338,27 @@ const placeLabels = (
     }[] = [
       { x: point.cx + gap, y: point.cy + 4, anchor: "start", dist: 1 },
       { x: point.cx - gap, y: point.cy + 4, anchor: "end", dist: 1.1 },
-      { x: point.cx, y: point.cy - gap - 2, anchor: "middle", dist: 1.2 },
-      { x: point.cx, y: point.cy + gap + 11, anchor: "middle", dist: 1.3 },
+      { x: point.cx, y: point.cy - gap - 3, anchor: "middle", dist: 1.2 },
+      { x: point.cx, y: point.cy + gap + 12, anchor: "middle", dist: 1.3 },
       { x: point.cx + gap, y: point.cy - gap, anchor: "start", dist: 1.6 },
       { x: point.cx - gap, y: point.cy - gap, anchor: "end", dist: 1.7 },
-      { x: point.cx + gap, y: point.cy + gap + 10, anchor: "start", dist: 1.8 },
-      { x: point.cx - gap, y: point.cy + gap + 10, anchor: "end", dist: 1.9 },
-      { x: point.cx + gap + 14, y: point.cy - 18, anchor: "start", dist: 3 },
-      { x: point.cx - gap - 14, y: point.cy - 18, anchor: "end", dist: 3.1 },
-      { x: point.cx + gap + 14, y: point.cy + 24, anchor: "start", dist: 3.2 },
-      { x: point.cx - gap - 14, y: point.cy + 24, anchor: "end", dist: 3.3 },
-      { x: point.cx, y: point.cy - gap - 20, anchor: "middle", dist: 3.5 },
-      { x: point.cx, y: point.cy + gap + 28, anchor: "middle", dist: 3.6 },
+      { x: point.cx + gap, y: point.cy + gap + 11, anchor: "start", dist: 1.8 },
+      { x: point.cx - gap, y: point.cy + gap + 11, anchor: "end", dist: 1.9 },
+      { x: point.cx + gap + 14, y: point.cy - 20, anchor: "start", dist: 3 },
+      { x: point.cx - gap - 14, y: point.cy - 20, anchor: "end", dist: 3.1 },
+      { x: point.cx + gap + 14, y: point.cy + 26, anchor: "start", dist: 3.2 },
+      { x: point.cx - gap - 14, y: point.cy + 26, anchor: "end", dist: 3.3 },
+      { x: point.cx, y: point.cy - gap - 22, anchor: "middle", dist: 3.5 },
+      { x: point.cx, y: point.cy + gap + 30, anchor: "middle", dist: 3.6 },
+      { x: point.cx - gap - 18, y: point.cy + 44, anchor: "end", dist: 4.1 },
+      { x: point.cx - gap - 18, y: point.cy - 36, anchor: "end", dist: 4.2 },
+      { x: point.cx - gap - 38, y: point.cy + 4, anchor: "end", dist: 4.3 },
+      { x: point.cx - gap - 38, y: point.cy - 18, anchor: "end", dist: 4.4 },
+      { x: point.cx - gap - 38, y: point.cy + 26, anchor: "end", dist: 4.45 },
+      { x: point.cx - gap - 18, y: point.cy + 62, anchor: "end", dist: 4.5 },
+      { x: point.cx + gap + 18, y: point.cy + 44, anchor: "start", dist: 4.6 },
+      { x: point.cx + gap + 18, y: point.cy - 36, anchor: "start", dist: 4.7 },
+      { x: point.cx - gap - 22, y: point.cy + 80, anchor: "end", dist: 5 },
     ];
 
     let best = candidates[0] ?? {
@@ -271,24 +381,30 @@ const placeLabels = (
       let cost = candidate.dist;
 
       if (box.x1 < bounds.x1) {
-        cost += 50 + (bounds.x1 - box.x1);
+        cost += 60 + (bounds.x1 - box.x1);
       }
 
       if (box.x2 > bounds.x2) {
-        cost += 50 + (box.x2 - bounds.x2);
+        cost += 60 + (box.x2 - bounds.x2);
       }
 
       if (box.y1 < bounds.y1) {
-        cost += 50 + (bounds.y1 - box.y1);
+        cost += 60 + (bounds.y1 - box.y1);
       }
 
       if (box.y2 > bounds.y2) {
-        cost += 50 + (box.y2 - bounds.y2);
+        cost += 60 + (box.y2 - bounds.y2);
       }
 
-      for (const existing of placed) {
+      for (const existing of pointBoxes) {
         if (rectsOverlap(box, existing)) {
-          cost += 40;
+          cost += 140;
+        }
+      }
+
+      for (const existing of labelBoxes) {
+        if (rectsOverlap(box, existing)) {
+          cost += 60;
         }
       }
 
@@ -298,7 +414,7 @@ const placeLabels = (
       }
     }
 
-    placed.push(labelRect(best.x, best.y, best.anchor, textWidth));
+    labelBoxes.push(labelRect(best.x, best.y, best.anchor, textWidth));
     results.push({
       x: best.x,
       y: best.y,
@@ -319,10 +435,10 @@ const providerLegend = (
   let cursor = startX;
 
   for (const provider of providers) {
-    parts.push(markerPath(provider, cursor, y - 4, 5));
+    parts.push(markerPath(provider, cursor, y - 4, 4.5));
     const label = providerDisplay(provider);
     parts.push(
-      `<text x="${(cursor + 10).toFixed(1)}" y="${y}" fill="${MUTED}" font-family="${FONT_SANS}" font-size="11">${esc(label)}</text>`
+      `<text x="${(cursor + 10).toFixed(1)}" y="${y}" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11">${esc(label)}</text>`
     );
     cursor += label.length * 6.8 + 26;
   }
@@ -425,16 +541,16 @@ const renderParetoStepPath = (
     }
   }
 
-  return `<path d="${pathPts.join(" ")}" fill="none" stroke="${PARETO}" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.85"/>`;
+  return `<path d="${pathPts.join(" ")}" fill="none" stroke="var(--c-frontier)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.65"/>`;
 };
 
 const renderParetoScatter = (options: ParetoChartOptions): string => {
-  const width = 920;
-  const height = 520;
-  const left = 78;
-  const right = width - 40;
+  const width = 960;
+  const height = 540;
+  const left = 76;
+  const right = width - 36;
   const top = 96;
-  const bottom = height - 66;
+  const bottom = height - 62;
   const plotW = right - left;
   const plotH = bottom - top;
 
@@ -451,8 +567,8 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
     : Math.max(0, minXRaw * 0.85);
 
   const maxX = options.logX
-    ? maxXRaw * 1.35
-    : Math.max(minX + 1, maxXRaw * 1.12);
+    ? maxXRaw * 1.4
+    : Math.max(minX + 1, maxXRaw * 1.14);
 
   const minYRaw = Math.min(...ys);
   const minY = Math.max(0, Math.floor((minYRaw - 4) / 5) * 5);
@@ -480,16 +596,16 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
     svgHeader(width, height, options.title, options.subtitle),
   ];
 
-  // Gridlines and Y ticks.
+  // Horizontal gridlines and Y ticks.
   for (const yTick of linearTicks(minY, 100, 6)) {
     const py = scaleY(yTick);
     parts.push(
-      `<line x1="${left}" y1="${py.toFixed(1)}" x2="${right}" y2="${py.toFixed(1)}" stroke="${GRID}" stroke-width="1"/>`,
-      `<text x="${left - 10}" y="${(py + 4).toFixed(1)}" text-anchor="end" fill="${MUTED}" font-family="${FONT_MONO}" font-size="11">${yTick.toFixed(0)}</text>`
+      `<line x1="${left}" y1="${py.toFixed(1)}" x2="${right}" y2="${py.toFixed(1)}" stroke="var(--c-grid)" stroke-width="1"/>`,
+      `<text x="${left - 10}" y="${(py + 4).toFixed(1)}" text-anchor="end" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="11">${yTick.toFixed(0)}</text>`
     );
   }
 
-  // X ticks.
+  // Vertical gridlines and X ticks.
   const xTicks = options.logX
     ? logTicks(minX, maxX)
     : linearTicks(minX, maxX, 6);
@@ -502,27 +618,27 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
     }
 
     parts.push(
-      `<line x1="${px.toFixed(1)}" y1="${top}" x2="${px.toFixed(1)}" y2="${bottom}" stroke="${GRID}" stroke-width="1"/>`,
-      `<text x="${px.toFixed(1)}" y="${bottom + 20}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_MONO}" font-size="11">${esc(options.formatX(xTick))}</text>`
+      `<line x1="${px.toFixed(1)}" y1="${top}" x2="${px.toFixed(1)}" y2="${bottom}" stroke="var(--c-grid)" stroke-width="1"/>`,
+      `<text x="${px.toFixed(1)}" y="${bottom + 20}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="11">${esc(options.formatX(xTick))}</text>`
     );
   }
 
   // Axes and directional hints.
   parts.push(
-    `<line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="${AXIS}" stroke-width="1.2"/>`,
-    `<line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="${AXIS}" stroke-width="1.2"/>`,
-    `<text x="${(left + right) / 2}" y="${height - 24}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_SANS}" font-size="12">${esc(options.xLabel)}</text>`,
-    `<text x="26" y="${(top + bottom) / 2}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_SANS}" font-size="12" transform="rotate(-90 26 ${(top + bottom) / 2})">${esc(options.yLabel)}</text>`
+    `<line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="var(--c-axis)" stroke-width="1"/>`,
+    `<line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="var(--c-axis)" stroke-width="1"/>`,
+    `<text x="${(left + right) / 2}" y="${height - 20}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="12">${esc(options.xLabel)}</text>`,
+    `<text x="22" y="${(top + bottom) / 2}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="12" transform="rotate(-90 22 ${(top + bottom) / 2})">${esc(options.yLabel)}</text>`
   );
 
   if (minY > 0) {
     parts.push(
-      `<text x="${left + 8}" y="${bottom - 8}" fill="${SUBTLE}" font-family="${FONT_SANS}" font-size="10">Y-axis starts at ${minY} (zoomed)</text>`
+      `<text x="${left + 8}" y="${bottom - 8}" fill="var(--c-subtle)" font-family="${FONT_SANS}" font-size="10">Y-axis starts at ${minY} (zoomed)</text>`
     );
   }
 
   parts.push(
-    `<text x="${left + 8}" y="${top + 16}" fill="${PARETO}" font-family="${FONT_SANS}" font-size="11" font-weight="600">↖ Better (Higher autonomy, lower ${options.logX ? "cost" : "wall time"})</text>`
+    `<text x="${left + 8}" y="${top + 16}" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="11" font-weight="600">↖ Better (Higher autonomy, lower ${options.logX ? "cost" : "wall time"})</text>`
   );
 
   // Pareto frontier step-line.
@@ -540,13 +656,13 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
     item,
     cx: scaleX(Math.max(item.x, options.logX ? 0.05 : 0)),
     cy: scaleY(item.y),
-    r: item.radius ?? (frontierIds.has(item.id) ? 7.5 : 6),
+    r: item.radius ?? (frontierIds.has(item.id) ? 6.5 : 5.5),
     label: item.label,
   }));
 
   const labels = placeLabels(coords, {
     x1: left + 6,
-    y1: top + 20,
+    y1: top + 22,
     x2: right - 6,
     y2: bottom - 12,
   });
@@ -561,17 +677,19 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
 
     if (placed.leader) {
       parts.push(
-        `<line x1="${point.cx.toFixed(1)}" y1="${point.cy.toFixed(1)}" x2="${placed.x.toFixed(1)}" y2="${(placed.y - 4).toFixed(1)}" stroke="${SUBTLE}" stroke-width="0.9" stroke-dasharray="2 2"/>`
+        `<line x1="${point.cx.toFixed(1)}" y1="${point.cy.toFixed(1)}" x2="${placed.x.toFixed(1)}" y2="${(placed.y - 4).toFixed(1)}" stroke="var(--c-subtle)" stroke-width="0.9" stroke-dasharray="2 2"/>`
       );
     }
 
-    const halo = frontierIds.has(point.item.id)
-      ? `<circle cx="${point.cx.toFixed(1)}" cy="${point.cy.toFixed(1)}" r="${(point.r + 3.5).toFixed(1)}" fill="none" stroke="${PARETO}" stroke-width="1.3" opacity="0.7"/>`
+    const isFrontier = frontierIds.has(point.item.id);
+
+    const halo = isFrontier
+      ? `<circle cx="${point.cx.toFixed(1)}" cy="${point.cy.toFixed(1)}" r="${(point.r + 4).toFixed(1)}" fill="none" stroke="var(--c-frontier)" stroke-width="1" opacity="0.35"/>`
       : "";
 
     parts.push(
       `<g class="chart-point" data-tip="${esc(point.item.tip)}">${halo}${markerPath(point.item.provider, point.cx, point.cy, point.r)}</g>`,
-      `<text x="${placed.x.toFixed(1)}" y="${placed.y.toFixed(1)}" text-anchor="${placed.anchor}" fill="${frontierIds.has(point.item.id) ? TEXT : MUTED}" font-family="${FONT_SANS}" font-size="11.5" font-weight="${frontierIds.has(point.item.id) ? "600" : "400"}">${esc(point.label)}</text>`
+      `<text x="${placed.x.toFixed(1)}" y="${placed.y.toFixed(1)}" text-anchor="${placed.anchor}" fill="${isFrontier ? "var(--c-text)" : "var(--c-muted)"}" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="${FONT_SANS}" font-size="11" font-weight="${isFrontier ? "600" : "400"}">${esc(point.label)}</text>`
     );
   }
 
@@ -589,9 +707,9 @@ const renderParetoScatter = (options: ParetoChartOptions): string => {
   const legendStart = Math.max(left, right - legendWidth);
 
   parts.push(
-    providerLegend(providers, legendStart, 82),
-    `<line x1="${(right - 102).toFixed(1)}" y1="78" x2="${(right - 78).toFixed(1)}" y2="78" stroke="${PARETO}" stroke-width="1.8" stroke-dasharray="5 3"/>`,
-    `<text x="${(right - 72).toFixed(1)}" y="82" fill="${MUTED}" font-family="${FONT_SANS}" font-size="11">Pareto frontier</text>`,
+    providerLegend(providers, legendStart, 80),
+    `<line x1="${(right - 102).toFixed(1)}" y1="76" x2="${(right - 78).toFixed(1)}" y2="76" stroke="var(--c-frontier)" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.7"/>`,
+    `<text x="${(right - 72).toFixed(1)}" y="80" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11">Pareto frontier</text>`,
     "</svg>"
   );
 
@@ -602,12 +720,12 @@ const renderReviewerCalibration = (
   rows: readonly ModelRoleSummary[],
   excludedTasks: readonly string[]
 ): string => {
-  const width = 920;
-  const height = 520;
-  const left = 78;
-  const right = width - 44;
+  const width = 960;
+  const height = 540;
+  const left = 76;
+  const right = width - 40;
   const top = 96;
-  const bottom = height - 66;
+  const bottom = height - 62;
   const plotW = right - left;
   const plotH = bottom - top;
 
@@ -630,9 +748,9 @@ const renderReviewerCalibration = (
     left + ((maxAlarms - alarms) / maxAlarms) * plotW;
 
   const scaleY = (recallPct: number): number =>
-    bottom - ((recallPct - minRecall) / Math.max(10, 102 - minRecall)) * plotH;
+    bottom - ((recallPct - minRecall) / Math.max(10, 106 - minRecall)) * plotH;
 
-  const scaleR = (wallS: number): number => 6 + Math.sqrt(wallS / maxWall) * 12;
+  const scaleR = (wallS: number): number => 6 + Math.sqrt(wallS / maxWall) * 11;
 
   const subtitle =
     excludedTasks.length > 0
@@ -643,42 +761,42 @@ const renderReviewerCalibration = (
     svgHeader(width, height, "Code Reviewer Calibration Quadrant", subtitle),
   ];
 
-  // Quadrant highlight for top-right (high recall >= 95%, <= 1 weighted false alarm).
+  // Top-right target quadrant highlight.
   const qx = scaleX(1.5);
   const qy = scaleY(95);
   parts.push(
-    `<rect x="${qx.toFixed(1)}" y="${top}" width="${(right - qx).toFixed(1)}" height="${(qy - top).toFixed(1)}" fill="#10b981" opacity="0.07"/>`,
-    `<line x1="${qx.toFixed(1)}" y1="${top}" x2="${qx.toFixed(1)}" y2="${bottom}" stroke="${AXIS}" stroke-width="1" stroke-dasharray="4 4"/>`,
-    `<line x1="${left}" y1="${qy.toFixed(1)}" x2="${right}" y2="${qy.toFixed(1)}" stroke="${AXIS}" stroke-width="1" stroke-dasharray="4 4"/>`,
-    `<text x="${(right - 8).toFixed(1)}" y="${(top + 16).toFixed(1)}" text-anchor="end" fill="#34d399" font-family="${FONT_SANS}" font-size="11" font-weight="600">High Recall + High Restraint ↗</text>`,
-    `<text x="${(left + 8).toFixed(1)}" y="${(top + 16).toFixed(1)}" fill="#f59e0b" font-family="${FONT_SANS}" font-size="11">High Recall, Noisy / Pedantic</text>`,
-    `<text x="${(right - 8).toFixed(1)}" y="${(bottom - 10).toFixed(1)}" text-anchor="end" fill="${SUBTLE}" font-family="${FONT_SANS}" font-size="11">Clean but Under-Sensitive</text>`
+    `<rect x="${qx.toFixed(1)}" y="${top}" width="${(right - qx).toFixed(1)}" height="${(qy - top).toFixed(1)}" fill="var(--c-quadrant)"/>`,
+    `<line x1="${qx.toFixed(1)}" y1="${top}" x2="${qx.toFixed(1)}" y2="${bottom}" stroke="var(--c-axis)" stroke-width="1" stroke-dasharray="4 4"/>`,
+    `<line x1="${left}" y1="${qy.toFixed(1)}" x2="${right}" y2="${qy.toFixed(1)}" stroke="var(--c-axis)" stroke-width="1" stroke-dasharray="4 4"/>`,
+    `<text x="${(right - 8).toFixed(1)}" y="${(top + 16).toFixed(1)}" text-anchor="end" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="11" font-weight="600">High Recall + High Restraint ↗</text>`,
+    `<text x="${(left + 8).toFixed(1)}" y="${(top + 16).toFixed(1)}" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11">High Recall, Noisy / Pedantic</text>`,
+    `<text x="${(right - 8).toFixed(1)}" y="${(bottom - 10).toFixed(1)}" text-anchor="end" fill="var(--c-subtle)" font-family="${FONT_SANS}" font-size="11">Clean but Under-Sensitive</text>`
   );
 
   for (const yTick of linearTicks(minRecall, 100, 5)) {
     const py = scaleY(yTick);
     parts.push(
-      `<line x1="${left}" y1="${py.toFixed(1)}" x2="${right}" y2="${py.toFixed(1)}" stroke="${GRID}" stroke-width="1"/>`,
-      `<text x="${left - 10}" y="${(py + 4).toFixed(1)}" text-anchor="end" fill="${MUTED}" font-family="${FONT_MONO}" font-size="11">${yTick.toFixed(0)}%</text>`
+      `<line x1="${left}" y1="${py.toFixed(1)}" x2="${right}" y2="${py.toFixed(1)}" stroke="var(--c-grid)" stroke-width="1"/>`,
+      `<text x="${left - 10}" y="${(py + 4).toFixed(1)}" text-anchor="end" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="11">${yTick.toFixed(0)}%</text>`
     );
   }
 
   for (let alarms = 0; alarms <= maxAlarms; alarms += 1) {
     const px = scaleX(alarms);
     parts.push(
-      `<line x1="${px.toFixed(1)}" y1="${top}" x2="${px.toFixed(1)}" y2="${bottom}" stroke="${GRID}" stroke-width="1"/>`,
-      `<text x="${px.toFixed(1)}" y="${bottom + 20}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_MONO}" font-size="11">${alarms}</text>`
+      `<line x1="${px.toFixed(1)}" y1="${top}" x2="${px.toFixed(1)}" y2="${bottom}" stroke="var(--c-grid)" stroke-width="1"/>`,
+      `<text x="${px.toFixed(1)}" y="${bottom + 20}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="11">${alarms}</text>`
     );
   }
 
   parts.push(
-    `<line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="${AXIS}" stroke-width="1.2"/>`,
-    `<line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="${AXIS}" stroke-width="1.2"/>`,
-    `<text x="${(left + right) / 2}" y="${height - 24}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_SANS}" font-size="12">Weighted Unsolicited False Alarms (2× P0–P2 + 1× P3 — right is cleaner)</text>`,
-    `<text x="26" y="${(top + bottom) / 2}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_SANS}" font-size="12" transform="rotate(-90 26 ${(top + bottom) / 2})">Seeded Defect Recall (%)</text>`
+    `<line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="var(--c-axis)" stroke-width="1"/>`,
+    `<line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="var(--c-axis)" stroke-width="1"/>`,
+    `<text x="${(left + right) / 2}" y="${height - 20}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="12">Weighted Unsolicited False Alarms (2× P0–P2 + 1× P3 — right is cleaner)</text>`,
+    `<text x="22" y="${(top + bottom) / 2}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="12" transform="rotate(-90 22 ${(top + bottom) / 2})">Seeded Defect Recall (%)</text>`
   );
 
-  // Small deterministic vertical jitter when multiple models tie at exact (0 alarms, 100% recall).
+  // Small deterministic jitter when multiple models tie at exact (0 alarms, 100% recall).
   const coords = rows.map((row, idx) => {
     const recallPct = (row.defectRecall ?? 1) * 100;
 
@@ -690,24 +808,25 @@ const renderReviewerCalibration = (
           Math.abs((prev.defectRecall ?? 1) * 100 - recallPct) < 0.1
       ).length;
 
-    const cx = scaleX(row.weightedFalseAlarms) - sameSpot * 18;
-    const cy = scaleY(recallPct) + sameSpot * 10;
+    const cx = scaleX(row.weightedFalseAlarms) - sameSpot * 22;
+    const cy = scaleY(recallPct) + sameSpot * 16;
     const r = scaleR(row.medianWallS);
-    const tip = `${row.model} | LSAS ${row.lsas.toFixed(1)} | Recall ${recallPct.toFixed(1)}% | FP ${row.falsePositiveP0P2}, P3 ${row.nitpickP3} | Wall ${row.medianWallS.toFixed(1)}s | Cost $${row.totalCostUsd.toFixed(2)}`;
+    const displayName = displayModelLabel(row.model);
+    const tip = `${displayName} | LSAS ${row.lsas.toFixed(1)} | Recall ${recallPct.toFixed(1)}% | FP ${row.falsePositiveP0P2}, P3 ${row.nitpickP3} | Wall ${row.medianWallS.toFixed(1)}s | Cost $${row.totalCostUsd.toFixed(2)}`;
 
     return {
       row,
       cx,
       cy,
       r,
-      label: `${shortModelLabel(row.model)} (${row.medianWallS.toFixed(0)}s)`,
+      label: `${displayName} · ${row.medianWallS.toFixed(0)}s`,
       tip,
     };
   });
 
   const labels = placeLabels(coords, {
     x1: left + 6,
-    y1: top + 22,
+    y1: top + 24,
     x2: right - 6,
     y2: bottom - 18,
   });
@@ -722,19 +841,19 @@ const renderReviewerCalibration = (
 
     if (placed.leader) {
       parts.push(
-        `<line x1="${point.cx.toFixed(1)}" y1="${point.cy.toFixed(1)}" x2="${placed.x.toFixed(1)}" y2="${(placed.y - 4).toFixed(1)}" stroke="${SUBTLE}" stroke-width="0.9" stroke-dasharray="2 2"/>`
+        `<line x1="${point.cx.toFixed(1)}" y1="${point.cy.toFixed(1)}" x2="${placed.x.toFixed(1)}" y2="${(placed.y - 4).toFixed(1)}" stroke="var(--c-subtle)" stroke-width="0.9" stroke-dasharray="2 2"/>`
       );
     }
 
-    const color = providerColor(point.row.provider);
+    const color = providerVar(point.row.provider);
     parts.push(
-      `<g class="chart-point" data-tip="${esc(point.tip)}"><circle cx="${point.cx.toFixed(1)}" cy="${point.cy.toFixed(1)}" r="${point.r.toFixed(1)}" fill="${color}" fill-opacity="0.32" stroke="${color}" stroke-width="2"/></g>`,
-      `<text x="${placed.x.toFixed(1)}" y="${placed.y.toFixed(1)}" text-anchor="${placed.anchor}" fill="${TEXT}" font-family="${FONT_SANS}" font-size="11">${esc(point.label)}</text>`
+      `<g class="chart-point" data-tip="${esc(point.tip)}"><circle cx="${point.cx.toFixed(1)}" cy="${point.cy.toFixed(1)}" r="${point.r.toFixed(1)}" fill="${color}" fill-opacity="0.16" stroke="${color}" stroke-width="2.2"/></g>`,
+      `<text x="${placed.x.toFixed(1)}" y="${placed.y.toFixed(1)}" text-anchor="${placed.anchor}" fill="var(--c-text)" stroke="var(--c-card)" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="${FONT_SANS}" font-size="11">${esc(point.label)}</text>`
     );
   }
 
   const providers = [...new Set(rows.map((row) => row.provider))].toSorted();
-  parts.push(providerLegend(providers, left, 82), "</svg>");
+  parts.push(providerLegend(providers, left, 80), "</svg>");
 
   return parts.join("\n");
 };
@@ -754,7 +873,7 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
     for (const row of summary.combinedCoderRows) {
       rows.push({
         section: "Coders (Solo + Pair)",
-        label: shortModelLabel(row.model),
+        label: displayModelLabel(row.model),
         scoreLabel: `ACI ${row.aci.toFixed(1)}`,
         total: row.totalTrials,
         counts: row.tierCounts,
@@ -764,7 +883,7 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
     for (const row of summary.coderRows) {
       rows.push({
         section: "Standalone Coders",
-        label: shortModelLabel(row.model),
+        label: displayModelLabel(row.model),
         scoreLabel: `LSAS ${row.lsas.toFixed(1)}`,
         total: row.trials,
         counts: row.tierCounts,
@@ -778,22 +897,22 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
         summary.excludedReviewerTasks.length > 0
           ? "Code Reviewers (Calibrated)"
           : "Code Reviewers",
-      label: shortModelLabel(row.model),
+      label: displayModelLabel(row.model),
       scoreLabel: `LSAS ${row.lsas.toFixed(1)}`,
       total: row.trials,
       counts: row.tierCounts,
     });
   }
 
-  const width = 920;
-  const rowH = 26;
-  const sectionGap = 24;
+  const width = 960;
+  const rowH = 32;
+  const sectionGap = 28;
   const sections = new Set(rows.map((row) => row.section)).size;
   const top = 104;
-  const height = top + rows.length * rowH + sections * sectionGap + 36;
-  const labelRight = 175;
-  const barLeft = 188;
-  const barRight = width - 110;
+  const height = top + rows.length * rowH + sections * sectionGap + 34;
+  const labelRight = 220;
+  const barLeft = 232;
+  const barRight = width - 114;
   const barW = barRight - barLeft;
 
   const parts: string[] = [
@@ -806,14 +925,14 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
   ];
 
   // Legend row.
-  let legendX = 32;
+  let legendX = 28;
 
   for (const tier of TIER_META) {
     parts.push(
-      `<rect x="${legendX}" y="76" width="11" height="11" rx="2" fill="${tier.color}"/>`,
-      `<text x="${legendX + 16}" y="86" fill="${MUTED}" font-family="${FONT_SANS}" font-size="11">${esc(tier.label)}</text>`
+      `<rect x="${legendX}" y="73" width="11" height="11" rx="2.5" fill="${tier.fillVar}"/>`,
+      `<text x="${legendX + 16}" y="82.5" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11">${esc(tier.label)}</text>`
     );
-    legendX += tier.label.length * 6.4 + 30;
+    legendX += tier.label.length * 6.3 + 30;
   }
 
   let cursorY = top;
@@ -826,14 +945,14 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
       }
 
       parts.push(
-        `<text x="32" y="${cursorY + 12}" fill="${PARETO}" font-family="${FONT_SANS}" font-size="11.5" font-weight="700">${esc(row.section.toUpperCase())}</text>`
+        `<text x="28" y="${cursorY + 12}" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11" font-weight="600" letter-spacing="0.06em">${esc(row.section.toUpperCase())}</text>`
       );
       cursorY += sectionGap;
       lastSection = row.section;
     }
 
     parts.push(
-      `<text x="${labelRight}" y="${cursorY + 15}" text-anchor="end" fill="${TEXT}" font-family="${FONT_SANS}" font-size="12">${esc(row.label)}</text>`
+      `<text x="${labelRight}" y="${cursorY + 16}" text-anchor="end" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="11.5">${esc(row.label)}</text>`
     );
 
     let segX = barLeft;
@@ -848,12 +967,12 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
       const segW = (count / Math.max(1, row.total)) * barW;
       const tip = `${row.label} | ${tier.label}: ${count}/${row.total} (${((100 * count) / row.total).toFixed(1)}%)`;
       parts.push(
-        `<rect class="chart-point" data-tip="${esc(tip)}" x="${segX.toFixed(1)}" y="${cursorY + 3}" width="${Math.max(1, segW - 1).toFixed(1)}" height="16" rx="2" fill="${tier.color}"/>`
+        `<rect class="chart-point" data-tip="${esc(tip)}" x="${segX.toFixed(1)}" y="${cursorY + 3}" width="${Math.max(1, segW - 1.5).toFixed(1)}" height="18" rx="3" fill="${tier.fillVar}"/>`
       );
 
       if (segW >= 24) {
         parts.push(
-          `<text x="${(segX + segW / 2).toFixed(1)}" y="${cursorY + 15}" text-anchor="middle" fill="${BG}" font-family="${FONT_MONO}" font-size="10.5" font-weight="700">${count}</text>`
+          `<text x="${(segX + segW / 2).toFixed(1)}" y="${cursorY + 15.5}" text-anchor="middle" fill="${tier.inkVar}" font-family="${FONT_MONO}" font-size="10.5" font-weight="600">${count}</text>`
         );
       }
 
@@ -861,7 +980,7 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
     }
 
     parts.push(
-      `<text x="${barRight + 10}" y="${cursorY + 15}" fill="${MUTED}" font-family="${FONT_MONO}" font-size="11">${esc(row.scoreLabel)}</text>`
+      `<text x="${barRight + 10}" y="${cursorY + 16}" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="11">${esc(row.scoreLabel)}</text>`
     );
     cursorY += rowH;
   }
@@ -871,24 +990,20 @@ const renderFailureTaxonomy = (summary: BenchmarkSummary): string => {
   return parts.join("\n");
 };
 
-const heatFill = (lsas: number): string => {
-  if (lsas >= 99.5) {
-    return "#065f46";
+const matrixAccentVar = (lsas: number): string => {
+  if (lsas >= 98) {
+    return "var(--m-top)";
   }
 
-  if (lsas >= 94) {
-    return "#0f766e";
+  if (lsas >= 92) {
+    return "var(--m-high)";
   }
 
-  if (lsas >= 88) {
-    return "#1e40af";
+  if (lsas >= 82) {
+    return "var(--m-mid)";
   }
 
-  if (lsas >= 80) {
-    return "#92400e";
-  }
-
-  return "#991b1b";
+  return "var(--m-low)";
 };
 
 const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
@@ -902,18 +1017,24 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
     ])
   );
 
-  const width = Math.max(760, 260 + reviewers.length * 260);
-  const rowH = 54;
-  const colW = Math.floor((width - 260) / Math.max(1, reviewers.length));
-  const top = 114;
-  const height = top + coders.length * rowH + 64;
+  const labelRight = 224;
+  const colStart = 238;
+  const width = Math.max(840, colStart + 24 + reviewers.length * 300);
+  const rowH = 58;
+
+  const colW = Math.floor(
+    (width - colStart - 24) / Math.max(1, reviewers.length)
+  );
+
+  const top = 110;
+  const height = top + coders.length * rowH + 56;
 
   const parts: string[] = [
     svgHeader(
       width,
       height,
       "Phase 3 Coder × Reviewer Synergy Matrix",
-      "Cell color = Pair LSAS (0–100); displays LSAS, strict Pass@1, 4-task cost, and median wall time per coder → reviewer cell"
+      "Status dot = Pair LSAS tier · Displays Pair LSAS, strict Pass@1, 4-task cost, and median wall time per coder → reviewer cell"
     ),
   ];
 
@@ -925,9 +1046,9 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
       continue;
     }
 
-    const x = 228 + col * colW + colW / 2;
+    const x = colStart + col * colW + colW / 2;
     parts.push(
-      `<text x="${x.toFixed(1)}" y="96" text-anchor="middle" fill="${TEXT}" font-family="${FONT_SANS}" font-size="12.5" font-weight="700">Reviewer: ${esc(shortModelLabel(reviewer))}</text>`
+      `<text x="${x.toFixed(1)}" y="92" text-anchor="middle" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="12" font-weight="600">Reviewer: ${esc(displayModelLabel(reviewer))}</text>`
     );
   }
 
@@ -940,7 +1061,7 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
 
     const y = top + row * rowH;
     parts.push(
-      `<text x="214" y="${y + 31}" text-anchor="end" fill="${TEXT}" font-family="${FONT_SANS}" font-size="12" font-weight="600">${esc(shortModelLabel(coder))}</text>`
+      `<text x="${labelRight}" y="${y + 33}" text-anchor="end" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="11.5" font-weight="500">${esc(displayModelLabel(coder))}</text>`
     );
 
     for (let col = 0; col < reviewers.length; col += 1) {
@@ -951,22 +1072,24 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
       }
 
       const cell = cellMap.get(`${coder}\0${reviewer}`);
-      const x = 228 + col * colW;
+      const x = colStart + col * colW;
 
       if (cell === undefined) {
         parts.push(
-          `<rect x="${x + 4}" y="${y + 4}" width="${colW - 8}" height="${rowH - 8}" rx="6" fill="${BORDER}"/>`,
-          `<text x="${(x + colW / 2).toFixed(1)}" y="${y + 31}" text-anchor="middle" fill="${SUBTLE}" font-family="${FONT_MONO}" font-size="11">—</text>`
+          `<rect x="${x + 5}" y="${y + 5}" width="${colW - 10}" height="${rowH - 10}" rx="7" fill="var(--c-muted-bg)" stroke="var(--c-border)" stroke-width="1"/>`,
+          `<text x="${(x + colW / 2).toFixed(1)}" y="${y + 33}" text-anchor="middle" fill="var(--c-subtle)" font-family="${FONT_MONO}" font-size="11">—</text>`
         );
         continue;
       }
 
-      const tip = `${coder} -> ${reviewer} | LSAS ${cell.lsas.toFixed(1)} | Pass ${cell.passedCount}/${cell.trials} | ZSDR ${(100 * cell.zsdrRate).toFixed(0)}% | Cost $${cell.totalCostUsd.toFixed(2)} | Med wall ${cell.medianWallS.toFixed(1)}s`;
+      const accent = matrixAccentVar(cell.lsas);
+      const tip = `${displayModelLabel(coder)} → ${displayModelLabel(reviewer)} | LSAS ${cell.lsas.toFixed(1)} | Pass ${cell.passedCount}/${cell.trials} | ZSDR ${(100 * cell.zsdrRate).toFixed(0)}% | Cost $${cell.totalCostUsd.toFixed(2)} | Med wall ${cell.medianWallS.toFixed(1)}s`;
       parts.push(
         `<g class="chart-point" data-tip="${esc(tip)}">`,
-        `<rect x="${x + 4}" y="${y + 4}" width="${colW - 8}" height="${rowH - 8}" rx="6" fill="${heatFill(cell.lsas)}" stroke="${BORDER}" stroke-width="1"/>`,
-        `<text x="${(x + colW / 2).toFixed(1)}" y="${y + 23}" text-anchor="middle" fill="${TEXT}" font-family="${FONT_MONO}" font-size="13" font-weight="700">LSAS ${cell.lsas.toFixed(1)} · ${cell.passedCount}/${cell.trials}</text>`,
-        `<text x="${(x + colW / 2).toFixed(1)}" y="${y + 40}" text-anchor="middle" fill="#cbd5e1" font-family="${FONT_MONO}" font-size="10.5">$${cell.totalCostUsd.toFixed(2)} · med ${cell.medianWallS.toFixed(1)}s</text>`,
+        `<rect x="${x + 5}" y="${y + 5}" width="${colW - 10}" height="${rowH - 10}" rx="8" fill="var(--c-muted-bg)" stroke="var(--c-border)" stroke-width="1"/>`,
+        `<circle cx="${x + 18}" cy="${y + 21}" r="3.5" fill="${accent}"/>`,
+        `<text x="${(x + colW / 2 + 4).toFixed(1)}" y="${y + 25}" text-anchor="middle" fill="var(--c-text)" font-family="${FONT_MONO}" font-size="12.5" font-weight="600">LSAS ${cell.lsas.toFixed(1)} · ${cell.passedCount}/${cell.trials}</text>`,
+        `<text x="${(x + colW / 2 + 4).toFixed(1)}" y="${y + 42}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="10.5">$${cell.totalCostUsd.toFixed(2)} · med ${cell.medianWallS.toFixed(1)}s</text>`,
         "</g>"
       );
     }
@@ -975,7 +1098,7 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
   // Footer totals per reviewer.
   const footerY = top + coders.length * rowH + 28;
   parts.push(
-    `<text x="214" y="${footerY}" text-anchor="end" fill="${MUTED}" font-family="${FONT_SANS}" font-size="11.5" font-weight="600">Reviewer total</text>`
+    `<text x="${labelRight}" y="${footerY}" text-anchor="end" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="11.5" font-weight="600">Reviewer total</text>`
   );
 
   for (let col = 0; col < reviewers.length; col += 1) {
@@ -993,10 +1116,10 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
     const total = cells.reduce((sum, cell) => sum + cell.trials, 0);
     const cost = cells.reduce((sum, cell) => sum + cell.totalCostUsd, 0);
     const wall = cells.reduce((sum, cell) => sum + cell.totalWallS, 0);
-    const x = 228 + col * colW + colW / 2;
+    const x = colStart + col * colW + colW / 2;
 
     parts.push(
-      `<text x="${x.toFixed(1)}" y="${footerY}" text-anchor="middle" fill="${PARETO}" font-family="${FONT_MONO}" font-size="11" font-weight="600">${passed}/${total} pass · $${cost.toFixed(2)} · ${Math.round(wall)}s total</text>`
+      `<text x="${x.toFixed(1)}" y="${footerY}" text-anchor="middle" fill="var(--c-text)" font-family="${FONT_MONO}" font-size="11" font-weight="600">${passed}/${total} pass · $${cost.toFixed(2)} · ${Math.round(wall)}s</text>`
     );
   }
 
@@ -1008,6 +1131,7 @@ const renderPairSynergyMatrix = (summary: BenchmarkSummary): string => {
 const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
   interface Panel {
     readonly heading: string;
+    readonly isPair: boolean;
     readonly tasks: readonly string[];
     readonly models: readonly string[];
     readonly lookup: ReadonlyMap<
@@ -1065,16 +1189,17 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
       });
     }
 
-    panels.push({ heading, tasks, models, lookup });
+    panels.push({ heading, isPair: role === "pair", tasks, models, lookup });
   }
 
-  const width = 1040;
+  const width = 1080;
   const labelW = 248;
-  const rowH = 22;
+  const rowH = 26;
   let totalH = 104;
 
   for (const panel of panels) {
-    totalH += 36 + 52 + panel.tasks.length * rowH + 18;
+    const headerH = panel.isPair ? 114 : 84;
+    totalH += 34 + headerH + panel.tasks.length * rowH + 20;
   }
 
   const parts: string[] = [
@@ -1087,12 +1212,12 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
   ];
 
   // Compact legend.
-  let legendX = 32;
+  let legendX = 28;
 
   for (const tier of TIER_META) {
     parts.push(
-      `<rect x="${legendX}" y="76" width="10" height="10" rx="2" fill="${tier.color}"/>`,
-      `<text x="${legendX + 14}" y="85" fill="${MUTED}" font-family="${FONT_SANS}" font-size="10.5">${esc(tier.label)}</text>`
+      `<rect x="${legendX}" y="73" width="10" height="10" rx="2.5" fill="${tier.fillVar}"/>`,
+      `<text x="${legendX + 15}" y="82" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="10.5">${esc(tier.label)}</text>`
     );
     legendX += tier.label.length * 6.2 + 26;
   }
@@ -1100,14 +1225,15 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
   let y = 108;
 
   for (const panel of panels) {
+    const headerH = panel.isPair ? 114 : 84;
     parts.push(
-      `<text x="32" y="${y + 14}" fill="${PARETO}" font-family="${FONT_SANS}" font-size="12.5" font-weight="700">${esc(panel.heading)}</text>`
+      `<text x="28" y="${y + 14}" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="12.5" font-weight="600">${esc(panel.heading)}</text>`
     );
     y += 28;
 
     const colW = Math.min(
       82,
-      Math.floor((width - labelW - 36) / Math.max(1, panel.models.length))
+      Math.floor((width - labelW - 110) / Math.max(1, panel.models.length))
     );
 
     // Angled model column labels.
@@ -1118,21 +1244,22 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
         continue;
       }
 
-      const compact = model.includes(" -> ")
-        ? model.split(" -> ").map(shortModelLabel).join("→")
-        : shortModelLabel(model);
+      const headerLabel = panel.isPair
+        ? compactModelLabel(model)
+        : displayModelLabel(model);
 
       const cx = labelW + col * colW + colW / 2;
+      const labelY = y + headerH - 8;
       parts.push(
-        `<text x="${cx.toFixed(1)}" y="${y + 44}" text-anchor="start" fill="${MUTED}" font-family="${FONT_SANS}" font-size="9.5" transform="rotate(-35 ${cx.toFixed(1)} ${y + 44})">${esc(compact)}</text>`
+        `<text x="${cx.toFixed(1)}" y="${labelY}" text-anchor="start" fill="var(--c-muted)" font-family="${FONT_SANS}" font-size="9.5" transform="rotate(-38 ${cx.toFixed(1)} ${labelY})">${esc(headerLabel)}</text>`
       );
     }
 
-    y += 52;
+    y += headerH;
 
     for (const taskId of panel.tasks) {
       parts.push(
-        `<text x="${labelW - 8}" y="${y + 15}" text-anchor="end" fill="${TEXT}" font-family="${FONT_MONO}" font-size="10">${esc(taskId)}</text>`
+        `<text x="${labelW - 10}" y="${y + 15.5}" text-anchor="end" fill="var(--c-text)" font-family="${FONT_MONO}" font-size="10">${esc(taskId)}</text>`
       );
 
       for (let col = 0; col < panel.models.length; col += 1) {
@@ -1147,21 +1274,21 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
 
         if (outcome === undefined) {
           parts.push(
-            `<rect x="${cx + 1}" y="${y + 1}" width="${colW - 2}" height="${rowH - 2}" rx="3" fill="${BORDER}"/>`
+            `<rect x="${cx + 1.5}" y="${y + 1.5}" width="${colW - 3}" height="${rowH - 3}" rx="3.5" fill="var(--c-muted-bg)" stroke="var(--c-border)" stroke-width="0.75"/>`
           );
           continue;
         }
 
-        const fill = TIER_COLORS[outcome.tier];
-        const tip = `${taskId} | ${model} | ${outcome.tier.replaceAll("_", " ")} | LSAS ${outcome.lsas.toFixed(1)} | ${outcome.wallS.toFixed(1)}s`;
+        const tierColors = TIER_BY_KEY[outcome.tier];
+        const tip = `${taskId} | ${displayModelLabel(model)} | ${outcome.tier.replaceAll("_", " ")} | LSAS ${outcome.lsas.toFixed(1)} | ${outcome.wallS.toFixed(1)}s`;
         parts.push(
           `<g class="chart-point" data-tip="${esc(tip)}">`,
-          `<rect x="${cx + 1}" y="${y + 1}" width="${colW - 2}" height="${rowH - 2}" rx="3" fill="${fill}" fill-opacity="0.82"/>`
+          `<rect x="${cx + 1.5}" y="${y + 1.5}" width="${colW - 3}" height="${rowH - 3}" rx="3.5" fill="${tierColors.fillVar}"/>`
         );
 
         if (colW >= 34) {
           parts.push(
-            `<text x="${(cx + colW / 2).toFixed(1)}" y="${y + 14.5}" text-anchor="middle" fill="${BG}" font-family="${FONT_MONO}" font-size="9" font-weight="700">${Math.round(outcome.wallS)}s</text>`
+            `<text x="${(cx + colW / 2).toFixed(1)}" y="${y + 15}" text-anchor="middle" fill="${tierColors.inkVar}" font-family="${FONT_MONO}" font-size="9" font-weight="600">${Math.round(outcome.wallS)}s</text>`
           );
         }
 
@@ -1171,7 +1298,7 @@ const renderTaskHeatmap = (summary: BenchmarkSummary): string => {
       y += rowH;
     }
 
-    y += 18;
+    y += 20;
   }
 
   parts.push("</svg>");
@@ -1199,15 +1326,15 @@ const renderOverheadAndDiff = (summary: BenchmarkSummary): string => {
           diffRatio: row.medianDiffRatio ?? 1,
         }));
 
-  const width = 960;
+  const width = 1040;
   const rowH = 34;
-  const top = 112;
+  const top = 110;
   const height = top + rows.length * rowH + 54;
-  const labelRight = 152;
-  const leftBarStart = 166;
-  const leftBarW = 310;
-  const rightBarStart = 590;
-  const rightBarW = 310;
+  const labelRight = 210;
+  const leftBarStart = 224;
+  const leftBarW = 290;
+  const rightBarStart = 668;
+  const rightBarW = 240;
 
   const maxTok = Math.max(50, ...rows.map((row) => row.tokPerS * 1.15));
   const maxDiff = Math.max(1.5, ...rows.map((row) => row.diffRatio * 1.15));
@@ -1222,15 +1349,15 @@ const renderOverheadAndDiff = (summary: BenchmarkSummary): string => {
   ];
 
   parts.push(
-    `<text x="${leftBarStart}" y="94" fill="${PARETO}" font-family="${FONT_SANS}" font-size="12" font-weight="700">Active Throughput (total tok/s) &amp; Reasoning Share</text>`,
-    `<text x="${rightBarStart}" y="94" fill="${PARETO}" font-family="${FONT_SANS}" font-size="12" font-weight="700">Normalized Diff Size (added lines / task median)</text>`
+    `<text x="${leftBarStart}" y="92" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="12" font-weight="600">Active Throughput (total tok/s) &amp; Reasoning Share</text>`,
+    `<text x="${rightBarStart}" y="92" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="12" font-weight="600">Normalized Diff Size (added lines / median)</text>`
   );
 
   // 1.0x reference line on right panel.
   const refX = rightBarStart + (1 / maxDiff) * rightBarW;
   parts.push(
-    `<line x1="${refX.toFixed(1)}" y1="${top - 6}" x2="${refX.toFixed(1)}" y2="${top + rows.length * rowH}" stroke="${MUTED}" stroke-width="1.2" stroke-dasharray="4 3"/>`,
-    `<text x="${refX.toFixed(1)}" y="${top + rows.length * rowH + 16}" text-anchor="middle" fill="${MUTED}" font-family="${FONT_MONO}" font-size="10">1.0× median</text>`
+    `<line x1="${refX.toFixed(1)}" y1="${top - 6}" x2="${refX.toFixed(1)}" y2="${top + rows.length * rowH}" stroke="var(--c-axis)" stroke-width="1.2" stroke-dasharray="4 3"/>`,
+    `<text x="${refX.toFixed(1)}" y="${top + rows.length * rowH + 16}" text-anchor="middle" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="10">1.0× median</text>`
   );
 
   for (let i = 0; i < rows.length; i += 1) {
@@ -1241,49 +1368,50 @@ const renderOverheadAndDiff = (summary: BenchmarkSummary): string => {
     }
 
     const y = top + i * rowH;
-    const color = providerColor(row.provider);
+    const color = providerVar(row.provider);
     const barW = (row.tokPerS / maxTok) * leftBarW;
     const reasonW = barW * Math.min(1, Math.max(0, row.reasoningShare));
+    const displayName = displayModelLabel(row.model);
 
     const coldText =
       row.coldVisibleS === null ? "—" : `${row.coldVisibleS.toFixed(1)}s`;
 
-    const leftTip = `${row.model} | ${Math.round(row.tokPerS)} total tok/s | Reasoning ${Math.round(row.reasoningShare * 100)}% | Cold TTFT ${coldText}`;
+    const leftTip = `${displayName} | ${Math.round(row.tokPerS)} total tok/s | Reasoning ${Math.round(row.reasoningShare * 100)}% | Cold TTFT ${coldText}`;
 
     parts.push(
-      `<text x="${labelRight}" y="${y + 18}" text-anchor="end" fill="${TEXT}" font-family="${FONT_SANS}" font-size="12">${esc(shortModelLabel(row.model))}</text>`,
+      `<text x="${labelRight}" y="${y + 18}" text-anchor="end" fill="var(--c-text)" font-family="${FONT_SANS}" font-size="11.5">${esc(displayName)}</text>`,
       `<g class="chart-point" data-tip="${esc(leftTip)}">`,
-      `<rect x="${leftBarStart}" y="${y + 5}" width="${Math.max(2, barW).toFixed(1)}" height="18" rx="3" fill="${color}" fill-opacity="0.82"/>`,
-      `<rect x="${leftBarStart}" y="${y + 5}" width="${Math.max(0, reasonW).toFixed(1)}" height="18" rx="3" fill="#0f172a" fill-opacity="0.42"/>`,
+      `<rect x="${leftBarStart}" y="${y + 5}" width="${Math.max(2, barW).toFixed(1)}" height="18" rx="3.5" fill="${color}" fill-opacity="0.86"/>`,
+      `<rect x="${leftBarStart}" y="${y + 5}" width="${Math.max(0, reasonW).toFixed(1)}" height="18" rx="3.5" fill="var(--c-reason-overlay)"/>`,
       `</g>`,
-      `<text x="${(leftBarStart + barW + 6).toFixed(1)}" y="${y + 18}" fill="${MUTED}" font-family="${FONT_MONO}" font-size="10.5">${Math.round(row.tokPerS)} t/s (${Math.round(row.reasoningShare * 100)}% R · ${coldText})</text>`
+      `<text x="${(leftBarStart + barW + 8).toFixed(1)}" y="${y + 18}" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="10.5">${Math.round(row.tokPerS)} t/s (${Math.round(row.reasoningShare * 100)}% R · ${coldText})</text>`
     );
 
     const diffW = (row.diffRatio / maxDiff) * rightBarW;
 
-    let diffColor = "#10b981";
+    let diffColor = "var(--d-balanced)";
     let diffTag = "balanced";
 
     if (row.diffRatio < 0.8) {
-      diffColor = "#f59e0b";
+      diffColor = "var(--d-compressed)";
       diffTag = "compressed";
     } else if (row.diffRatio > 1.2) {
-      diffColor = "#ef4444";
+      diffColor = "var(--d-verbose)";
       diffTag = "verbose";
     }
 
-    const rightTip = `${row.model} | Median diff ${row.diffRatio.toFixed(2)}× task median (${diffTag})`;
+    const rightTip = `${displayName} | Median diff ${row.diffRatio.toFixed(2)}× task median (${diffTag})`;
 
     parts.push(
       `<g class="chart-point" data-tip="${esc(rightTip)}">`,
-      `<rect x="${rightBarStart}" y="${y + 5}" width="${Math.max(2, diffW).toFixed(1)}" height="18" rx="3" fill="${diffColor}" fill-opacity="0.85"/>`,
+      `<rect x="${rightBarStart}" y="${y + 5}" width="${Math.max(2, diffW).toFixed(1)}" height="18" rx="3.5" fill="${diffColor}"/>`,
       `</g>`,
-      `<text x="${(rightBarStart + diffW + 6).toFixed(1)}" y="${y + 18}" fill="${MUTED}" font-family="${FONT_MONO}" font-size="10.5">${row.diffRatio.toFixed(2)}× (${diffTag})</text>`
+      `<text x="${(rightBarStart + diffW + 8).toFixed(1)}" y="${y + 18}" fill="var(--c-muted)" font-family="${FONT_MONO}" font-size="10.5">${row.diffRatio.toFixed(2)}× (${diffTag})</text>`
     );
   }
 
   parts.push(
-    `<text x="${leftBarStart}" y="${height - 18}" fill="${SUBTLE}" font-family="${FONT_SANS}" font-size="10">Darkened left bar portion = reasoning token share (R). Uses total_model_tok_per_s across providers.</text>`,
+    `<text x="${leftBarStart}" y="${height - 16}" fill="var(--c-subtle)" font-family="${FONT_SANS}" font-size="10">Shaded left bar portion = reasoning token share (R). Uses total_model_tok_per_s across providers.</text>`,
     "</svg>"
   );
 
@@ -1298,11 +1426,11 @@ export const renderBenchmarkCharts = (
   if (summary.combinedCoderRows.length > 0) {
     const costItems: ScatterItem[] = summary.combinedCoderRows.map((row) => ({
       id: row.model,
-      label: shortModelLabel(row.model),
+      label: displayModelLabel(row.model),
       provider: row.provider,
       x: row.totalCostUsd,
       y: row.aci,
-      tip: `${row.model} | ACI ${row.aci.toFixed(1)} (Solo ${row.solo.lsas.toFixed(1)}, Pair ${row.pair.lsas.toFixed(1)}) | Pass ${row.passedCount}/${row.totalTrials} | ZSDR ${(100 * row.zsdrRate).toFixed(1)}% | Cost $${row.totalCostUsd.toFixed(2)} | Wall ${Math.round(row.totalWallS)}s`,
+      tip: `${displayModelLabel(row.model)} | ACI ${row.aci.toFixed(1)} (Solo ${row.solo.lsas.toFixed(1)}, Pair ${row.pair.lsas.toFixed(1)}) | Pass ${row.passedCount}/${row.totalTrials} | ZSDR ${(100 * row.zsdrRate).toFixed(1)}% | Cost $${row.totalCostUsd.toFixed(2)} | Wall ${Math.round(row.totalWallS)}s`,
     }));
 
     charts.push({
@@ -1327,11 +1455,11 @@ export const renderBenchmarkCharts = (
 
     const speedItems: ScatterItem[] = summary.combinedCoderRows.map((row) => ({
       id: row.model,
-      label: shortModelLabel(row.model),
+      label: displayModelLabel(row.model),
       provider: row.provider,
       x: row.totalWallS / 60,
       y: row.aci,
-      tip: `${row.model} | ACI ${row.aci.toFixed(1)} | Total wall ${(row.totalWallS / 60).toFixed(1)} min (${Math.round(row.totalWallS)}s) | Med wall ${row.medianWallS.toFixed(1)}s | Cost $${row.totalCostUsd.toFixed(2)}`,
+      tip: `${displayModelLabel(row.model)} | ACI ${row.aci.toFixed(1)} | Total wall ${(row.totalWallS / 60).toFixed(1)} min (${Math.round(row.totalWallS)}s) | Med wall ${row.medianWallS.toFixed(1)}s | Cost $${row.totalCostUsd.toFixed(2)}`,
     }));
 
     charts.push({
@@ -1355,11 +1483,11 @@ export const renderBenchmarkCharts = (
   } else if (summary.coderRows.length > 0) {
     const costItems: ScatterItem[] = summary.coderRows.map((row) => ({
       id: row.label,
-      label: shortModelLabel(row.model),
+      label: displayModelLabel(row.model),
       provider: row.provider,
       x: row.totalCostUsd,
       y: row.lsas,
-      tip: `${row.model} | Solo LSAS ${row.lsas.toFixed(1)} | Pass ${row.passedCount}/${row.trials} | ZSDR ${(100 * row.zsdrRate).toFixed(1)}% | Cost $${row.totalCostUsd.toFixed(2)} | Med wall ${row.medianWallS.toFixed(1)}s`,
+      tip: `${displayModelLabel(row.model)} | Solo LSAS ${row.lsas.toFixed(1)} | Pass ${row.passedCount}/${row.trials} | ZSDR ${(100 * row.zsdrRate).toFixed(1)}% | Cost $${row.totalCostUsd.toFixed(2)} | Med wall ${row.medianWallS.toFixed(1)}s`,
     }));
 
     charts.push({
@@ -1392,11 +1520,11 @@ export const renderBenchmarkCharts = (
     const reviewerCostItems: ScatterItem[] = summary.reviewerCalibratedRows.map(
       (row) => ({
         id: row.label,
-        label: shortModelLabel(row.model),
+        label: displayModelLabel(row.model),
         provider: row.provider,
         x: row.totalCostUsd,
         y: row.lsas,
-        tip: `${row.model} | Reviewer LSAS ${row.lsas.toFixed(1)} | Pass ${row.passedCount}/${row.trials} | FP ${row.falsePositiveP0P2}, P3 ${row.nitpickP3} | Cost $${row.totalCostUsd.toFixed(2)} | Med wall ${row.medianWallS.toFixed(1)}s`,
+        tip: `${displayModelLabel(row.model)} | Reviewer LSAS ${row.lsas.toFixed(1)} | Pass ${row.passedCount}/${row.trials} | FP ${row.falsePositiveP0P2}, P3 ${row.nitpickP3} | Cost $${row.totalCostUsd.toFixed(2)} | Med wall ${row.medianWallS.toFixed(1)}s`,
       })
     );
 
