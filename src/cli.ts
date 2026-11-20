@@ -6,7 +6,10 @@ import { parseArgs } from "node:util";
 
 import { CODER_MODELS, PAIR_REVIEWER_MODELS, parseModelSpec, REVIEWER_MODELS, validateModels } from "./config/models.ts";
 import { exportBlindJudgePacket, validateBlindJudgeAnswers } from "./judge/blind.ts";
-import { readResultsJson, renderMarkdownReport, writeResultsJson } from "./report/markdown.ts";
+import { renderBenchmarkCharts } from "./report/charts.ts";
+import { renderHtmlReport } from "./report/html.ts";
+import { readResultsJson, renderDetailedReport, renderMarkdownReport, writeResultsJson } from "./report/markdown.ts";
+import { summarizeBenchmark } from "./report/scoring.ts";
 import { runPool, scheduleTrials } from "./runner/pool.ts";
 import { runTrial, validateTrialCatalog } from "./runner/run-trial.ts";
 import type { RunConfig, TrialJob, TrialResult } from "./runner/types.ts";
@@ -274,12 +277,73 @@ function output(text: string, path: string | undefined): void {
   }
 }
 
+function exportPng(svgPath: string, pngPath: string): void {
+  const rsvg = Bun.which("rsvg-convert");
+  const resvg = rsvg === null ? Bun.which("resvg") : null;
+
+  const cmd = rsvg !== null
+    ? [rsvg, "--background-color=#0b1120", "-o", pngPath, svgPath]
+    : resvg !== null
+      ? [resvg, svgPath, pngPath]
+      : null;
+
+  if (cmd === null) {
+    throw new Error("PNG export requires host rsvg-convert or resvg on PATH.");
+  }
+
+  const proc = Bun.spawnSync(cmd, { stdout: "ignore", stderr: "pipe" });
+
+  if (proc.exitCode !== 0) {
+    throw new Error(`PNG export failed for ${svgPath}: ${proc.stderr.toString().trim()}`);
+  }
+}
+
 function report(args: string[]): number {
-  const { values } = parseArgs({ args, options: { input: { type: "string" }, out: { type: "string" } } });
+  const { values } = parseArgs({
+    args,
+    options: {
+      input: { type: "string", multiple: true },
+      out: { type: "string" },
+      "out-dir": { type: "string" },
+      png: { type: "boolean" },
+    },
+  });
 
-  if (!values.input) throw new Error("Provide --input <results.json>.");
+  const inputs = values.input ?? [];
 
-  output(renderMarkdownReport(readResultsJson(values.input)), values.out);
+  if (inputs.length === 0) throw new Error("Provide at least one --input <results.json>.");
+
+  const results: TrialResult[] = [];
+
+  for (const inputPath of inputs) {
+    results.push(...readResultsJson(inputPath));
+  }
+
+  if (values["out-dir"] !== undefined) {
+    const outDir = resolve(values["out-dir"]);
+    const chartsDir = join(outDir, "charts");
+    mkdirSync(chartsDir, { recursive: true, mode: 0o700 });
+
+    const summary = summarizeBenchmark(results);
+    const charts = renderBenchmarkCharts(summary);
+
+    for (const chart of charts) {
+      const svgPath = join(chartsDir, chart.filename);
+      atomicWriteFile(svgPath, `${chart.svg}\n`);
+
+      if (values.png) {
+        exportPng(svgPath, join(chartsDir, chart.filename.replace(/\.svg$/u, ".png")));
+      }
+    }
+
+    atomicWriteFile(join(outDir, "summary.md"), renderDetailedReport(results, charts, "charts"));
+    atomicWriteFile(join(outDir, "report.html"), renderHtmlReport(summary, charts));
+    progress(`Wrote ${charts.length} chart(s), summary.md, and report.html -> ${outDir}`);
+
+    return 0;
+  }
+
+  output(renderMarkdownReport(results), values.out);
 
   return 0;
 }

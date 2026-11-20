@@ -225,6 +225,21 @@ test("lists TSV and JSON catalogs, validates flags, and creates nested output di
     }));
     expect(await runCli(["judge", "--input", input, "--answers", answers, "--out", judged])).toBe(0);
     expect(parseJsonText(readFileSync(judged, "utf8"))).toHaveProperty("judged_cases", 1);
+
+    const extraInput = join(directory, "results-pair.json");
+    const bundleDir = join(directory, "bundle");
+    writeResultsJson(extraInput, [
+      trial({ task_id: "coder-1", role: "coder", model: "anthropic/claude-opus-5-5#medium" }),
+      trial({
+        task_id: "pair-1", role: "pair", model: "anthropic/claude-opus-5-5#medium",
+        reviewer_model: "openai/gpt-6.2-astra#medium",
+      }),
+    ]);
+    expect(await runCli(["report", "--input", input, "--input", extraInput, "--out-dir", bundleDir])).toBe(0);
+    expect(readFileSync(join(bundleDir, "summary.md"), "utf8")).toContain("Combined Autonomous Coder Index");
+    expect(readFileSync(join(bundleDir, "report.html"), "utf8")).toContain("<!doctype html>");
+    expect(readFileSync(join(bundleDir, "charts", "coder-cost-pareto.svg"), "utf8")).toContain("<svg ");
+
     writeFileSync(input, JSON.stringify([trial({ checks: {} }), { ...trial(), subagent_tokens: [] }]));
     expect(() => readResultsJson(input)).toThrow("array of trial results");
   } finally {

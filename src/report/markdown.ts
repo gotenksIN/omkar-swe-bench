@@ -5,6 +5,8 @@ import { median } from "../driver/telemetry.ts";
 import type { SeededDefectRecord, SubagentTokenTotals, TrialResult } from "../runner/types.ts";
 import { atomicWriteFile } from "../util/fs.ts";
 import { isJsonArray, isJsonObject, isString, parseJsonText, type JsonValue } from "../util/json.ts";
+import type { GeneratedChart } from "./charts.ts";
+import { summarizeBenchmark, type ModelRoleSummary } from "./scoring.ts";
 
 type Field = JsonValue | undefined;
 
@@ -175,6 +177,129 @@ export function renderMarkdownReport(results: readonly TrialResult[]): string {
     lines.push(tableRow([
       trial.task_id, modelLabel(trial), trial.agent_profile, String(trial.repetition), trial.passed ? "Yes" : "No",
       percent(trial.score), format(trial.wall_s, 1, "s"), format(trial.first_ttfvt_s, 2, "s"), trial.notes.join("; "),
+    ]));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function roleTableLines(rows: readonly ModelRoleSummary[], isReviewer: boolean): string[] {
+  const header = isReviewer
+    ? ["Rank", "Model", "LSAS", "Pass@1", "Passed", "Defect recall", "P0–P2 FPs", "P3 nits", "Suite cost", "Med wall", "Cold TTFT", "Active tok/s", "Reasoning %"]
+    : ["Rank", "Model", "LSAS", "ZSDR", "Pass@1", "Passed", "Mean check", "Diff ratio", "Suite cost", "Med wall", "Cold TTFT", "Active tok/s", "Reasoning %"];
+
+  const lines = [...tableHeader(header)];
+
+  for (const [index, row] of rows.entries()) {
+    lines.push(tableRow(isReviewer
+      ? [
+        String(index + 1), `\`${row.label}\``, row.lsas.toFixed(1), percent(row.passRate), `${row.passedCount}/${row.trials}`,
+        row.defectRecall === null ? "—" : percent(row.defectRecall), String(row.falsePositiveP0P2), String(row.nitpickP3),
+        format(row.totalCostUsd, 2, "", "$"), format(row.medianWallS, 1, "s"), format(row.coldVisibleS, 2, "s"),
+        format(row.medianTotalTokPerS, 0), percent(row.medianReasoningShare, 0),
+      ]
+      : [
+        String(index + 1), `\`${row.label}\``, row.lsas.toFixed(1), percent(row.zsdrRate), percent(row.passRate),
+        `${row.passedCount}/${row.trials}`, percent(row.meanRawScore), format(row.medianDiffRatio, 2, "×"),
+        format(row.totalCostUsd, 2, "", "$"), format(row.medianWallS, 1, "s"), format(row.coldVisibleS, 2, "s"),
+        format(row.medianTotalTokPerS, 0), percent(row.medianReasoningShare, 0),
+      ]));
+  }
+
+  return lines;
+}
+
+export function renderDetailedReport(
+  results: readonly TrialResult[],
+  charts: readonly GeneratedChart[] = [],
+  chartPrefix = "charts",
+): string {
+  const summary = summarizeBenchmark(results);
+  const byId = new Map(charts.map((chart) => [chart.id, chart]));
+
+  const embed = (id: string): string[] => {
+    const chart = byId.get(id);
+
+    return chart === undefined ? [] : [`![${chart.title}](${chartPrefix}/${chart.filename})`, ""];
+  };
+
+  const lines: string[] = [
+    "# OmkarSWE bench — Full Evaluation Report",
+    "",
+    `Evaluated **${summary.totalTrials}** trials (**${summary.totalPassed}/${summary.totalTrials}** strict Pass@1, **${percent(summary.totalTrials === 0 ? 0 : summary.totalPassed / summary.totalTrials)}**, **$${summary.totalCostUsd.toFixed(2)}** total API cost).`,
+    "",
+    "Open [`report.html`](report.html) in a browser for the interactive dashboard with hover tooltips and phase tabs.",
+    "",
+    "## Scoring methodology",
+    "",
+    "- **LSAS (Low-Steering Autonomy Score, 0–100):** Zeroes timeouts, crashes, and partial runs. Caps broken deliverables or scope violations at `<= 25`. Passing deliverables start at `100` minus `-35` per static/test hygiene miss, `-20` per skipped verification check, `-8` per self-healed in-session friction item (such as a commit-guard rejection recovered autonomously), and `-2` per root tool error (capped at `-8`). For code reviewers, LSAS starts at `100 × recall` (`100` on clean diffs) minus `-30` per blocking `P0–P2` false alarm and `-15` per `P3` nitpick.",
+    "- **ZSDR (Zero-Steering Deliverable Rate):** Share of trials needing zero human intervention after the session ends.",
+    "- **ACI (Autonomous Coder Index):** `0.6 × Solo LSAS + 0.4 × Pair LSAS` across all 19 coder trials (Phases 1 and 3).",
+    "- **Cost and Wall Time:** Reported on orthogonal Pareto axes rather than blended into capability scores.",
+    "",
+  ];
+
+  if (summary.combinedCoderRows.length > 0) {
+    lines.push(
+      "## Combined Autonomous Coder Index (Phases 1 + 3)",
+      "",
+      ...tableHeader([
+        "Rank", "Coder", "ACI", "Solo LSAS", "Pair LSAS", "ZSDR", "Pass@1", "19-trial cost", "$/clean pass", "Total wall", "Active tok/s", "Diff ratio",
+      ]),
+    );
+
+    for (const [index, row] of summary.combinedCoderRows.entries()) {
+      lines.push(tableRow([
+        String(index + 1), `\`${row.model}\``, row.aci.toFixed(1), row.solo.lsas.toFixed(1), row.pair.lsas.toFixed(1),
+        `${percent(row.zsdrRate)} (${row.zsdrCount}/${row.totalTrials})`, `${percent(row.passRate)} (${row.passedCount}/${row.totalTrials})`,
+        format(row.totalCostUsd, 2, "", "$"), format(row.costPerCleanPassUsd, 3, "", "$"), `${Math.round(row.totalWallS)}s`,
+        format(row.medianTotalTokPerS, 0), format(row.medianDiffRatio, 2, "×"),
+      ]));
+    }
+
+    lines.push("", ...embed("coder-cost-pareto"), ...embed("coder-speed-pareto"), ...embed("overhead-and-diff"));
+  }
+
+  if (summary.coderRows.length > 0) {
+    lines.push("## Phase 1 — Standalone coder leaderboard", "", ...roleTableLines(summary.coderRows, false), "");
+  }
+
+  if (summary.reviewerCalibratedRows.length > 0) {
+    const heading = summary.excludedReviewerTasks.length > 0
+      ? `## Phase 2 — Code reviewer leaderboard (calibrated, excluding \`${summary.excludedReviewerTasks.join("`, `")}\`)`
+      : "## Phase 2 — Code reviewer leaderboard";
+
+    lines.push(heading, "", ...roleTableLines(summary.reviewerCalibratedRows, true), "", ...embed("reviewer-cost-pareto"), ...embed("reviewer-calibration"));
+
+    if (summary.excludedReviewerTasks.length > 0) {
+      lines.push("### All Phase 2 tasks (including 0%-pass bounce fixture)", "", ...roleTableLines(summary.reviewerRows, true), "");
+    }
+  }
+
+  if (summary.pairRows.length > 0) {
+    lines.push("## Phase 3 — Pair collaboration leaderboard", "", ...embed("pair-synergy-matrix"), ...roleTableLines(summary.pairRows, false), "");
+  }
+
+  lines.push("## Diagnostics", "", ...embed("failure-taxonomy"), ...embed("task-heatmap"));
+
+  lines.push(
+    "## Per-trial breakdown",
+    "",
+    ...tableHeader(["Task", "Role", "Model", "Tier", "LSAS", "Pass", "Raw score", "Wall", "Cost", "Notes"]),
+  );
+
+  for (const item of summary.scoredTrials) {
+    const { trial } = item;
+    const failed = [...item.failedTierA, ...item.failedTierB, ...item.failedTierC];
+
+    const detail = [
+      ...(failed.length > 0 ? [`failed: ${failed.join(", ")}`] : []),
+      ...trial.notes,
+    ].join("; ");
+
+    lines.push(tableRow([
+      trial.task_id, trial.role, modelLabel(trial), item.tier, item.lsas.toFixed(1), trial.passed ? "Yes" : "No",
+      percent(trial.score), format(trial.wall_s, 1, "s"), format(trial.total_cost_usd, 4, "", "$"), detail,
     ]));
   }
 
