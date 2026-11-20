@@ -180,21 +180,6 @@ export const providerOf = (spec: string): string => {
   return slash > 0 ? spec.slice(0, slash) : "other";
 };
 
-export const shortModelLabel = (spec: string): string => {
-  const slash = spec.indexOf("/");
-  const trimmed = slash === -1 ? spec : spec.slice(slash + 1);
-
-  return trimmed
-    .replace(/^claude-/u, "")
-    .replace(/^gemini-4-/u, "")
-    .replace(/^gpt-6\.2-/u, "")
-    .replace(/^deepseek-/u, "")
-    .replace(/#xhigh$/u, "#xh")
-    .replace(/#high$/u, "#h")
-    .replace(/#medium$/u, "#m")
-    .replace(/#low$/u, "#l");
-};
-
 const titleCaseWord = (word: string): string => {
   if (word.length === 0) {
     return word;
@@ -262,52 +247,30 @@ const formatModelName = (rawName: string): string => {
   return rawName.split("-").map(titleCaseWord).join(" ");
 };
 
-const formatSingleDisplayModel = (spec: string, compact: boolean): string => {
+const formatSingleDisplayModel = (spec: string): string => {
   const hash = spec.lastIndexOf("#");
   const base = hash === -1 ? spec : spec.slice(0, hash);
   const variant = hash === -1 ? null : spec.slice(hash + 1);
   const slash = base.lastIndexOf("/");
   const rawName = slash === -1 ? base : base.slice(slash + 1);
-
-  let name = formatModelName(rawName);
-
-  if (compact) {
-    name = name
-      .replace(/^Claude /u, "")
-      .replace(/^Gemini 4 /u, "Gemini ")
-      .replace(/^GPT-6\.2 /u, "GPT-6.2 ")
-      .replace(/^DeepSeek /u, "DS ");
-  }
+  const name = formatModelName(rawName);
 
   if (variant === null || variant.length === 0) {
     return name;
   }
 
-  const variantLabel = compact && variant === "medium" ? "med" : variant;
-
-  return `${name} (${variantLabel})`;
+  return `${name} (${variant})`;
 };
 
 export const displayModelLabel = (spec: string): string => {
   if (spec.includes(" -> ")) {
     return spec
       .split(" -> ")
-      .map((part) => formatSingleDisplayModel(part.trim(), false))
+      .map((part) => formatSingleDisplayModel(part.trim()))
       .join(" → ");
   }
 
-  return formatSingleDisplayModel(spec, false);
-};
-
-export const compactModelLabel = (spec: string): string => {
-  if (spec.includes(" -> ")) {
-    return spec
-      .split(" -> ")
-      .map((part) => formatSingleDisplayModel(part.trim(), true))
-      .join(" → ");
-  }
-
-  return formatSingleDisplayModel(spec, true);
+  return formatSingleDisplayModel(spec);
 };
 
 export const modelLabelForTrial = (

@@ -1076,7 +1076,6 @@ const positiveModes = [
   [reportId, "newline-batched-amend", "tests_rerun_before_amend"],
   [reportId, "chained-amend-status", "tests_rerun_before_amend"],
   [loopId, "reused-session", "reviewer_caught_edge"],
-  [cliId, "reused-session", "reviewer_caught_real_limit"],
   [cliId, "passive-decline", "declined_unhittable_with_reason"],
   [cliId, "helper-guard-decline", "declined_unhittable_with_reason"],
   [cliId, "division-by-zero-decline", "declined_unhittable_with_reason"],

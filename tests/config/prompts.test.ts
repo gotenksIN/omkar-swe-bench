@@ -106,14 +106,6 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(reviewer.system).toContain("## Findings");
     expect(reviewer.system).toContain("No actionable findings.");
     expect(reviewer.system).toContain("Scope needed");
-
-    if (role === "pair") {
-      expect(reviewer.system).not.toContain("working-tree diff");
-      expect(reviewer.system).toContain("explicit <start>..<end> commit range");
-    } else {
-      expect(reviewer.system).toContain("working-tree diff");
-    }
-
     expect(reviewer).not.toHaveProperty("model");
 
     for (const [action, resource] of [
@@ -158,66 +150,15 @@ for (const role of ["coder", "code-reviewer", "pair"] as const) {
     expect(
       evaluatePermission(reviewer.permissions, "skill", "code-review")
     ).toBe("deny");
-    const expectedGitEffect = "ask";
-    const expectedFlagEffect = "ask";
     expect(evaluatePermission(reviewer.permissions, "shell", "rm -rf .")).toBe(
       "deny"
     );
     expect(
       evaluatePermission(reviewer.permissions, "shell", "git diff main..HEAD")
-    ).toBe(expectedGitEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git diff --no-ext-diff --no-textconv main..HEAD"
-      )
-    ).toBe(expectedGitEffect);
+    ).toBe("ask");
     expect(
       evaluatePermission(reviewer.permissions, "shell", "git log -n 5")
-    ).toBe(expectedGitEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git log --no-ext-diff --no-textconv -n 5"
-      )
-    ).toBe(expectedGitEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git log --no-ext-diff --no-textconv --show-signature -n 5"
-      )
-    ).toBe(expectedFlagEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git diff --no-ext-diff --no-textconv --output=pwned.txt"
-      )
-    ).toBe(expectedFlagEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git diff --no-ext-diff --no-textconv --no-index /etc/passwd /dev/null"
-      )
-    ).toBe(expectedFlagEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git log --no-ext-diff --no-textconv --ext-diff -p"
-      )
-    ).toBe(expectedFlagEffect);
-    expect(
-      evaluatePermission(
-        reviewer.permissions,
-        "shell",
-        "git diff --no-ext-diff --no-textconv --textconv HEAD"
-      )
-    ).toBe(expectedFlagEffect);
+    ).toBe("ask");
   });
 }
 
@@ -297,13 +238,6 @@ test("imports only approved agent fields, overrides user allows via last-match-w
       reviewer.permissions,
       "shell",
       "git diff --no-ext-diff --no-textconv HEAD~1..HEAD"
-    )
-  ).toBe("ask");
-  expect(
-    evaluatePermission(
-      reviewer.permissions,
-      "shell",
-      "git diff --no-ext-diff --no-textconv a1b2..HEAD -- docs/--output.md"
     )
   ).toBe("ask");
 

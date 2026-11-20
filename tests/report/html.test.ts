@@ -101,12 +101,15 @@ test("renders self-contained HTML dashboard and detailed LSAS Markdown report", 
   const md = renderDetailedReport(trials, charts, "charts");
 
   expect(html.startsWith("<!doctype html>")).toBe(true);
-  expect(html).toContain("OmkarSWE Bench");
-  expect(html).toContain('id="tooltip"');
-  expect(html).toContain('data-chart-id="coder-cost-pareto"');
-  expect(html).not.toContain("https://cdn");
+  expect(html).toContain("Claude Opus 5.5 (medium)");
+  expect(html).toContain("GPT-6.2 Astra (medium)");
+  expect(html).toContain("100.0");
+  expect(html).toContain("$0.58");
+  expect(html).not.toMatch(/\b(?:src|href)=["']https?:\/\//iu);
 
   expect(md).toContain("## Combined Autonomous Coder Index (Phases 1 + 3)");
+  expect(md).toContain("Claude Opus 5.5 (medium)");
+  expect(md).toContain("GPT-6.2 Astra (medium)");
   expect(md).toContain(
     "![Coder Autonomy vs. Cost Pareto Frontier](charts/coder-cost-pareto.svg)"
   );

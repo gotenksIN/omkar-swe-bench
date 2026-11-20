@@ -4,7 +4,6 @@ import {
   computeParetoFrontier,
   parseDiffMetrics,
   scoreTrial,
-  shortModelLabel,
   summarizeBenchmark,
 } from "../../src/report/scoring.ts";
 import type { TrialResult } from "../../src/runner/types.ts";
@@ -225,10 +224,6 @@ test("parses diff line counts and computes upper-left Pareto frontiers", () => {
   ].join("\n");
 
   expect(parseDiffMetrics(diff)).toEqual({ addedLines: 2, removedLines: 1 });
-  expect(shortModelLabel("anthropic/claude-opus-5-5#medium")).toBe(
-    "opus-5-5#m"
-  );
-  expect(shortModelLabel("google/gemini-4-neon#xhigh")).toBe("neon#xh");
 
   const frontier = computeParetoFrontier([
     { id: "cheap-ok", x: 1, y: 90 },
