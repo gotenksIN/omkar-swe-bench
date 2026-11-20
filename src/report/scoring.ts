@@ -173,15 +173,15 @@ const TIER_C_FRICTION = new Set([
   "review_pending",
 ]);
 
-export function providerOf(spec: string): string {
+export const providerOf = (spec: string): string => {
   const slash = spec.indexOf("/");
 
   return slash > 0 ? spec.slice(0, slash) : "other";
-}
+};
 
-export function shortModelLabel(spec: string): string {
+export const shortModelLabel = (spec: string): string => {
   const slash = spec.indexOf("/");
-  const trimmed = slash >= 0 ? spec.slice(slash + 1) : spec;
+  const trimmed = slash === -1 ? spec : spec.slice(slash + 1);
 
   return trimmed
     .replace(/^claude-/u, "")
@@ -192,13 +192,16 @@ export function shortModelLabel(spec: string): string {
     .replace(/#high$/u, "#h")
     .replace(/#medium$/u, "#m")
     .replace(/#low$/u, "#l");
-}
+};
 
-export function modelLabelForTrial(trial: Pick<TrialResult, "model" | "reviewer_model">): string {
-  return trial.reviewer_model === null ? trial.model : `${trial.model} -> ${trial.reviewer_model}`;
-}
+export const modelLabelForTrial = (
+  trial: Pick<TrialResult, "model" | "reviewer_model">
+): string =>
+  trial.reviewer_model === null
+    ? trial.model
+    : `${trial.model} -> ${trial.reviewer_model}`;
 
-export function parseDiffMetrics(gitDiff: string): DiffMetrics {
+export const parseDiffMetrics = (gitDiff: string): DiffMetrics => {
   let addedLines = 0;
   let removedLines = 0;
   let inHunk = false;
@@ -214,7 +217,9 @@ export function parseDiffMetrics(gitDiff: string): DiffMetrics {
       continue;
     }
 
-    if (!inHunk) continue;
+    if (!inHunk) {
+      continue;
+    }
 
     if (line.startsWith("+") && !line.startsWith("+++")) {
       addedLines += 1;
@@ -224,43 +229,62 @@ export function parseDiffMetrics(gitDiff: string): DiffMetrics {
   }
 
   return { addedLines, removedLines };
-}
+};
 
-function round1(value: number): number {
-  return Math.round(value * 10) / 10;
-}
+const round1 = (value: number): number => Math.round(value * 10) / 10;
 
-function meanOf(values: readonly number[]): number {
-  if (values.length === 0) return 0;
+const meanOf = (values: readonly number[]): number => {
+  if (values.length === 0) {
+    return 0;
+  }
 
   let sum = 0;
 
-  for (const value of values) sum += value;
+  for (const value of values) {
+    sum += value;
+  }
 
   return sum / values.length;
-}
+};
 
-function sdOf(values: readonly number[], avg: number): number {
-  if (values.length === 0) return 0;
+const sdOf = (values: readonly number[], avg: number): number => {
+  if (values.length === 0) {
+    return 0;
+  }
 
   let sumSq = 0;
 
-  for (const value of values) sumSq += (value - avg) ** 2;
+  for (const value of values) {
+    sumSq += (value - avg) ** 2;
+  }
 
   return Math.sqrt(sumSq / values.length);
-}
+};
 
-function scoreReviewerTrial(trial: TrialResult, rootToolErrors: number, diff: DiffMetrics): TrialAutonomyScore {
+const scoreReviewerTrial = (
+  trial: TrialResult,
+  rootToolErrors: number,
+  diff: DiffMetrics
+): TrialAutonomyScore => {
   const failedChecks: string[] = [];
 
   for (const [name, ok] of Object.entries(trial.checks)) {
-    if (!ok) failedChecks.push(name);
+    if (!ok) {
+      failedChecks.push(name);
+    }
   }
 
   if (trial.checks.read_only_clean_repo === false) {
     return {
-      trial, lsas: 0, zsdr: false, tier: "broken_deliverable", rootToolErrors,
-      failedTierA: ["read_only_clean_repo"], failedTierB: [], failedTierC: [], diff,
+      trial,
+      lsas: 0,
+      zsdr: false,
+      tier: "broken_deliverable",
+      rootToolErrors,
+      failedTierA: ["read_only_clean_repo"],
+      failedTierB: [],
+      failedTierC: [],
+      diff,
     };
   }
 
@@ -276,8 +300,15 @@ function scoreReviewerTrial(trial: TrialResult, rootToolErrors: number, diff: Di
     const lsas = trial.false_positive_p0_p2 + trial.nitpick_p3 === 0 ? 15 : 0;
 
     return {
-      trial, lsas, zsdr: false, tier: "broken_deliverable", rootToolErrors,
-      failedTierA: failedA, failedTierB: [], failedTierC: [], diff,
+      trial,
+      lsas,
+      zsdr: false,
+      tier: "broken_deliverable",
+      rootToolErrors,
+      failedTierA: failedA,
+      failedTierB: [],
+      failedTierC: [],
+      diff,
     };
   }
 
@@ -291,8 +322,15 @@ function scoreReviewerTrial(trial: TrialResult, rootToolErrors: number, diff: Di
 
   if (trial.passed) {
     return {
-      trial, lsas, zsdr: true, tier: "clean_pass", rootToolErrors,
-      failedTierA: [], failedTierB: [], failedTierC: [], diff,
+      trial,
+      lsas,
+      zsdr: true,
+      tier: "clean_pass",
+      rootToolErrors,
+      failedTierA: [],
+      failedTierB: [],
+      failedTierC: [],
+      diff,
     };
   }
 
@@ -300,25 +338,50 @@ function scoreReviewerTrial(trial: TrialResult, rootToolErrors: number, diff: Di
 
   if (missedDefect || trial.false_positive_p0_p2 > 0) {
     return {
-      trial, lsas, zsdr: false, tier: "broken_deliverable", rootToolErrors,
-      failedTierA: failedChecks, failedTierB: [], failedTierC: [], diff,
+      trial,
+      lsas,
+      zsdr: false,
+      tier: "broken_deliverable",
+      rootToolErrors,
+      failedTierA: failedChecks,
+      failedTierB: [],
+      failedTierC: [],
+      diff,
     };
   }
 
   return {
-    trial, lsas, zsdr: false, tier: "hygiene_nudge", rootToolErrors,
-    failedTierA: [], failedTierB: failedChecks, failedTierC: [], diff,
+    trial,
+    lsas,
+    zsdr: false,
+    tier: "hygiene_nudge",
+    rootToolErrors,
+    failedTierA: [],
+    failedTierB: failedChecks,
+    failedTierC: [],
+    diff,
   };
-}
+};
 
-export function scoreTrial(trial: TrialResult): TrialAutonomyScore {
-  const rootToolErrors = Math.max(0, trial.tool_errors - trial.subagent_tool_errors);
+export const scoreTrial = (trial: TrialResult): TrialAutonomyScore => {
+  const rootToolErrors = Math.max(
+    0,
+    trial.tool_errors - trial.subagent_tool_errors
+  );
+
   const diff = parseDiffMetrics(trial.git_diff);
 
   if (trial.timed_out || trial.exit_code !== 0 || trial.partial) {
     return {
-      trial, lsas: 0, zsdr: false, tier: "timeout_crash", rootToolErrors,
-      failedTierA: [], failedTierB: [], failedTierC: [], diff,
+      trial,
+      lsas: 0,
+      zsdr: false,
+      tier: "timeout_crash",
+      rootToolErrors,
+      failedTierA: [],
+      failedTierB: [],
+      failedTierC: [],
+      diff,
     };
   }
 
@@ -353,8 +416,11 @@ export function scoreTrial(trial: TrialResult): TrialAutonomyScore {
     } else {
       totalTierA += 1;
 
-      if (ok) passedTierA += 1;
-      else failedTierA.push(name);
+      if (ok) {
+        passedTierA += 1;
+      } else {
+        failedTierA.push(name);
+      }
     }
   }
 
@@ -364,8 +430,15 @@ export function scoreTrial(trial: TrialResult): TrialAutonomyScore {
     const ratio = totalTierA === 0 ? 0 : passedTierA / totalTierA;
 
     return {
-      trial, lsas: round1(25 * ratio), zsdr: false, tier: "broken_deliverable", rootToolErrors,
-      failedTierA, failedTierB, failedTierC, diff,
+      trial,
+      lsas: round1(25 * ratio),
+      zsdr: false,
+      tier: "broken_deliverable",
+      rootToolErrors,
+      failedTierA,
+      failedTierB,
+      failedTierC,
+      diff,
     };
   }
 
@@ -373,8 +446,15 @@ export function scoreTrial(trial: TrialResult): TrialAutonomyScore {
     const lsas = round1(Math.max(25, 100 - tierBPenalty - tierCPenalty));
 
     return {
-      trial, lsas, zsdr: false, tier: "hygiene_nudge", rootToolErrors,
-      failedTierA, failedTierB, failedTierC, diff,
+      trial,
+      lsas,
+      zsdr: false,
+      tier: "hygiene_nudge",
+      rootToolErrors,
+      failedTierA,
+      failedTierB,
+      failedTierC,
+      diff,
     };
   }
 
@@ -382,42 +462,60 @@ export function scoreTrial(trial: TrialResult): TrialAutonomyScore {
 
   if (trial.passed) {
     return {
-      trial, lsas, zsdr: true, tier: "clean_pass", rootToolErrors,
-      failedTierA, failedTierB, failedTierC, diff,
+      trial,
+      lsas,
+      zsdr: true,
+      tier: "clean_pass",
+      rootToolErrors,
+      failedTierA,
+      failedTierB,
+      failedTierC,
+      diff,
     };
   }
 
   return {
-    trial, lsas, zsdr: true, tier: "self_healed_friction", rootToolErrors,
-    failedTierA, failedTierB, failedTierC, diff,
+    trial,
+    lsas,
+    zsdr: true,
+    tier: "self_healed_friction",
+    rootToolErrors,
+    failedTierA,
+    failedTierB,
+    failedTierC,
+    diff,
   };
-}
+};
 
-function emptyTierCounts() {
-  return {
-    clean_pass: 0,
-    self_healed_friction: 0,
-    hygiene_nudge: 0,
-    broken_deliverable: 0,
-    timeout_crash: 0,
-  };
-}
+const emptyTierCounts = () => ({
+  clean_pass: 0,
+  self_healed_friction: 0,
+  hygiene_nudge: 0,
+  broken_deliverable: 0,
+  timeout_crash: 0,
+});
 
-function addTierCounts(left: TierCounts, right: TierCounts): TierCounts {
-  return {
-    clean_pass: left.clean_pass + right.clean_pass,
-    self_healed_friction: left.self_healed_friction + right.self_healed_friction,
-    hygiene_nudge: left.hygiene_nudge + right.hygiene_nudge,
-    broken_deliverable: left.broken_deliverable + right.broken_deliverable,
-    timeout_crash: left.timeout_crash + right.timeout_crash,
-  };
-}
+const addTierCounts = (left: TierCounts, right: TierCounts): TierCounts => ({
+  clean_pass: left.clean_pass + right.clean_pass,
+  self_healed_friction: left.self_healed_friction + right.self_healed_friction,
+  hygiene_nudge: left.hygiene_nudge + right.hygiene_nudge,
+  broken_deliverable: left.broken_deliverable + right.broken_deliverable,
+  timeout_crash: left.timeout_crash + right.timeout_crash,
+});
 
-function taskMedianAddedLines(scored: readonly TrialAutonomyScore[]): ReadonlyMap<string, number> {
+const taskMedianAddedLines = (
+  scored: readonly TrialAutonomyScore[]
+): ReadonlyMap<string, number> => {
   const byTask = new Map<string, number[]>();
 
   for (const item of scored) {
-    if (item.trial.role === "code-reviewer" || !item.trial.passed || item.diff.addedLines <= 0) continue;
+    if (
+      item.trial.role === "code-reviewer" ||
+      !item.trial.passed ||
+      item.diff.addedLines <= 0
+    ) {
+      continue;
+    }
 
     const list = byTask.get(item.trial.task_id) ?? [];
     list.push(item.diff.addedLines);
@@ -429,21 +527,23 @@ function taskMedianAddedLines(scored: readonly TrialAutonomyScore[]): ReadonlyMa
   for (const [taskId, lines] of byTask) {
     const med = median(lines);
 
-    if (med !== null && med > 0) medians.set(taskId, med);
+    if (med !== null && med > 0) {
+      medians.set(taskId, med);
+    }
   }
 
   return medians;
-}
+};
 
-function summarizeGroup(
+const summarizeGroup = (
   role: TaskRole,
   label: string,
   model: string,
   reviewerModel: string | null,
   agentProfile: string,
   items: readonly TrialAutonomyScore[],
-  taskDiffMedians: ReadonlyMap<string, number>,
-): ModelRoleSummary {
+  taskDiffMedians: ReadonlyMap<string, number>
+): ModelRoleSummary => {
   const counts = emptyTierCounts();
   const lsasValues: number[] = [];
   const rawScores: number[] = [];
@@ -475,19 +575,33 @@ function summarizeGroup(
     reasoningShares.push(trial.reasoning_share);
     cacheHits.push(trial.cache_hit_ratio);
 
-    if (trial.first_ttfvt_s !== null) coldVisibles.push(trial.first_ttfvt_s);
+    if (trial.first_ttfvt_s !== null) {
+      coldVisibles.push(trial.first_ttfvt_s);
+    }
 
-    if (trial.median_ttfvt_s !== null) warmVisibles.push(trial.median_ttfvt_s);
+    if (trial.median_ttfvt_s !== null) {
+      warmVisibles.push(trial.median_ttfvt_s);
+    }
 
-    if (trial.total_model_tok_per_s !== null) totalToks.push(trial.total_model_tok_per_s);
+    if (trial.total_model_tok_per_s !== null) {
+      totalToks.push(trial.total_model_tok_per_s);
+    }
 
-    if (trial.output_decode_tok_per_s !== null) decodeToks.push(trial.output_decode_tok_per_s);
+    if (trial.output_decode_tok_per_s !== null) {
+      decodeToks.push(trial.output_decode_tok_per_s);
+    }
 
-    if (trial.defect_recall !== null) recalls.push(trial.defect_recall);
+    if (trial.defect_recall !== null) {
+      recalls.push(trial.defect_recall);
+    }
 
-    if (trial.passed) passedCount += 1;
+    if (trial.passed) {
+      passedCount += 1;
+    }
 
-    if (item.zsdr) zsdrCount += 1;
+    if (item.zsdr) {
+      zsdrCount += 1;
+    }
 
     totalCostUsd += trial.total_cost_usd;
     totalWallS += trial.wall_s;
@@ -496,7 +610,11 @@ function summarizeGroup(
 
     const baselineAdded = taskDiffMedians.get(trial.task_id);
 
-    if (trial.passed && baselineAdded !== undefined && item.diff.addedLines > 0) {
+    if (
+      trial.passed &&
+      baselineAdded !== undefined &&
+      item.diff.addedLines > 0
+    ) {
       diffRatios.push(item.diff.addedLines / baselineAdded);
     }
   }
@@ -536,27 +654,31 @@ function summarizeGroup(
     weightedFalseAlarms: 2 * falsePositiveP0P2 + nitpickP3,
     medianDiffRatio: median(diffRatios),
   };
-}
+};
 
-function compareRoleSummaries(left: ModelRoleSummary, right: ModelRoleSummary): number {
-  return right.lsas - left.lsas
-    || right.passRate - left.passRate
-    || right.zsdrRate - left.zsdrRate
-    || left.medianWallS - right.medianWallS
-    || left.totalCostUsd - right.totalCostUsd
-    || left.label.localeCompare(right.label);
-}
+const compareRoleSummaries = (
+  left: ModelRoleSummary,
+  right: ModelRoleSummary
+): number =>
+  right.lsas - left.lsas ||
+  right.passRate - left.passRate ||
+  right.zsdrRate - left.zsdrRate ||
+  left.medianWallS - right.medianWallS ||
+  left.totalCostUsd - right.totalCostUsd ||
+  left.label.localeCompare(right.label);
 
-function buildRoleRows(
+const buildRoleRows = (
   role: TaskRole,
   scored: readonly TrialAutonomyScore[],
   taskDiffMedians: ReadonlyMap<string, number>,
-  excludedTaskIds: ReadonlySet<string> = new Set(),
-): readonly ModelRoleSummary[] {
+  excludedTaskIds: ReadonlySet<string> = new Set()
+): readonly ModelRoleSummary[] => {
   const groups = new Map<string, TrialAutonomyScore[]>();
 
   for (const item of scored) {
-    if (item.trial.role !== role || excludedTaskIds.has(item.trial.task_id)) continue;
+    if (item.trial.role !== role || excludedTaskIds.has(item.trial.task_id)) {
+      continue;
+    }
 
     const label = modelLabelForTrial(item.trial);
     const key = JSON.stringify([label, item.trial.agent_profile]);
@@ -568,29 +690,38 @@ function buildRoleRows(
   const rows: ModelRoleSummary[] = [];
 
   for (const items of groups.values()) {
-    const first = items[0];
+    const [first] = items;
 
-    if (first === undefined) continue;
+    if (first === undefined) {
+      continue;
+    }
 
-    rows.push(summarizeGroup(
-      role,
-      modelLabelForTrial(first.trial),
-      first.trial.model,
-      first.trial.reviewer_model,
-      first.trial.agent_profile,
-      items,
-      taskDiffMedians,
-    ));
+    rows.push(
+      summarizeGroup(
+        role,
+        modelLabelForTrial(first.trial),
+        first.trial.model,
+        first.trial.reviewer_model,
+        first.trial.agent_profile,
+        items,
+        taskDiffMedians
+      )
+    );
   }
 
-  return rows.sort(compareRoleSummaries);
-}
+  return rows.toSorted(compareRoleSummaries);
+};
 
 /**
  * Compute upper-left Pareto frontier where lower X (cost or wall time) and higher Y (LSAS / ACI) are better.
  */
-export function computeParetoFrontier<T extends ParetoPoint>(points: readonly T[]): readonly T[] {
-  const sorted = [...points].sort((left, right) => left.x - right.x || right.y - left.y);
+export const computeParetoFrontier = <T extends ParetoPoint>(
+  points: readonly T[]
+): readonly T[] => {
+  const sorted = points.toSorted(
+    (left, right) => left.x - right.x || right.y - left.y
+  );
+
   const frontier: T[] = [];
   let bestY = -Infinity;
 
@@ -602,120 +733,59 @@ export function computeParetoFrontier<T extends ParetoPoint>(points: readonly T[
   }
 
   return frontier;
-}
+};
 
-export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSummary {
-  const scoredTrials = results.map(scoreTrial);
-  const taskDiffMedians = taskMedianAddedLines(scoredTrials);
-  const coderRows = buildRoleRows("coder", scoredTrials, taskDiffMedians);
-  const reviewerRows = buildRoleRows("code-reviewer", scoredTrials, taskDiffMedians);
-  const pairRows = buildRoleRows("pair", scoredTrials, taskDiffMedians);
-
-  // Identify reviewer tasks where 0/N models passed (e.g. ambiguous bounce fixture) for a calibrated companion view.
-  const reviewerTaskTotals = new Map<string, { passed: number; total: number }>();
+const findExcludedReviewerTasks = (
+  scoredTrials: readonly TrialAutonomyScore[]
+): readonly string[] => {
+  const reviewerTaskTotals = new Map<
+    string,
+    { passed: number; total: number }
+  >();
 
   for (const item of scoredTrials) {
-    if (item.trial.role !== "code-reviewer") continue;
+    if (item.trial.role !== "code-reviewer") {
+      continue;
+    }
 
-    const entry = reviewerTaskTotals.get(item.trial.task_id) ?? { passed: 0, total: 0 };
+    const entry = reviewerTaskTotals.get(item.trial.task_id) ?? {
+      passed: 0,
+      total: 0,
+    };
+
     entry.total += 1;
 
-    if (item.trial.passed) entry.passed += 1;
+    if (item.trial.passed) {
+      entry.passed += 1;
+    }
 
     reviewerTaskTotals.set(item.trial.task_id, entry);
   }
 
-  const excludedReviewerTasks: string[] = [];
+  const excluded: string[] = [];
 
   for (const [taskId, stats] of reviewerTaskTotals) {
-    if (stats.total >= 3 && stats.passed === 0) excludedReviewerTasks.push(taskId);
-  }
-
-  excludedReviewerTasks.sort();
-
-  const reviewerCalibratedRows = excludedReviewerTasks.length > 0
-    ? buildRoleRows("code-reviewer", scoredTrials, taskDiffMedians, new Set(excludedReviewerTasks))
-    : reviewerRows;
-
-  // Build marginal pair rows grouped by coder model (across all paired reviewers) for Combined Coder ACI.
-  const pairByCoder = new Map<string, TrialAutonomyScore[]>();
-
-  for (const item of scoredTrials) {
-    if (item.trial.role !== "pair") continue;
-
-    const key = JSON.stringify([item.trial.model, item.trial.agent_profile]);
-    const list = pairByCoder.get(key) ?? [];
-    list.push(item);
-    pairByCoder.set(key, list);
-  }
-
-  const combinedCoderRows: CombinedCoderSummary[] = [];
-
-  for (const solo of coderRows) {
-    const key = JSON.stringify([solo.model, solo.agentProfile]);
-    const pairItems = pairByCoder.get(key);
-
-    if (pairItems === undefined || pairItems.length === 0) continue;
-
-    const pair = summarizeGroup("pair", solo.model, solo.model, null, solo.agentProfile, pairItems, taskDiffMedians);
-    const totalTrials = solo.trials + pair.trials;
-    const passedCount = solo.passedCount + pair.passedCount;
-    const zsdrCount = solo.zsdrCount + pair.zsdrCount;
-    const totalCostUsd = solo.totalCostUsd + pair.totalCostUsd;
-    const totalWallS = solo.totalWallS + pair.totalWallS;
-
-    const allItems: TrialAutonomyScore[] = [];
-
-    for (const item of scoredTrials) {
-      if ((item.trial.role === "coder" || item.trial.role === "pair")
-        && item.trial.model === solo.model
-        && item.trial.agent_profile === solo.agentProfile) {
-        allItems.push(item);
-      }
+    if (stats.total >= 3 && stats.passed === 0) {
+      excluded.push(taskId);
     }
-
-    const combinedMetrics = summarizeGroup("coder", solo.model, solo.model, null, solo.agentProfile, allItems, taskDiffMedians);
-    const aci = round1(0.6 * solo.lsas + 0.4 * pair.lsas);
-
-    combinedCoderRows.push({
-      model: solo.model,
-      provider: solo.provider,
-      agentProfile: solo.agentProfile,
-      solo,
-      pair,
-      aci,
-      totalTrials,
-      passedCount,
-      passRate: passedCount / totalTrials,
-      zsdrCount,
-      zsdrRate: zsdrCount / totalTrials,
-      totalCostUsd,
-      costPerCleanPassUsd: passedCount === 0 ? null : totalCostUsd / passedCount,
-      totalWallS,
-      medianWallS: combinedMetrics.medianWallS,
-      coldVisibleS: combinedMetrics.coldVisibleS,
-      medianTotalTokPerS: combinedMetrics.medianTotalTokPerS,
-      medianReasoningShare: combinedMetrics.medianReasoningShare,
-      medianDiffRatio: combinedMetrics.medianDiffRatio,
-      tierCounts: addTierCounts(solo.tierCounts, pair.tierCounts),
-    });
   }
 
-  combinedCoderRows.sort((left, right) =>
-    right.aci - left.aci
-    || right.zsdrRate - left.zsdrRate
-    || right.passRate - left.passRate
-    || left.totalWallS - right.totalWallS
-    || left.totalCostUsd - right.totalCostUsd,
-  );
+  return excluded.toSorted();
+};
 
-  // Pair Coder × Reviewer synergy matrix.
+const buildPairMatrix = (
+  scoredTrials: readonly TrialAutonomyScore[],
+  combinedCoderRows: readonly CombinedCoderSummary[],
+  taskDiffMedians: ReadonlyMap<string, number>
+) => {
   const pairCells = new Map<string, TrialAutonomyScore[]>();
   const pairCoderSet = new Set<string>();
   const pairReviewerSet = new Set<string>();
 
   for (const item of scoredTrials) {
-    if (item.trial.role !== "pair" || item.trial.reviewer_model === null) continue;
+    if (item.trial.role !== "pair" || item.trial.reviewer_model === null) {
+      continue;
+    }
 
     pairCoderSet.add(item.trial.model);
     pairReviewerSet.add(item.trial.reviewer_model);
@@ -728,9 +798,11 @@ export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSu
   const pairMatrix: PairCellSummary[] = [];
 
   for (const items of pairCells.values()) {
-    const first = items[0];
+    const [first] = items;
 
-    if (first === undefined || first.trial.reviewer_model === null) continue;
+    if (first === undefined || first.trial.reviewer_model === null) {
+      continue;
+    }
 
     const group = summarizeGroup(
       "pair",
@@ -739,7 +811,7 @@ export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSu
       first.trial.reviewer_model,
       first.trial.agent_profile,
       items,
-      taskDiffMedians,
+      taskDiffMedians
     );
 
     pairMatrix.push({
@@ -756,16 +828,152 @@ export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSu
     });
   }
 
-  const aciOrder = new Map(combinedCoderRows.map((row, index) => [row.model, index]));
+  const aciOrder = new Map(
+    combinedCoderRows.map((row, index) => [row.model, index])
+  );
 
-  const pairCoders = Array.from(pairCoderSet).sort((left, right) => {
+  const pairCoders = [...pairCoderSet].toSorted((left, right) => {
     const leftIndex = aciOrder.get(left) ?? Number.MAX_SAFE_INTEGER;
     const rightIndex = aciOrder.get(right) ?? Number.MAX_SAFE_INTEGER;
 
     return leftIndex - rightIndex || left.localeCompare(right);
   });
 
-  const pairReviewers = Array.from(pairReviewerSet).sort();
+  const pairReviewers = [...pairReviewerSet].toSorted();
+
+  return { pairMatrix, pairCoders, pairReviewers };
+};
+
+export const summarizeBenchmark = (
+  results: readonly TrialResult[]
+): BenchmarkSummary => {
+  const scoredTrials = results.map(scoreTrial);
+  const taskDiffMedians = taskMedianAddedLines(scoredTrials);
+  const coderRows = buildRoleRows("coder", scoredTrials, taskDiffMedians);
+
+  const reviewerRows = buildRoleRows(
+    "code-reviewer",
+    scoredTrials,
+    taskDiffMedians
+  );
+
+  const pairRows = buildRoleRows("pair", scoredTrials, taskDiffMedians);
+  const excludedReviewerTasks = findExcludedReviewerTasks(scoredTrials);
+
+  const reviewerCalibratedRows =
+    excludedReviewerTasks.length > 0
+      ? buildRoleRows(
+          "code-reviewer",
+          scoredTrials,
+          taskDiffMedians,
+          new Set(excludedReviewerTasks)
+        )
+      : reviewerRows;
+
+  // Build marginal pair rows grouped by coder model (across all paired reviewers) for Combined Coder ACI.
+  const pairByCoder = new Map<string, TrialAutonomyScore[]>();
+
+  for (const item of scoredTrials) {
+    if (item.trial.role !== "pair") {
+      continue;
+    }
+
+    const key = JSON.stringify([item.trial.model, item.trial.agent_profile]);
+    const list = pairByCoder.get(key) ?? [];
+    list.push(item);
+    pairByCoder.set(key, list);
+  }
+
+  const combinedCoderRows: CombinedCoderSummary[] = [];
+
+  for (const solo of coderRows) {
+    const key = JSON.stringify([solo.model, solo.agentProfile]);
+    const pairItems = pairByCoder.get(key);
+
+    if (pairItems === undefined || pairItems.length === 0) {
+      continue;
+    }
+
+    const pair = summarizeGroup(
+      "pair",
+      solo.model,
+      solo.model,
+      null,
+      solo.agentProfile,
+      pairItems,
+      taskDiffMedians
+    );
+
+    const totalTrials = solo.trials + pair.trials;
+    const passedCount = solo.passedCount + pair.passedCount;
+    const zsdrCount = solo.zsdrCount + pair.zsdrCount;
+    const totalCostUsd = solo.totalCostUsd + pair.totalCostUsd;
+    const totalWallS = solo.totalWallS + pair.totalWallS;
+
+    const allItems: TrialAutonomyScore[] = [];
+
+    for (const item of scoredTrials) {
+      if (
+        (item.trial.role === "coder" || item.trial.role === "pair") &&
+        item.trial.model === solo.model &&
+        item.trial.agent_profile === solo.agentProfile
+      ) {
+        allItems.push(item);
+      }
+    }
+
+    const combinedMetrics = summarizeGroup(
+      "coder",
+      solo.model,
+      solo.model,
+      null,
+      solo.agentProfile,
+      allItems,
+      taskDiffMedians
+    );
+
+    const aci = round1(0.6 * solo.lsas + 0.4 * pair.lsas);
+
+    combinedCoderRows.push({
+      model: solo.model,
+      provider: solo.provider,
+      agentProfile: solo.agentProfile,
+      solo,
+      pair,
+      aci,
+      totalTrials,
+      passedCount,
+      passRate: passedCount / totalTrials,
+      zsdrCount,
+      zsdrRate: zsdrCount / totalTrials,
+      totalCostUsd,
+      costPerCleanPassUsd:
+        passedCount === 0 ? null : totalCostUsd / passedCount,
+      totalWallS,
+      medianWallS: combinedMetrics.medianWallS,
+      coldVisibleS: combinedMetrics.coldVisibleS,
+      medianTotalTokPerS: combinedMetrics.medianTotalTokPerS,
+      medianReasoningShare: combinedMetrics.medianReasoningShare,
+      medianDiffRatio: combinedMetrics.medianDiffRatio,
+      tierCounts: addTierCounts(solo.tierCounts, pair.tierCounts),
+    });
+  }
+
+  combinedCoderRows.sort(
+    (left, right) =>
+      right.aci - left.aci ||
+      right.zsdrRate - left.zsdrRate ||
+      right.passRate - left.passRate ||
+      left.totalWallS - right.totalWallS ||
+      left.totalCostUsd - right.totalCostUsd
+  );
+
+  // Pair Coder × Reviewer synergy matrix.
+  const { pairMatrix, pairCoders, pairReviewers } = buildPairMatrix(
+    scoredTrials,
+    combinedCoderRows,
+    taskDiffMedians
+  );
 
   const taskCells: TaskCellOutcome[] = scoredTrials.map((item) => ({
     taskId: item.trial.task_id,
@@ -784,7 +992,9 @@ export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSu
   for (const item of scoredTrials) {
     totalCostUsd += item.trial.total_cost_usd;
 
-    if (item.trial.passed) totalPassed += 1;
+    if (item.trial.passed) {
+      totalPassed += 1;
+    }
   }
 
   return {
@@ -803,4 +1013,4 @@ export function summarizeBenchmark(results: readonly TrialResult[]): BenchmarkSu
     totalPassed,
     totalTrials: scoredTrials.length,
   };
-}
+};

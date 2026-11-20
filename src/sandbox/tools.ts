@@ -1,6 +1,14 @@
-import { lstatSync, mkdirSync, readlinkSync, realpathSync, rmdirSync, statSync, symlinkSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  readlinkSync,
+  realpathSync,
+  rmdirSync,
+  statSync,
+  symlinkSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import nodePath from "node:path";
 
 import { assertNoSymlinkBoundary, atomicWriteFile } from "../util/fs.ts";
 import { isJsonObject, parseJsonText } from "../util/json.ts";
@@ -15,30 +23,57 @@ export interface HostToolFile {
   readonly sourcePath: string;
 }
 
-const tsPackages = ["typescript", "@typescript", "@types", "bun-types", "undici-types"];
-const toolNames = ["opencode", "bun", "node", "ruff", "git", "python3", "ssh-keygen"];
-export const COMMIT_GUARD_PACKAGE = "opencode-commit-guard@1.1.1";
-export const FORBIDDEN_HARNESS_MOUNT = /(?:^|\/)(?:oxlint|oxc-parser|@oxlint|anti-slop)(?:\/|$)/u;
-const DEFAULT_MODELS_URL = "https://models.opencode.ai";
-const MODELS_CATALOG_PATH = "/experimental/v2.0/api.json?type=chat,decision,image,video";
+const tsPackages = [
+  "typescript",
+  "@typescript",
+  "@types",
+  "bun-types",
+  "undici-types",
+];
 
-function whichOnPath(name: string): string | null {
+const toolNames = [
+  "opencode",
+  "bun",
+  "node",
+  "ruff",
+  "git",
+  "python3",
+  "ssh-keygen",
+];
+
+export const COMMIT_GUARD_PACKAGE = "opencode-commit-guard@1.1.1";
+
+export const FORBIDDEN_HARNESS_MOUNT =
+  /(?:^|\/)(?:oxlint|oxlint-tsgolint|oxfmt|ultracite|oxc-parser|@oxlint|@oxlint-tsgolint|@oxfmt|@oxc-parser|@oxc-project|anti-slop|oxlint\.config\.[cm]?[jt]s|oxfmt\.config\.[cm]?[jt]s|\.oxlintrc\.jsonc?|\.oxfmtrc\.jsonc?)(?:\/|$)/u;
+
+const DEFAULT_MODELS_URL = "https://models.opencode.ai";
+
+const MODELS_CATALOG_PATH =
+  "/experimental/v2.0/api.json?type=chat,decision,image,video";
+
+const whichOnPath = (name: string): string | null => {
   const pathEnv = process.env.PATH;
 
-  return pathEnv === undefined ? Bun.which(name) : Bun.which(name, { PATH: pathEnv });
-}
+  return pathEnv === undefined
+    ? Bun.which(name)
+    : Bun.which(name, { PATH: pathEnv });
+};
 
-export function requireGlobalRuff(): string {
+export const requireGlobalRuff = (): string => {
   const executable = whichOnPath("ruff");
 
   if (executable === null) {
-    throw new Error("Install ruff globally on PATH (for example: uv tool install ruff==0.17.5).");
+    throw new Error(
+      "Install ruff globally on PATH (for example: uv tool install ruff==0.17.5)."
+    );
   }
 
   return realpathSync(executable);
-}
+};
 
-export async function runHostRuffCheck(repoDir: string): Promise<{ exitCode: number; output: string }> {
+export const runHostRuffCheck = async (
+  repoDir: string
+): Promise<{ exitCode: number; output: string }> => {
   const ruff = requireGlobalRuff();
 
   const child = Bun.spawn([ruff, "check", "--no-cache", "."], {
@@ -49,13 +84,15 @@ export async function runHostRuffCheck(repoDir: string): Promise<{ exitCode: num
   });
 
   const [exitCode, stdout, stderr] = await Promise.all([
-    child.exited, new Response(child.stdout).text(), new Response(child.stderr).text(),
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
   ]);
 
   return { exitCode, output: stdout + stderr };
-}
+};
 
-export function discoverHostToolFiles(): HostToolFile[] {
+export const discoverHostToolFiles = (): HostToolFile[] => {
   const files: HostToolFile[] = [];
 
   for (const name of toolNames) {
@@ -67,7 +104,10 @@ export function discoverHostToolFiles(): HostToolFile[] {
 
     const sourcePath = realpathSync(executable);
 
-    if (name !== "ruff" && (sourcePath.startsWith("/usr/") || sourcePath.startsWith("/bin/"))) {
+    if (
+      name !== "ruff" &&
+      (sourcePath.startsWith("/usr/") || sourcePath.startsWith("/bin/"))
+    ) {
       continue;
     }
 
@@ -75,95 +115,159 @@ export function discoverHostToolFiles(): HostToolFile[] {
   }
 
   return files;
-}
+};
 
-export function discoverHostToolDirs(): string[] {
+export const discoverHostToolDirs = (): string[] => {
   const dirs = new Set<string>();
 
   for (const tool of toolNames) {
     const executable = whichOnPath(tool);
 
     if (executable !== null) {
-      dirs.add(dirname(executable));
+      dirs.add(nodePath.dirname(executable));
     }
   }
 
   return [...dirs];
-}
+};
 
-export function discoverOpenCodeCaches() {
-  const cacheHome = process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
-  const commitGuard = join(cacheHome, "opencode", "npm", COMMIT_GUARD_PACKAGE);
-  const bin = join(cacheHome, "opencode", "bin");
-  const models = process.env.OPENCODE_MODELS_PATH ?? join(cacheHome, "opencode", "models.json");
+export const discoverOpenCodeCaches = () => {
+  const cacheHome =
+    process.env.XDG_CACHE_HOME ?? nodePath.join(homedir(), ".cache");
+
+  const commitGuard = nodePath.join(
+    cacheHome,
+    "opencode",
+    "npm",
+    COMMIT_GUARD_PACKAGE
+  );
+
+  const bin = nodePath.join(cacheHome, "opencode", "bin");
+
+  const models =
+    process.env.OPENCODE_MODELS_PATH ??
+    nodePath.join(cacheHome, "opencode", "models.json");
 
   return {
-    commitGuardCacheDir: statSync(commitGuard, { throwIfNoEntry: false })?.isDirectory() ? commitGuard : null,
-    opencodeBinCacheDir: statSync(bin, { throwIfNoEntry: false })?.isDirectory() ? bin : null,
-    opencodeModelsCacheFile: statSync(models, { throwIfNoEntry: false })?.isFile() ? realpathSync(models) : null,
+    commitGuardCacheDir:
+      statSync(commitGuard, {
+        throwIfNoEntry: false,
+      })?.isDirectory() === true
+        ? commitGuard
+        : null,
+    opencodeBinCacheDir:
+      statSync(bin, { throwIfNoEntry: false })?.isDirectory() === true
+        ? bin
+        : null,
+    opencodeModelsCacheFile:
+      statSync(models, {
+        throwIfNoEntry: false,
+      })?.isFile() === true
+        ? realpathSync(models)
+        : null,
   };
-}
+};
 
-export async function refreshOpenCodeModelsCache(signal: AbortSignal): Promise<string | null> {
+export const refreshOpenCodeModelsCache = async (
+  signal: AbortSignal
+): Promise<string | null> => {
   const override = process.env.OPENCODE_MODELS_PATH;
 
   if (override !== undefined) {
-    if (!statSync(override, { throwIfNoEntry: false })?.isFile()) {
-      throw new Error(`OPENCODE_MODELS_PATH is not a readable file: ${override}`);
+    if (statSync(override, { throwIfNoEntry: false })?.isFile() !== true) {
+      throw new Error(
+        `OPENCODE_MODELS_PATH is not a readable file: ${override}`
+      );
     }
 
     return realpathSync(override);
   }
 
-  const cacheHome = process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
-  const opencodeCacheDir = resolve(cacheHome, "opencode");
-  const target = join(opencodeCacheDir, "models.json");
-  const existing = statSync(target, { throwIfNoEntry: false })?.isFile() ? realpathSync(target) : null;
-  const baseUrl = (process.env.OPENCODE_MODELS_URL || DEFAULT_MODELS_URL).replace(/\/+$/u, "");
+  const cacheHome =
+    process.env.XDG_CACHE_HOME ?? nodePath.join(homedir(), ".cache");
+
+  const opencodeCacheDir = nodePath.resolve(cacheHome, "opencode");
+  const target = nodePath.join(opencodeCacheDir, "models.json");
+
+  const existing =
+    statSync(target, { throwIfNoEntry: false })?.isFile() === true
+      ? realpathSync(target)
+      : null;
+
+  const envModelsUrl = process.env.OPENCODE_MODELS_URL;
+
+  const baseUrl = (
+    envModelsUrl !== undefined && envModelsUrl.length > 0
+      ? envModelsUrl
+      : DEFAULT_MODELS_URL
+  ).replace(/\/+$/u, "");
+
   const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
 
   try {
-    let response = await fetch(`${baseUrl}${MODELS_CATALOG_PATH}`, { signal: requestSignal });
+    let response = await fetch(`${baseUrl}${MODELS_CATALOG_PATH}`, {
+      signal: requestSignal,
+    });
 
     if (response.status === 404 && baseUrl !== DEFAULT_MODELS_URL) {
       response = await fetch(`${baseUrl}/api.json`, { signal: requestSignal });
     }
 
-    if (!response.ok) return existing;
+    if (!response.ok) {
+      return existing;
+    }
 
     const text = await response.text();
 
-    if (!isJsonObject(parseJsonText(text))) return existing;
+    if (!isJsonObject(parseJsonText(text))) {
+      return existing;
+    }
 
     mkdirSync(opencodeCacheDir, { recursive: true });
     atomicWriteFile(target, text, 0o644);
 
     return realpathSync(target);
-  } catch (cause) {
-    if (signal.aborted) throw cause;
+  } catch (error) {
+    if (signal.aborted) {
+      throw error;
+    }
 
     return existing;
   }
-}
+};
 
-export function discoverTsCompilerDirs(harnessRoot: string): TsCompilerDir[] {
-  return tsPackages.flatMap((packageSubpath) => {
-    const path = join(harnessRoot, "node_modules", packageSubpath);
+export const discoverTsCompilerDirs = (harnessRoot: string): TsCompilerDir[] =>
+  tsPackages.flatMap((packageSubpath) => {
+    const path = nodePath.join(harnessRoot, "node_modules", packageSubpath);
 
-    return statSync(path, { throwIfNoEntry: false })?.isDirectory()
-      ? [{ sourceDir: resolveTsCompilerDir({ sourceDir: path, packageSubpath }), packageSubpath }]
+    return statSync(path, { throwIfNoEntry: false })?.isDirectory() === true
+      ? [
+          {
+            sourceDir: resolveTsCompilerDir({
+              sourceDir: path,
+              packageSubpath,
+            }),
+            packageSubpath,
+          },
+        ]
       : [];
   });
-}
 
-export function resolveTsCompilerDir({ sourceDir, packageSubpath }: TsCompilerDir): string {
+export const resolveTsCompilerDir = ({
+  sourceDir,
+  packageSubpath,
+}: TsCompilerDir): string => {
   const source = realpathSync(sourceDir);
 
   if (
-    !tsPackages.includes(packageSubpath) || basename(source) !== packageSubpath
-    || FORBIDDEN_HARNESS_MOUNT.test(sourceDir) || FORBIDDEN_HARNESS_MOUNT.test(source)
+    !tsPackages.includes(packageSubpath) ||
+    nodePath.basename(source) !== packageSubpath ||
+    FORBIDDEN_HARNESS_MOUNT.test(sourceDir) ||
+    FORBIDDEN_HARNESS_MOUNT.test(source)
   ) {
-    throw new Error(`Invalid TypeScript compiler mount: ${sourceDir} → ${packageSubpath}`);
+    throw new Error(
+      `Invalid TypeScript compiler mount: ${sourceDir} → ${packageSubpath}`
+    );
   }
 
   if (!statSync(source).isDirectory()) {
@@ -171,39 +275,42 @@ export function resolveTsCompilerDir({ sourceDir, packageSubpath }: TsCompilerDi
   }
 
   return source;
-}
+};
 
-export function prepareTrialTsBin(trialDir: string): void {
-  const bin = join(trialDir, "ts-bin");
+export const prepareTrialTsBin = (trialDir: string): void => {
+  const bin = nodePath.join(trialDir, "ts-bin");
   mkdirSync(bin);
-  symlinkSync("../node_modules/typescript/bin/tsc", join(bin, "tsc"));
-}
+  symlinkSync("../node_modules/typescript/bin/tsc", nodePath.join(bin, "tsc"));
+};
 
-export function linkHostTsNodeModules(trialDir: string, tsCompilerDirs: readonly TsCompilerDir[]): void {
+export const linkHostTsNodeModules = (
+  trialDir: string,
+  tsCompilerDirs: readonly TsCompilerDir[]
+): void => {
   if (tsCompilerDirs.length === 0) {
     return;
   }
 
   assertNoSymlinkBoundary(trialDir);
 
-  const nodeModules = join(trialDir, "node_modules");
+  const nodeModules = nodePath.join(trialDir, "node_modules");
   mkdirSync(nodeModules, { recursive: true });
   assertNoSymlinkBoundary(nodeModules);
 
   for (const compilerDir of tsCompilerDirs) {
     const source = resolveTsCompilerDir(compilerDir);
-    const target = join(nodeModules, compilerDir.packageSubpath);
+    const target = nodePath.join(nodeModules, compilerDir.packageSubpath);
     const entry = lstatSync(target, { throwIfNoEntry: false });
 
-    if (entry?.isSymbolicLink() && readlinkSync(target) === source) {
+    if (entry?.isSymbolicLink() === true && readlinkSync(target) === source) {
       continue;
     }
 
-    if (entry?.isDirectory()) {
+    if (entry?.isDirectory() === true) {
       // A bind at a missing target leaves an empty placeholder after bwrap exits.
       rmdirSync(target);
     }
 
     symlinkSync(source, target);
   }
-}
+};

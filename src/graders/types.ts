@@ -1,4 +1,5 @@
-import { unwrapSimpleCommand, type ParsedShellScript } from "../ast/bash.ts";
+import { unwrapSimpleCommand } from "../ast/bash.ts";
+import type { ParsedShellScript } from "../ast/bash.ts";
 import type { JsonObject } from "../util/json.ts";
 
 export type TaskRole = "coder" | "code-reviewer" | "pair";
@@ -105,21 +106,31 @@ export interface GradeResult {
   readonly reviewDiff: string | null;
 }
 
-interface GradeOptions extends Partial<Omit<GradeResult, "passed" | "score" | "checks">> {
+interface GradeOptions extends Partial<
+  Omit<GradeResult, "passed" | "score" | "checks">
+> {
   readonly timedOut: boolean;
   readonly exitCode?: number | null;
   readonly partial?: boolean;
 }
 
-export function computeGradeResult(checks: CheckOutcomes, options: GradeOptions): GradeResult {
+export const computeGradeResult = (
+  checks: CheckOutcomes,
+  options: GradeOptions
+): GradeResult => {
   const checkNames = Object.keys(checks);
-  const passedCount = checkNames.filter((name) => checks[name]).length;
+  const passedCount = checkNames.filter((name) => checks[name] === true).length;
   const { timedOut, exitCode = 0, partial = false } = options;
 
   return {
     checks,
     score: checkNames.length === 0 ? 0 : passedCount / checkNames.length,
-    passed: checkNames.length > 0 && passedCount === checkNames.length && !timedOut && exitCode === 0 && !partial,
+    passed:
+      checkNames.length > 0 &&
+      passedCount === checkNames.length &&
+      !timedOut &&
+      exitCode === 0 &&
+      !partial,
     notes: options.notes ?? [],
     pedantryFlags: options.pedantryFlags ?? 0,
     falsePositiveP0P2: options.falsePositiveP0P2 ?? 0,
@@ -130,41 +141,63 @@ export function computeGradeResult(checks: CheckOutcomes, options: GradeOptions)
     blockerDisclosed: options.blockerDisclosed ?? null,
     reviewDiff: options.reviewDiff ?? null,
   };
-}
+};
 
-function enablesErrexit(words: readonly { readonly text: string }[]): boolean {
-  if (words[0]?.text !== "set") return false;
+const enablesErrexit = (
+  words: readonly { readonly text: string }[]
+): boolean => {
+  if (words[0]?.text !== "set") {
+    return false;
+  }
 
   for (let i = 1; i < words.length; i += 1) {
     const text = words[i]?.text ?? "";
 
-    if (/^-[A-Za-z]*e[A-Za-z]*$/u.test(text) || (text === "-o" && words[i + 1]?.text === "errexit")) return true;
+    if (
+      /^-[A-Za-z]*e[A-Za-z]*$/u.test(text) ||
+      (text === "-o" && words[i + 1]?.text === "errexit")
+    ) {
+      return true;
+    }
   }
 
   return false;
-}
+};
 
-function disablesErrexit(words: readonly { readonly text: string }[]): boolean {
-  if (words[0]?.text !== "set") return false;
+const disablesErrexit = (
+  words: readonly { readonly text: string }[]
+): boolean => {
+  if (words[0]?.text !== "set") {
+    return false;
+  }
 
   for (let i = 1; i < words.length; i += 1) {
     const text = words[i]?.text ?? "";
 
-    if (/^\+[A-Za-z]*e[A-Za-z]*$/u.test(text) || (text === "+o" && words[i + 1]?.text === "errexit")) return true;
+    if (
+      /^\+[A-Za-z]*e[A-Za-z]*$/u.test(text) ||
+      (text === "+o" && words[i + 1]?.text === "errexit")
+    ) {
+      return true;
+    }
   }
 
   return false;
-}
+};
 
 const FLOW_TERMINATORS = new Set(["exit", "return", "exec"]);
 
-function execHasOperand(args: readonly string[]): boolean {
+const execHasOperand = (args: readonly string[]): boolean => {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index] ?? "";
 
-    if (arg === "--") return index + 1 < args.length;
+    if (arg === "--") {
+      return index + 1 < args.length;
+    }
 
-    if (arg === "-c" || arg === "-l") continue;
+    if (arg === "-c" || arg === "-l") {
+      continue;
+    }
 
     if (arg === "-a") {
       index += 1;
@@ -175,199 +208,339 @@ function execHasOperand(args: readonly string[]): boolean {
   }
 
   return false;
-}
+};
 
-function terminatesShell(cmd: ShellRunTrace["parsed"]["commands"][number], exitCode: number): boolean {
+const terminatesShell = (
+  cmd: ShellRunTrace["parsed"]["commands"][number],
+  exitCode: number
+): boolean => {
   const unwrapped = unwrapSimpleCommand(cmd);
   const name = unwrapped?.executable ?? cmd.words[0]?.text;
 
-  if (name === undefined || !FLOW_TERMINATORS.has(name)) return false;
+  if (name === undefined || !FLOW_TERMINATORS.has(name)) {
+    return false;
+  }
 
   const args = unwrapped?.args ?? cmd.words.slice(1).map(({ text }) => text);
 
-  if (name === "exec") return execHasOperand(args);
+  if (name === "exec") {
+    return execHasOperand(args);
+  }
 
-  const literal = args[0];
+  const [literal] = args;
 
-  if (literal !== undefined && /^\d+$/u.test(literal) && (Number(literal) & 255) !== exitCode) {
+  if (
+    literal !== undefined &&
+    /^\d+$/u.test(literal) &&
+    Number(literal) % 256 !== exitCode
+  ) {
     return false;
   }
 
   return true;
-}
+};
 
-function siblingExitApplies(
+const partitionStatements = (
   commands: ShellRunTrace["parsed"]["commands"],
-  siblingIndices: readonly number[],
-  position: number,
-  exitCode: number,
-): boolean {
-  for (let idx = 0; idx < position; idx += 1) {
-    const cmd = commands[siblingIndices[idx] ?? -1];
-
-    if (!cmd || terminatesShell(cmd, exitCode)) return false;
-  }
-
-  // Partition sibling commands into `;`/`\n`-separated statements (lists).
+  siblingIndices: readonly number[]
+): number[][] | null => {
   const statements: number[][] = [];
   let current: number[] = [];
 
   for (const idx of siblingIndices) {
     const cmd = commands[idx];
 
-    if (!cmd) return false;
+    if (!cmd) {
+      return null;
+    }
 
     current.push(idx);
 
-    if (cmd.operatorAfter === ";" || cmd.operatorAfter === "\n" || cmd.operatorAfter === null) {
+    if (
+      cmd.operatorAfter === ";" ||
+      cmd.operatorAfter === "\n" ||
+      cmd.operatorAfter === null
+    ) {
       statements.push(current);
       current = [];
     }
   }
 
-  if (current.length > 0) statements.push(current);
+  if (current.length > 0) {
+    statements.push(current);
+  }
 
-  const targetIndex = siblingIndices[position];
-  const statementIndex = statements.findIndex((stmt) => stmt.includes(targetIndex ?? -1));
-  const statement = statements[statementIndex];
+  return statements;
+};
 
-  if (statementIndex < 0 || !statement) return false;
-
-  // Track `set -e` across statements preceding the target statement.
+const trackErrexitBefore = (
+  commands: ShellRunTrace["parsed"]["commands"],
+  statements: readonly (readonly number[])[],
+  statementIndex: number
+): boolean | null => {
   let errexit = false;
 
   for (let s = 0; s < statementIndex; s += 1) {
     const stmt = statements[s];
 
-    if (!stmt) return false;
+    if (!stmt) {
+      return null;
+    }
 
     if (stmt.length === 1) {
       const only = commands[stmt[0] ?? -1];
 
       if (only) {
-        if (enablesErrexit(only.words)) errexit = true;
-        else if (disablesErrexit(only.words)) errexit = false;
+        if (enablesErrexit(only.words)) {
+          errexit = true;
+        } else if (disablesErrexit(only.words)) {
+          errexit = false;
+        }
       }
     }
   }
 
+  return errexit;
+};
+
+const hasBackgroundedCommand = (
+  commands: ShellRunTrace["parsed"]["commands"],
+  statements: readonly (readonly number[])[],
+  fromIndex: number
+): boolean => {
+  for (let s = fromIndex; s < statements.length; s += 1) {
+    const stmt = statements[s];
+
+    if (!stmt || stmt.some((idx) => commands[idx]?.operatorAfter === "&")) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const siblingExitApplies = (
+  commands: ShellRunTrace["parsed"]["commands"],
+  siblingIndices: readonly number[],
+  position: number,
+  exitCode: number
+): boolean => {
+  for (let idx = 0; idx < position; idx += 1) {
+    const cmd = commands[siblingIndices[idx] ?? -1];
+
+    if (!cmd || terminatesShell(cmd, exitCode)) {
+      return false;
+    }
+  }
+
+  // Partition sibling commands into `;`/`\n`-separated statements (lists).
+  const statements = partitionStatements(commands, siblingIndices);
+
+  if (statements === null) {
+    return false;
+  }
+
+  const targetIndex = siblingIndices[position];
+
+  const statementIndex = statements.findIndex((stmt) =>
+    stmt.includes(targetIndex ?? -1)
+  );
+
+  const statement = statements[statementIndex];
+
+  if (statementIndex === -1 || !statement) {
+    return false;
+  }
+
+  // Track `set -e` across statements preceding the target statement.
+  const errexit = trackErrexitBefore(commands, statements, statementIndex);
+
+  if (errexit === null) {
+    return false;
+  }
+
   // Last statement in the sequence.
   if (statementIndex === statements.length - 1) {
-    if (errexit && statementIndex > 0 && exitCode !== 0) return false;
+    if (errexit && statementIndex > 0 && exitCode !== 0) {
+      return false;
+    }
 
-    if (statement.length === 1) return true;
+    if (statement.length === 1) {
+      return true;
+    }
 
     // A pure `&&` chain exiting 0 proves every command in the chain ran and succeeded.
-    const pureAnd = statement.slice(0, -1).every((idx) => commands[idx]?.operatorAfter === "&&");
+    const pureAnd = statement
+      .slice(0, -1)
+      .every((idx) => commands[idx]?.operatorAfter === "&&");
 
     return pureAnd && exitCode === 0;
   }
 
   // Earlier statement: exitCode === 0 proves execution only when errexit is active on a single simple command.
-  if (exitCode !== 0 || !errexit || statement.length !== 1) return false;
-
-  // Ensure no command in the remaining statements is backgrounded.
-  for (let s = statementIndex + 1; s < statements.length; s += 1) {
-    const stmt = statements[s];
-
-    if (!stmt || stmt.some((idx) => commands[idx]?.operatorAfter === "&")) return false;
+  if (exitCode !== 0 || !errexit || statement.length !== 1) {
+    return false;
   }
 
-  return true;
-}
+  // Ensure no command in the remaining statements is backgrounded.
+  return !hasBackgroundedCommand(commands, statements, statementIndex + 1);
+};
 
-export function commandExitApplies(run: ShellRunTrace, commandIndex: number): boolean {
+export const commandExitApplies = (
+  run: ShellRunTrace,
+  commandIndex: number
+): boolean => {
   const { commands, malformed } = run.parsed;
 
-  if (malformed || run.exitCode === null || commands.length === 0) return false;
+  if (malformed || run.exitCode === null || commands.length === 0) {
+    return false;
+  }
 
   const target = commands[commandIndex];
 
-  if (target === undefined || target.operatorAfter === "&" || target.words[0]?.text === "!") return false;
+  if (
+    target === undefined ||
+    target.operatorAfter === "&" ||
+    target.words[0]?.text === "!"
+  ) {
+    return false;
+  }
 
   if (target.depth === 0) {
     const topLevel: number[] = [];
 
     for (let index = 0; index < commands.length; index += 1) {
-      if (commands[index]?.depth === 0) topLevel.push(index);
+      if (commands[index]?.depth === 0) {
+        topLevel.push(index);
+      }
     }
 
     const position = topLevel.indexOf(commandIndex);
 
-    return position >= 0 && siblingExitApplies(commands, topLevel, position, run.exitCode);
+    return (
+      position !== -1 &&
+      siblingExitApplies(commands, topLevel, position, run.exitCode)
+    );
   }
 
   // Nested commands inherit exit status only when parsed directly from an enclosing `sh|bash|zsh -c`.
   const origin = target.shellCOrigin;
 
-  if (origin === undefined || !commandExitApplies(run, origin)) return false;
+  if (origin === undefined || !commandExitApplies(run, origin)) {
+    return false;
+  }
 
   const siblings: number[] = [];
 
   for (let index = origin + 1; index < commands.length; index += 1) {
-    if (commands[index]?.shellCOrigin === origin) siblings.push(index);
+    if (commands[index]?.shellCOrigin === origin) {
+      siblings.push(index);
+    }
   }
 
   const position = siblings.indexOf(commandIndex);
 
-  return position >= 0 && siblingExitApplies(commands, siblings, position, run.exitCode);
-}
+  return (
+    position !== -1 &&
+    siblingExitApplies(commands, siblings, position, run.exitCode)
+  );
+};
 
-function isShortCircuitedByPrevious(
+const isShortCircuitedByPrevious = (
   commands: ShellRunTrace["parsed"]["commands"],
   siblings: readonly number[],
-  position: number,
-): boolean {
-  if (position <= 0) return false;
+  position: number
+): boolean => {
+  if (position <= 0) {
+    return false;
+  }
 
   const previous = commands[siblings[position - 1] ?? -1];
 
-  if (!previous) return false;
+  if (!previous) {
+    return false;
+  }
 
-  const name = unwrapSimpleCommand(previous)?.executable ?? previous.words[0]?.text;
+  const name =
+    unwrapSimpleCommand(previous)?.executable ?? previous.words[0]?.text;
 
-  return (previous.operatorAfter === "&&" && name === "false")
-    || (previous.operatorAfter === "||" && (name === "true" || name === ":"));
-}
+  return (
+    (previous.operatorAfter === "&&" && name === "false") ||
+    (previous.operatorAfter === "||" && (name === "true" || name === ":"))
+  );
+};
 
-export function commandCanProduceOutput(run: ShellRunTrace, commandIndex: number): boolean {
+const collectCommandSiblings = (
+  run: ShellRunTrace,
+  target: ShellRunTrace["parsed"]["commands"][number]
+): number[] | null => {
+  const { commands } = run.parsed;
+  const siblings: number[] = [];
+
+  if (target.depth === 0) {
+    for (let index = 0; index < commands.length; index += 1) {
+      if (commands[index]?.depth === 0) {
+        siblings.push(index);
+      }
+    }
+
+    return siblings;
+  }
+
+  const origin = target.shellCOrigin;
+
+  if (origin === undefined || !commandCanProduceOutput(run, origin)) {
+    return null;
+  }
+
+  for (let index = origin + 1; index < commands.length; index += 1) {
+    if (commands[index]?.shellCOrigin === origin) {
+      siblings.push(index);
+    }
+  }
+
+  return siblings;
+};
+
+export const commandCanProduceOutput = (
+  run: ShellRunTrace,
+  commandIndex: number
+): boolean => {
   const { commands, malformed } = run.parsed;
 
-  if (malformed || run.exitCode === null || commands.length === 0) return false;
+  if (malformed || run.exitCode === null || commands.length === 0) {
+    return false;
+  }
 
   const target = commands[commandIndex];
 
-  if (target === undefined || target.operatorAfter === "&" || target.words[0]?.text === "!") return false;
+  if (
+    target === undefined ||
+    target.operatorAfter === "&" ||
+    target.words[0]?.text === "!"
+  ) {
+    return false;
+  }
 
-  let siblings: number[];
+  const siblings = collectCommandSiblings(run, target);
 
-  if (target.depth === 0) {
-    siblings = [];
-
-    for (let index = 0; index < commands.length; index += 1) {
-      if (commands[index]?.depth === 0) siblings.push(index);
-    }
-  } else {
-    const origin = target.shellCOrigin;
-
-    if (origin === undefined || !commandCanProduceOutput(run, origin)) return false;
-
-    siblings = [];
-
-    for (let index = origin + 1; index < commands.length; index += 1) {
-      if (commands[index]?.shellCOrigin === origin) siblings.push(index);
-    }
+  if (siblings === null) {
+    return false;
   }
 
   const position = siblings.indexOf(commandIndex);
 
-  if (position < 0) return false;
+  if (position === -1) {
+    return false;
+  }
 
   for (let idx = 0; idx < position; idx += 1) {
     const cmd = commands[siblings[idx] ?? -1];
 
-    if (!cmd || terminatesShell(cmd, run.exitCode)) return false;
+    if (!cmd || terminatesShell(cmd, run.exitCode)) {
+      return false;
+    }
   }
 
   return !isShortCircuitedByPrevious(commands, siblings, position);
-}
+};

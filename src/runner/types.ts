@@ -80,11 +80,19 @@ export interface TrialResult {
   readonly error_message: string | null;
 }
 
-export function serializeSeededDefects(defects: readonly Defect[]): readonly SeededDefectRecord[] {
-  return defects.map(({ id, file, lineRange, minSeverity, conceptGroups, description }) => ({
-    id, file, line_range: lineRange, min_severity: minSeverity, concept_groups: conceptGroups, description,
-  }));
-}
+export const serializeSeededDefects = (
+  defects: readonly Defect[]
+): readonly SeededDefectRecord[] =>
+  defects.map(
+    ({ id, file, lineRange, minSeverity, conceptGroups, description }) => ({
+      id,
+      file,
+      line_range: lineRange,
+      min_severity: minSeverity,
+      concept_groups: conceptGroups,
+      description,
+    })
+  );
 
 export interface TrialJob {
   readonly task: EvalTask;

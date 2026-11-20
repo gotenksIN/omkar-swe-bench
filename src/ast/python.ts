@@ -243,25 +243,34 @@ print(json.dumps(passed))
 `;
 
 type PythonAstRequest =
-  | { readonly kind: "imports" | "tests"; readonly repoDir: string; readonly paths: readonly string[] }
+  | {
+      readonly kind: "imports" | "tests";
+      readonly repoDir: string;
+      readonly paths: readonly string[];
+    }
   | { readonly kind: "divide"; readonly path: string }
   | {
-    readonly kind: "patches";
-    readonly repoDir: string;
-    readonly paths: readonly string[];
-    readonly modules: readonly string[];
-    readonly strict: boolean;
-  };
+      readonly kind: "patches";
+      readonly repoDir: string;
+      readonly paths: readonly string[];
+      readonly modules: readonly string[];
+      readonly strict: boolean;
+    };
 
-async function runPythonAst(request: PythonAstRequest): Promise<boolean> {
+const runPythonAst = async (request: PythonAstRequest): Promise<boolean> => {
   const child = Bun.spawn(["python3", "-I", "-", JSON.stringify(request)], {
-    env: { PATH: process.env.PATH ?? "/usr/bin:/bin", PYTHONDONTWRITEBYTECODE: "1" },
+    env: {
+      PATH: process.env.PATH ?? "/usr/bin:/bin",
+      PYTHONDONTWRITEBYTECODE: "1",
+    },
     stdin: new TextEncoder().encode(PYTHON_AST_DRIVER),
     stdout: "pipe",
     stderr: "pipe",
   });
 
-  const timer = setTimeout(() => child.kill("SIGKILL"), 15_000);
+  const timer = setTimeout(() => {
+    child.kill("SIGKILL");
+  }, 15_000);
 
   try {
     const [exitCode, reply] = await Promise.all([
@@ -276,30 +285,34 @@ async function runPythonAst(request: PythonAstRequest): Promise<boolean> {
   } finally {
     clearTimeout(timer);
   }
-}
+};
 
-export function checkPythonImportDag(repoDir: string, moduleOrder: readonly string[]): Promise<boolean> {
-  return runPythonAst({ kind: "imports", repoDir, paths: moduleOrder });
-}
+export const checkPythonImportDag = async (
+  repoDir: string,
+  moduleOrder: readonly string[]
+): Promise<boolean> =>
+  await runPythonAst({ kind: "imports", repoDir, paths: moduleOrder });
 
-export function checkPythonHasTestMethods(repoDir: string, testFiles: readonly string[]): Promise<boolean> {
-  return runPythonAst({ kind: "tests", repoDir, paths: testFiles });
-}
+export const checkPythonHasTestMethods = async (
+  repoDir: string,
+  testFiles: readonly string[]
+): Promise<boolean> =>
+  await runPythonAst({ kind: "tests", repoDir, paths: testFiles });
 
-export function checkPythonNoTestMonkeypatches(
+export const checkPythonNoTestMonkeypatches = async (
   repoDir: string,
   testFiles: readonly string[],
-  options?: MonkeypatchCheckOptions,
-): Promise<boolean> {
-  return runPythonAst({
+  options?: MonkeypatchCheckOptions
+): Promise<boolean> =>
+  await runPythonAst({
     kind: "patches",
     repoDir,
     paths: testFiles,
     modules: options?.projectModules ?? [],
     strict: options?.prohibitStdlibPatches === true,
   });
-}
 
-export function checkPythonDividePagesMinimal(cliFilePath: string): Promise<boolean> {
-  return runPythonAst({ kind: "divide", path: cliFilePath });
-}
+export const checkPythonDividePagesMinimal = async (
+  cliFilePath: string
+): Promise<boolean> =>
+  await runPythonAst({ kind: "divide", path: cliFilePath });

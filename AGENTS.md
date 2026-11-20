@@ -5,9 +5,8 @@
 - Use Bun `1.4.4`, TypeScript `7.0.2`, and the strict options in `tsconfig.json`.
 - Use TypeScript for type checking and native `oxc-parser@0.159.0` for TypeScript AST analysis.
   Keep the toolchain free of WASM dependencies.
-- Keep `oxlint` and `@oxlint/plugins` pinned in lockstep at `1.94.0`.
-  Use `.oxlintrc.json` for the harness's lint rules.
-  Never mount these packages, the lint configuration, or `tools/oxlint/anti-slop` into trial sandboxes.
+- Use Ultracite (`ultracite@8.3.1`), `oxlint@1.94.0`, `oxlint-tsgolint@7.0.2007`, and `oxfmt@0.79.0` via `oxlint.config.ts` and `oxfmt.config.ts` (`ultracite/oxlint/core`, `ultracite/oxlint/anti-slop`, and `ultracite/oxfmt`).
+  Never mount these packages or their configurations into trial sandboxes.
   Do not seed trial repositories with the harness lint configuration or load anti-slop in trial configurations.
 
 ## Source rules
@@ -26,18 +25,17 @@
 
 ## Module boundaries
 
-| Module | Owns |
-| --- | --- |
-| `src/ast/` | Shell, Python, and TypeScript analysis |
+| Module         | Owns                                                    |
+| -------------- | ------------------------------------------------------- |
+| `src/ast/`     | Shell, Python, and TypeScript analysis                  |
 | `src/sandbox/` | Trial mounts, environment, tools, and process isolation |
-| `src/driver/` | OpenCode server, session protocol, and telemetry |
-| `src/graders/` | Grading evidence and deterministic checks |
-| `src/tasks/` | Benchmark task definitions and fixtures |
-| `src/runner/` | Trial lifecycle and scheduling |
+| `src/driver/`  | OpenCode server, session protocol, and telemetry        |
+| `src/graders/` | Grading evidence and deterministic checks               |
+| `src/tasks/`   | Benchmark task definitions and fixtures                 |
+| `src/runner/`  | Trial lifecycle and scheduling                          |
 
 ## Verification and commits
 
-Run `bun run typecheck`, `bun run lint`, and `bun test`.
-If your `node` executable cannot load TypeScript, use `bun run --bun lint` to load the local plugin with Bun.
+Run `bun run typecheck`, `bun run check`, and `bun test`.
 Inspect `git status` and `git diff` before committing.
 Create one scoped commit per task with subject `<scope>: <Capitalized summary>` and sign off with `-s`.

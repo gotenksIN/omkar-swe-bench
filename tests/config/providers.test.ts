@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import path from "node:path";
 
-import { loadProviderConfig, writeProviderConfig } from "../../src/config/providers.ts";
+import {
+  loadProviderConfig,
+  writeProviderConfig,
+} from "../../src/config/providers.ts";
 import { parseJsoncObject } from "../../src/util/json.ts";
 
 let workspace: string;
@@ -35,18 +46,20 @@ afterEach(() => {
 });
 
 test("filters providers and rewrites tokens relative to the canonical source and home", () => {
-  const sourceDir = join(workspace, "source");
-  const source = join(sourceDir, "providers.jsonc");
-  const link = join(workspace, "linked.jsonc");
-  const relativeFile = join(sourceDir, "secret");
-  const homeFile = join(workspace, "home-key");
+  const sourceDir = path.join(workspace, "source");
+  const source = path.join(sourceDir, "providers.jsonc");
+  const link = path.join(workspace, "linked.jsonc");
+  const relativeFile = path.join(sourceDir, "secret");
+  const homeFile = path.join(workspace, "home-key");
 
   mkdirSync(sourceDir);
   writeFileSync(relativeFile, "relative secret");
   writeFileSync(homeFile, "home secret");
-  symlinkSync(relativeFile, join(sourceDir, "alias"));
+  symlinkSync(relativeFile, path.join(sourceDir, "alias"));
   symlinkSync(source, link);
-  writeFileSync(source, `{
+  writeFileSync(
+    source,
+    `{
     // Copy only providers used by the trial.
     "mcp": { "example": "{file:do-not-open}" },
     "plugins": ["personal-plugin"],
@@ -60,9 +73,13 @@ test("filters providers and rewrites tokens relative to the canonical source and
       "google": { "settings": { "apiKey": "{env:GOOGLE_KEY}" } },
       "unused": { "settings": { "apiKey": "{env:UNUSED}{file:do-not-open}" } },
     },
-  }`);
+  }`
+  );
 
-  const credentials = loadProviderConfig({ activeProviderIds: ["openai", "google", "openai"], providersFile: link });
+  const credentials = loadProviderConfig({
+    activeProviderIds: ["openai", "google", "openai"],
+    providersFile: link,
+  });
 
   const providers = {
     openai: {
@@ -70,7 +87,10 @@ test("filters providers and rewrites tokens relative to the canonical source and
         apiKey: `{file:${relativeFile}}`,
         headers: [
           `{env:API_KEY} {file:${homeFile}} {file:${relativeFile}}`,
-          "{env:API_KEY}:{env:OTHER}", 42, false, null,
+          "{env:API_KEY}:{env:OTHER}",
+          42,
+          false,
+          null,
         ],
       },
     },
@@ -84,9 +104,11 @@ test("filters providers and rewrites tokens relative to the canonical source and
   });
 
   const configFile = writeProviderConfig(workspace, credentials);
-  expect(configFile).toBe(join(workspace, "config", "opencode", "opencode.jsonc"));
-  expect(statSync(configFile).mode & 0o777).toBe(0o600);
-  expect(parseJsoncObject(readFileSync(configFile, "utf8"))).toEqual({
+  expect(configFile).toBe(
+    path.join(workspace, "config", "opencode", "opencode.jsonc")
+  );
+  expect(statSync(configFile).mode % 0o1000).toBe(0o600);
+  expect(parseJsoncObject(readFileSync(configFile, "utf-8"))).toEqual({
     $schema: "https://opencode.ai/config.json",
     providers,
   });
@@ -94,45 +116,78 @@ test("filters providers and rewrites tokens relative to the canonical source and
 });
 
 test("rejects a directory or missing file referenced by an active provider", () => {
-  const providersFile = join(workspace, "providers.jsonc");
+  const providersFile = path.join(workspace, "providers.jsonc");
   const options = { activeProviderIds: ["openai"], providersFile };
 
-  mkdirSync(join(workspace, "keys"));
-  writeFileSync(providersFile, '{"providers":{"openai":{"apiKey":"{file:keys}"}}}');
-  expect(() => loadProviderConfig(options)).toThrow(/regular file.*\{file:keys\}/u);
-  writeFileSync(providersFile, '{"providers":{"openai":{"apiKey":"{file:missing}"}}}');
+  mkdirSync(path.join(workspace, "keys"));
+  writeFileSync(
+    providersFile,
+    '{"providers":{"openai":{"apiKey":"{file:keys}"}}}'
+  );
+  expect(() => loadProviderConfig(options)).toThrow(
+    /regular file.*\{file:keys\}/u
+  );
+  writeFileSync(
+    providersFile,
+    '{"providers":{"openai":{"apiKey":"{file:missing}"}}}'
+  );
   expect(() => loadProviderConfig(options)).toThrow(/missing/u);
 });
 
 test("uses the XDG config home and rejects missing active providers even in dry runs", () => {
-  process.env.XDG_CONFIG_HOME = join(workspace, "xdg");
-  const sourceDir = join(process.env.XDG_CONFIG_HOME, "opencode");
+  process.env.XDG_CONFIG_HOME = path.join(workspace, "xdg");
+  const sourceDir = path.join(process.env.XDG_CONFIG_HOME, "opencode");
 
   mkdirSync(sourceDir, { recursive: true });
-  writeFileSync(join(sourceDir, "opencode.jsonc"), '{"providers":{"google":{}}}');
-  expect(loadProviderConfig({ activeProviderIds: ["google"] }).filteredProviders).toEqual({ google: {} });
-  expect(() => loadProviderConfig({ activeProviderIds: ["openai"], dryRun: true }))
-    .toThrow('Missing active provider "openai"');
-  expect(() => loadProviderConfig({ activeProviderIds: ["constructor"] })).toThrow('Missing active provider "constructor"');
+  writeFileSync(
+    path.join(sourceDir, "opencode.jsonc"),
+    '{"providers":{"google":{}}}'
+  );
+  expect(
+    loadProviderConfig({ activeProviderIds: ["google"] }).filteredProviders
+  ).toEqual({ google: {} });
+  expect(() =>
+    loadProviderConfig({ activeProviderIds: ["openai"], dryRun: true })
+  ).toThrow('Missing active provider "openai"');
+  expect(() =>
+    loadProviderConfig({ activeProviderIds: ["constructor"] })
+  ).toThrow('Missing active provider "constructor"');
 });
 
 test("falls back to a synthetic stub only for dry runs with no host file", () => {
-  const sourceDir = join(workspace, ".config", "opencode");
+  const sourceDir = path.join(workspace, ".config", "opencode");
 
   mkdirSync(sourceDir, { recursive: true });
-  writeFileSync(join(sourceDir, "opencode.json"), '{"providers":{"openai":{"apiKey":"ignore me"}}}');
-  expect(loadProviderConfig({ activeProviderIds: ["openai", "google"], dryRun: true })).toEqual({
+  writeFileSync(
+    path.join(sourceDir, "opencode.json"),
+    '{"providers":{"openai":{"apiKey":"ignore me"}}}'
+  );
+  expect(
+    loadProviderConfig({
+      activeProviderIds: ["openai", "google"],
+      dryRun: true,
+    })
+  ).toEqual({
     filteredProviders: { openai: {}, google: {} },
     extraRoFiles: [],
     extraEnvNames: [],
   });
-  expect(() => loadProviderConfig({ activeProviderIds: ["openai"] })).toThrow(/opencode\.jsonc/u);
-  expect(() => loadProviderConfig({
-    activeProviderIds: ["openai"],
-    dryRun: true,
-    providersFile: join(sourceDir, "override.jsonc"),
-  })).toThrow(/override\.jsonc/u);
+  expect(() => loadProviderConfig({ activeProviderIds: ["openai"] })).toThrow(
+    /opencode\.jsonc/u
+  );
+  expect(() =>
+    loadProviderConfig({
+      activeProviderIds: ["openai"],
+      dryRun: true,
+      providersFile: path.join(sourceDir, "override.jsonc"),
+    })
+  ).toThrow(/override\.jsonc/u);
 
-  writeFileSync(join(sourceDir, "opencode.jsonc"), '{"providers":{"openai":{"default":true}}}');
-  expect(loadProviderConfig({ activeProviderIds: ["openai"] }).filteredProviders).toEqual({ openai: { default: true } });
+  writeFileSync(
+    path.join(sourceDir, "opencode.jsonc"),
+    '{"providers":{"openai":{"default":true}}}'
+  );
+  expect(
+    loadProviderConfig({ activeProviderIds: ["openai"] }).filteredProviders
+  ).toEqual({ openai: { default: true } });
 });

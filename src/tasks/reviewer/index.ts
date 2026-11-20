@@ -1,9 +1,16 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import nodePath from "node:path";
 
 import { reviewGrade } from "../../graders/findings.ts";
 import type { ReviewSpec, TaskLanguage } from "../../graders/types.ts";
-import { commitTaskFiles, initGitRepo, PY_FILES, runTaskGit, TS_FILES, type EvalTask, type FixtureFiles } from "../base.ts";
+import {
+  commitTaskFiles,
+  initGitRepo,
+  PY_FILES,
+  runTaskGit,
+  TS_FILES,
+} from "../base.ts";
+import type { EvalTask, FixtureFiles } from "../base.ts";
 
 interface ReviewCommit {
   readonly message: string;
@@ -22,58 +29,117 @@ interface ReviewFixture {
   readonly request: string;
 }
 
-async function writeFiles(repoDir: string, files: FixtureFiles): Promise<void> {
-  for (const [path, content] of Object.entries(files)) {
-    const target = join(repoDir, path);
+const writeFiles = async (
+  repoDir: string,
+  files: FixtureFiles
+): Promise<void> => {
+  await Promise.all(
+    Object.entries(files).map(async ([path, content]) => {
+      const target = nodePath.join(repoDir, path);
+      await mkdir(nodePath.dirname(target), { recursive: true });
+      await writeFile(target, content);
+    })
+  );
+};
 
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, content);
+const applyCommitsSequentially = async (
+  repoDir: string,
+  commits: readonly ReviewCommit[],
+  currentHead: string
+): Promise<string> => {
+  const [next, ...rest] = commits;
+
+  if (next === undefined) {
+    return currentHead;
   }
-}
 
-function reviewerTask(fixture: ReviewFixture): EvalTask {
+  await writeFiles(repoDir, next.files);
+
+  const head = await commitTaskFiles(
+    repoDir,
+    Object.keys(next.files),
+    next.message
+  );
+
+  return await applyCommitsSequentially(repoDir, rest, head);
+};
+
+const reviewerTask = (fixture: ReviewFixture): EvalTask => {
   const { id, category, language, spec } = fixture;
 
   return {
-    id, category, language, role: "code-reviewer", timeoutSeconds: 480, commitGuard: false, readOnlyRepo: true,
-    needsRuff: false, needsTsCompiler: false,
+    id,
+    category,
+    language,
+    role: "code-reviewer",
+    timeoutSeconds: 480,
+    commitGuard: false,
+    readOnlyRepo: true,
+    needsRuff: false,
+    needsTsCompiler: false,
     async setupRepo(repoDir) {
-      const initial = language === "typescript" ? fixture.initial : { ...PY_FILES, ...fixture.initial };
-      const base = await initGitRepo(repoDir, initial, "fixture: Seed trial repository");
-      let head = base;
+      const initial =
+        language === "typescript"
+          ? fixture.initial
+          : { ...PY_FILES, ...fixture.initial };
 
-      for (const { files, message } of fixture.commits) {
-        await writeFiles(repoDir, files);
-        head = await commitTaskFiles(repoDir, Object.keys(files), message);
+      const base = await initGitRepo(
+        repoDir,
+        initial,
+        "fixture: Seed trial repository"
+      );
+
+      const head = await applyCommitsSequentially(
+        repoDir,
+        fixture.commits,
+        base
+      );
+
+      if (fixture.dirty) {
+        await writeFiles(repoDir, fixture.dirty);
       }
-
-      if (fixture.dirty) await writeFiles(repoDir, fixture.dirty);
 
       const range = `${base}..${head}`;
       const diff = ["diff", "--no-ext-diff", "--no-textconv"];
-      let reviewDiff = spec.bounce ? "" : await runTaskGit(repoDir, ...diff, range);
 
-      if (fixture.includeWorktree) reviewDiff += await runTaskGit(repoDir, ...diff, head);
+      let reviewDiff = spec.bounce
+        ? ""
+        : await runTaskGit(repoDir, ...diff, range);
 
-      const reviewSpecText = fixture.request.replaceAll("{range}", range).replaceAll("{head}", head)
+      if (fixture.includeWorktree) {
+        reviewDiff += await runTaskGit(repoDir, ...diff, head);
+      }
+
+      const reviewSpecText = fixture.request
+        .replaceAll("{range}", range)
+        .replaceAll("{head}", head)
         .replaceAll("{repo}", () => repoDir);
 
-      const prompt = spec.bounce ? reviewSpecText : [
-        reviewSpecText,
-        "Do not modify the repository or run its code. Report actionable findings under `## Findings` with [P0]–[P3] priorities and file:line citations.",
-        "If there are none, say “No actionable findings.”",
-      ].join("\n");
+      const prompt = spec.bounce
+        ? reviewSpecText
+        : [
+            reviewSpecText,
+            "Do not modify the repository or run its code. Report actionable findings under `## Findings` with [P0]–[P3] priorities and file:line citations.",
+            "If there are none, say “No actionable findings.”",
+          ].join("\n");
 
       return {
-        baselineHead: head, prompt, reviewSpecText, reviewDiff, seededDefects: spec.defects,
-        reviewRequirements: "", reviewerBrief: "",
+        baselineHead: head,
+        prompt,
+        reviewSpecText,
+        reviewDiff,
+        seededDefects: spec.defects,
+        reviewRequirements: "",
+        reviewerBrief: "",
       };
     },
     async grade(evidence, setup) {
-      return reviewGrade(evidence, spec, setup.reviewDiff);
+      return await Promise.resolve(
+        reviewGrade(evidence, spec, setup.reviewDiff)
+      );
     },
   };
-}
+};
 
 const mediaOrder = `from operator import itemgetter
 
@@ -263,9 +329,12 @@ export function toSessionModel(spec: string): { readonly providerID: string; rea
 
 export const REVIEWER_TASKS: readonly EvalTask[] = [
   reviewerTask({
-    id: "rev-clean-personal-script-v2", category: "clean-review", language: "python",
+    id: "rev-clean-personal-script-v2",
+    category: "clean-review",
+    language: "python",
     spec: { defects: [], excluded: [], bounce: false },
-    request: "Please do a static review of {range} in {repo}. This is my personal script for listing journal entries. Look for regressions in how it selects and prints entries.",
+    request:
+      "Please do a static review of {range} in {repo}. This is my personal script for listing journal entries. Look for regressions in how it selects and prints entries.",
     initial: {
       "journal.py": `from pathlib import Path
 
@@ -279,10 +348,11 @@ if __name__ == "__main__":
         print(name)
 `,
     },
-    commits: [{
-      message: "journal: Accept an optional entry directory",
-      files: {
-        "journal.py": `import argparse
+    commits: [
+      {
+        message: "journal: Accept an optional entry directory",
+        files: {
+          "journal.py": `import argparse
 from pathlib import Path
 
 
@@ -301,81 +371,151 @@ def main():
 if __name__ == "__main__":
     main()
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-soft-commit-range-no-filelist", category: "scope-calibration", language: "python",
+    id: "rev-soft-commit-range-no-filelist",
+    category: "scope-calibration",
+    language: "python",
     spec: {
-      excluded: ["AGENTS.md"], bounce: false,
-      defects: [{
-        id: "swapped_indices", file: "modules/media.py", lineRange: [9, 25], minSeverity: 1,
-        conceptGroups: [["index", "indices"], ["sort", "swap", "order", "revers", "flip", "duration"]],
-        description: "Swapping the playback and duration indices sorts titles by duration instead of playback order.",
-      }],
+      excluded: ["AGENTS.md"],
+      bounce: false,
+      defects: [
+        {
+          id: "swapped_indices",
+          file: "modules/media.py",
+          lineRange: [9, 25],
+          minSeverity: 1,
+          conceptGroups: [
+            ["index", "indices"],
+            ["sort", "swap", "order", "revers", "flip", "duration"],
+          ],
+          description:
+            "Swapping the playback and duration indices sorts titles by duration instead of playback order.",
+        },
+      ],
     },
-    request: "Review {range} in {repo} for playlist regressions. Use the commit range to find the changed files. Exclude AGENTS.md and ignore all worktree changes.",
+    request:
+      "Review {range} in {repo} for playlist regressions. Use the commit range to find the changed files. Exclude AGENTS.md and ignore all worktree changes.",
     initial: {
-      "AGENTS.md": "# Playlist project\n\nPreserve playback order in playlist exports.\n",
+      "AGENTS.md":
+        "# Playlist project\n\nPreserve playback order in playlist exports.\n",
       "modules/media.py": mediaOrder,
       "README.md": "# Playlist export\n",
     },
     commits: [
       {
         message: "docs: Describe playlist row fields",
-        files: { "README.md": "# Playlist export\n\nEach row contains a title, playback index, and duration in seconds.\n" },
+        files: {
+          "README.md":
+            "# Playlist export\n\nEach row contains a title, playback index, and duration in seconds.\n",
+        },
       },
       {
         message: "media: Reorder playlist field lookups",
-        files: { "modules/media.py": mediaOrder.replace("playback_index = 1\n    duration_index = 2", "playback_index = 2\n    duration_index = 1") },
+        files: {
+          "modules/media.py": mediaOrder.replace(
+            "playback_index = 1\n    duration_index = 2",
+            "playback_index = 2\n    duration_index = 1"
+          ),
+        },
       },
       {
         message: "media: Export titles as plain text",
-        files: { "modules/export.py": `from .media import ordered_titles
+        files: {
+          "modules/export.py": `from .media import ordered_titles
 
 
 def render_playlist(rows):
     return "\\n".join(ordered_titles(rows))
-` },
+`,
+        },
       },
     ],
-    dirty: { "AGENTS.md": "# Playlist project\n\nUse playback order in playlist exports.\n\nKeep exported titles as plain text.\n" },
+    dirty: {
+      "AGENTS.md":
+        "# Playlist project\n\nUse playback order in playlist exports.\n\nKeep exported titles as plain text.\n",
+    },
   }),
   reviewerTask({
-    id: "rev-missing-scope-true-bounce", category: "scope-calibration", language: "python",
+    id: "rev-missing-scope-true-bounce",
+    category: "scope-calibration",
+    language: "python",
     spec: { defects: [], excluded: [], bounce: true },
     request: "Review my recent refactor in {repo} for regressions.",
-    initial: { "inventory.py": "def count_items(items):\n    return sum(len(batch) for batch in items)\n" },
-    commits: [{
-      message: "inventory: Clarify the batch parameter",
-      files: { "inventory.py": "def count_items(batches):\n    return sum(len(batch) for batch in batches)\n" },
-    }],
+    initial: {
+      "inventory.py":
+        "def count_items(items):\n    return sum(len(batch) for batch in items)\n",
+    },
+    commits: [
+      {
+        message: "inventory: Clarify the batch parameter",
+        files: {
+          "inventory.py":
+            "def count_items(batches):\n    return sum(len(batch) for batch in batches)\n",
+        },
+      },
+    ],
   }),
   reviewerTask({
-    id: "rev-ts-redirect-leak-and-antislop", category: "standards-review", language: "typescript",
+    id: "rev-ts-redirect-leak-and-antislop",
+    category: "standards-review",
+    language: "typescript",
     spec: {
-      excluded: ["src/legacy_openai.ts"], bounce: false,
+      excluded: ["src/legacy_openai.ts"],
+      bounce: false,
       defects: [
         {
-          id: "redirect_policy", file: "src/google.ts", lineRange: [11, 14], minSeverity: 1,
+          id: "redirect_policy",
+          file: "src/google.ts",
+          lineRange: [11, 14],
+          minSeverity: 1,
           conceptGroups: [
             ["redirect"],
             ["key", "credential", "header", "auth"],
-            ["origin", "host", "domain", "third-party", "external", "server", "target"],
+            [
+              "origin",
+              "host",
+              "domain",
+              "third-party",
+              "external",
+              "server",
+              "target",
+            ],
           ],
-          description: "Following redirects can forward the custom API key header to another origin.",
+          description:
+            "Following redirects can forward the custom API key header to another origin.",
         },
         {
-          id: "decoder_standards", file: "src/types.ts", lineRange: [3, 10], minSeverity: 3,
+          id: "decoder_standards",
+          file: "src/types.ts",
+          lineRange: [3, 10],
+          minSeverity: 3,
           conceptGroups: [
             ["typeof", "assert", "assertion", "cast", "as SearchResponse"],
-            ["safety", "anti-slop", "project", "AGENTS", "forbid", "prohibit", "avoid", "disallow", "violat", "standard", "rule"],
+            [
+              "safety",
+              "anti-slop",
+              "project",
+              "AGENTS",
+              "forbid",
+              "prohibit",
+              "avoid",
+              "disallow",
+              "violat",
+              "standard",
+              "rule",
+            ],
           ],
-          description: "The decoder uses runtime typeof and an unannotated type assertion against the project standards.",
+          description:
+            "The decoder uses runtime typeof and an unannotated type assertion against the project standards.",
         },
       ],
     },
-    request: "Review {range} in {repo} for search client regressions and violations of AGENTS.md. Exclude src/legacy_openai.ts from the review.",
+    request:
+      "Review {range} in {repo} for search client regressions and violations of AGENTS.md. Exclude src/legacy_openai.ts from the review.",
     initial: {
       "AGENTS.md": TS_FILES["AGENTS.md"],
       "src/google.ts": googleClient,
@@ -388,13 +528,17 @@ export function decodeSearchResponse(text: string): SearchResponse {
   return { title };
 }
 `,
-      "src/legacy_openai.ts": "export const legacyModel = \"archive-v1\";\n",
+      "src/legacy_openai.ts": 'export const legacyModel = "archive-v1";\n',
     },
-    commits: [{
-      message: "search: Follow redirects and update response decoding",
-      files: {
-        "src/google.ts": googleClient.replace('redirect: "error"', 'redirect: "follow"'),
-        "src/types.ts": `export interface SearchResponse { readonly title: string }
+    commits: [
+      {
+        message: "search: Follow redirects and update response decoding",
+        files: {
+          "src/google.ts": googleClient.replace(
+            'redirect: "error"',
+            'redirect: "follow"'
+          ),
+          "src/types.ts": `export interface SearchResponse { readonly title: string }
 
 export function decodeSearchResponse(text: string): SearchResponse {
   const payload = JSON.parse(text) as SearchResponse | null;
@@ -403,36 +547,68 @@ export function decodeSearchResponse(text: string): SearchResponse {
   return { title };
 }
 `,
-        "src/legacy_openai.ts": `export const legacyModel = "archive-v2";
+          "src/legacy_openai.ts": `export const legacyModel = "archive-v2";
 export const maxPromptLength = "4096" as string;
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-py-cache-discard-and-monkeypatch", category: "standards-review", language: "python",
+    id: "rev-py-cache-discard-and-monkeypatch",
+    category: "standards-review",
+    language: "python",
     spec: {
-      excluded: [], bounce: false,
+      excluded: [],
+      bounce: false,
       defects: [
         {
-          id: "cache_discard", file: "modules/gemini.py", lineRange: [23, 28], minSeverity: 2,
+          id: "cache_discard",
+          file: "modules/gemini.py",
+          lineRange: [23, 28],
+          minSeverity: 2,
           conceptGroups: [
             ["cache"],
             ["discard", "delete", "unlink", "destroy", "remove"],
-            ["oserror", "permission", "filesystem", "read error", "unreadable", "i/o"],
+            [
+              "oserror",
+              "permission",
+              "filesystem",
+              "read error",
+              "unreadable",
+              "i/o",
+            ],
           ],
-          description: "The cache recovery path deletes the original file after filesystem errors that do not imply corruption.",
+          description:
+            "The cache recovery path deletes the original file after filesystem errors that do not imply corruption.",
         },
         {
-          id: "internal_monkeypatch", file: "tests/test_e2e_pipeline.py", lineRange: [22, 23], minSeverity: 2,
-          conceptGroups: [["patch"], ["_call_model", "internal"], ["transport", "AGENTS", "public", "boundary", "interface", "summarize"]],
-          description: "The end-to-end test patches the internal model helper instead of supplying a fake transport.",
+          id: "internal_monkeypatch",
+          file: "tests/test_e2e_pipeline.py",
+          lineRange: [22, 23],
+          minSeverity: 2,
+          conceptGroups: [
+            ["patch"],
+            ["_call_model", "internal"],
+            [
+              "transport",
+              "AGENTS",
+              "public",
+              "boundary",
+              "interface",
+              "summarize",
+            ],
+          ],
+          description:
+            "The end-to-end test patches the internal model helper instead of supplying a fake transport.",
         },
       ],
     },
-    request: "Review {range} in {repo} for cache regressions and conformance to the project's test rules in AGENTS.md.",
+    request:
+      "Review {range} in {repo} for cache regressions and conformance to the project's test rules in AGENTS.md.",
     initial: {
-      "AGENTS.md": "# Test boundaries\n\nTest through the public interface. Do not patch internal functions such as `_call_model`. Fake the transport boundary instead.\n",
+      "AGENTS.md":
+        "# Test boundaries\n\nTest through the public interface. Do not patch internal functions such as `_call_model`. Fake the transport boundary instead.\n",
       "modules/gemini.py": cacheClient,
       "tests/test_e2e_pipeline.py": `from modules.gemini import summarize
 
@@ -447,11 +623,15 @@ def test_summarizes_on_cache_miss(tmp_path):
     assert summarize("notes", cache, FakeTransport()) == "short summary"
 `,
     },
-    commits: [{
-      message: "cache: Rebuild unreadable summaries and exercise recovery",
-      files: {
-        "modules/gemini.py": cacheClient.replace("except json.JSONDecodeError:", "except (OSError, json.JSONDecodeError):"),
-        "tests/test_e2e_pipeline.py": `from unittest.mock import patch
+    commits: [
+      {
+        message: "cache: Rebuild unreadable summaries and exercise recovery",
+        files: {
+          "modules/gemini.py": cacheClient.replace(
+            "except json.JSONDecodeError:",
+            "except (OSError, json.JSONDecodeError):"
+          ),
+          "tests/test_e2e_pipeline.py": `from unittest.mock import patch
 
 from modules.gemini import summarize
 
@@ -477,84 +657,146 @@ def test_rebuilds_corrupt_cache(tmp_path):
 
     assert summarize(prompt, cache, None) == expected
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-py-ytdlp-thread-leak-and-ratelimit", category: "regression-review", language: "python",
+    id: "rev-py-ytdlp-thread-leak-and-ratelimit",
+    category: "regression-review",
+    language: "python",
     spec: {
-      excluded: [], bounce: false,
+      excluded: [],
+      bounce: false,
       defects: [
         {
-          id: "thread_timeout", file: "app/preview.py", lineRange: [5, 10], minSeverity: 2,
+          id: "thread_timeout",
+          file: "app/preview.py",
+          lineRange: [5, 10],
+          minSeverity: 2,
           conceptGroups: [
-            ["thread"], ["timeout", "cancel"],
-            ["continue", "running", "run", "hang", "stop", "leak", "release", "block", "alive", "background", "terminat", "exit"],
+            ["thread"],
+            ["timeout", "cancel"],
+            [
+              "continue",
+              "running",
+              "run",
+              "hang",
+              "stop",
+              "leak",
+              "release",
+              "block",
+              "alive",
+              "background",
+              "terminat",
+              "exit",
+            ],
           ],
-          description: "The coroutine times out without stopping yt-dlp in the background worker thread.",
+          description:
+            "The coroutine times out without stopping yt-dlp in the background worker thread.",
         },
         {
-          id: "quota_before_validation", file: "app/main.py", lineRange: [22, 27], minSeverity: 2,
+          id: "quota_before_validation",
+          file: "app/main.py",
+          lineRange: [22, 27],
+          minSeverity: 2,
           conceptGroups: [
-            ["quota", "slot", "rate limit", "rate-limit", "budget"], ["oversized", "length", "4096", "too long", "max_input"],
+            ["quota", "slot", "rate limit", "rate-limit", "budget"],
+            ["oversized", "length", "4096", "too long", "max_input"],
           ],
-          description: "Oversized input uses a quota slot even though submission is rejected.",
+          description:
+            "Oversized input uses a quota slot even though submission is rejected.",
         },
       ],
     },
-    request: "Review {range} in {repo} for regressions in video previews and text submission.",
+    request:
+      "Review {range} in {repo} for regressions in video previews and text submission.",
     initial: { "app/preview.py": previewWorker, "app/main.py": quotaApp },
-    commits: [{
-      message: "app: Time out previews and reorder submission checks",
-      files: {
-        "app/preview.py": previewWorker.replace(
-          "return await asyncio.to_thread(_extract_title, video_id)",
-          "return await asyncio.wait_for(asyncio.to_thread(_extract_title, video_id), timeout=3)",
-        ),
-        "app/main.py": quotaApp.replace(
-          "    if len(text) > MAX_INPUT:\n        return 413\n    if not quota.take_slot(now):\n        return 429",
-          "    if not quota.take_slot(now):\n        return 429\n    if len(text) > MAX_INPUT:\n        return 413",
-        ),
+    commits: [
+      {
+        message: "app: Time out previews and reorder submission checks",
+        files: {
+          "app/preview.py": previewWorker.replace(
+            "return await asyncio.to_thread(_extract_title, video_id)",
+            "return await asyncio.wait_for(asyncio.to_thread(_extract_title, video_id), timeout=3)"
+          ),
+          "app/main.py": quotaApp.replace(
+            "    if len(text) > MAX_INPUT:\n        return 413\n    if not quota.take_slot(now):\n        return 429",
+            "    if not quota.take_slot(now):\n        return 429\n    if len(text) > MAX_INPUT:\n        return 413"
+          ),
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-mixed-committed-plus-worktree", category: "scope-calibration", language: "mixed",
+    id: "rev-mixed-committed-plus-worktree",
+    category: "scope-calibration",
+    language: "mixed",
     spec: {
-      excluded: [], bounce: false,
-      defects: [{
-        id: "manifest_bytes", file: "output.json", lineRange: [1, 4], minSeverity: 1,
-        conceptGroups: [
-          ["byte", "whitespace", "format", "indent", "pretty"],
-          ["head", "commit", "worktree", "working tree", "working-tree", "uncommitted", "unstaged", "dirty", "modified"],
-        ],
-        description: "The working-tree manifest has the same data as HEAD but its pretty formatting breaks byte equality.",
-      }],
+      excluded: [],
+      bounce: false,
+      defects: [
+        {
+          id: "manifest_bytes",
+          file: "output.json",
+          lineRange: [1, 4],
+          minSeverity: 1,
+          conceptGroups: [
+            ["byte", "whitespace", "format", "indent", "pretty"],
+            [
+              "head",
+              "commit",
+              "worktree",
+              "working tree",
+              "working-tree",
+              "uncommitted",
+              "unstaged",
+              "dirty",
+              "modified",
+            ],
+          ],
+          description:
+            "The working-tree manifest has the same data as HEAD but its pretty formatting breaks byte equality.",
+        },
+      ],
     },
-    request: "Review both the committed changes ({range}) and the tracked working-tree changes against {head} in {repo}. Check the release diff against the rules in AGENTS.md.",
+    request:
+      "Review both the committed changes ({range}) and the tracked working-tree changes against {head} in {repo}. Check the release diff against the rules in AGENTS.md.",
     initial: {
-      "AGENTS.md": "# Release manifest\n\nCommit the compact output from build.py. Keep output.json byte-identical to that generated manifest in the release worktree.\n",
+      "AGENTS.md":
+        "# Release manifest\n\nCommit the compact output from build.py. Keep output.json byte-identical to that generated manifest in the release worktree.\n",
       "build.py": buildScript,
       "output.json": '{"assets":["styles.css"]}\n',
-      "index.html": "<!doctype html>\n<html lang=\"en\">\n<title>Asset catalog</title>\n<p>Asset catalog</p>\n",
+      "index.html":
+        '<!doctype html>\n<html lang="en">\n<title>Asset catalog</title>\n<p>Asset catalog</p>\n',
     },
-    commits: [{
-      message: "build: Include the entry page in the manifest",
-      files: {
-        "build.py": buildScript.replace('["styles.css"]', '["styles.css", "index.html"]'),
-        "output.json": '{"assets":["styles.css","index.html"]}\n',
+    commits: [
+      {
+        message: "build: Include the entry page in the manifest",
+        files: {
+          "build.py": buildScript.replace(
+            '["styles.css"]',
+            '["styles.css", "index.html"]'
+          ),
+          "output.json": '{"assets":["styles.css","index.html"]}\n',
+        },
       },
-    }],
+    ],
     dirty: {
-      "index.html": "<!doctype html>\n<html lang=\"en\">\n<title>Asset catalog</title>\n<h1>Asset catalog</h1>\n",
-      "output.json": '{\n  "assets": [\n    "styles.css",\n    "index.html"\n  ]\n}\n',
+      "index.html":
+        '<!doctype html>\n<html lang="en">\n<title>Asset catalog</title>\n<h1>Asset catalog</h1>\n',
+      "output.json":
+        '{\n  "assets": [\n    "styles.css",\n    "index.html"\n  ]\n}\n',
     },
     includeWorktree: true,
   }),
   reviewerTask({
-    id: "rev-calibration-trap-clean-idiomatic", category: "clean-review", language: "python",
+    id: "rev-calibration-trap-clean-idiomatic",
+    category: "clean-review",
+    language: "python",
     spec: { defects: [], excluded: [], bounce: false },
-    request: "Review {range} in {repo} for regressions. This Linux-only CLI reads trusted local CSV exports. Use CONTEXT.md for its input and path contract.",
+    request:
+      "Review {range} in {repo} for regressions. This Linux-only CLI reads trusted local CSV exports. Use CONTEXT.md for its input and path contract.",
     initial: {
       "modules/media.py": csvReader,
       "modules/cli.py": `import argparse
@@ -574,7 +816,8 @@ def main(argv=None):
 if __name__ == "__main__":
     main()
 `,
-      "CONTEXT.md": "# Media export\n\nRun on Linux. Pass the path to a trusted UTF-8 CSV with a title column.\n",
+      "CONTEXT.md":
+        "# Media export\n\nRun on Linux. Pass the path to a trusted UTF-8 CSV with a title column.\n",
       "tests/test_media.py": `from modules.media import read_titles
 
 
@@ -584,11 +827,15 @@ def test_quoted_title(tmp_path):
     assert read_titles(path) == ["Blue, green"]
 `,
     },
-    commits: [{
-      message: "media: Read local exports with native paths and CSV newlines",
-      files: {
-        "modules/media.py": csvReader.replace('encoding="utf-8"', 'encoding="utf-8", newline=""'),
-        "modules/cli.py": `import argparse
+    commits: [
+      {
+        message: "media: Read local exports with native paths and CSV newlines",
+        files: {
+          "modules/media.py": csvReader.replace(
+            'encoding="utf-8"',
+            'encoding="utf-8", newline=""'
+          ),
+          "modules/cli.py": `import argparse
 from pathlib import Path
 
 from .media import read_titles
@@ -605,14 +852,14 @@ def main(argv=None):
 if __name__ == "__main__":
     main()
 `,
-        "CONTEXT.md": `# Media export
+          "CONTEXT.md": `# Media export
 
 Run on Linux. Pass the path to a trusted UTF-8 CSV with a title column.
 If you omit the path, read media.csv from the current directory.
 Relative paths stay relative to the current directory.
 Quoted titles can contain commas and embedded newlines.
 `,
-        "tests/test_media.py": `from modules.media import read_titles
+          "tests/test_media.py": `from modules.media import read_titles
 
 
 def test_quoted_title(tmp_path):
@@ -620,28 +867,76 @@ def test_quoted_title(tmp_path):
     path.write_bytes(b'title\\r\\n"Blue, green\\r\\nred"\\r\\n')
     assert read_titles(path) == ["Blue, green\\r\\nred"]
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-py-denylist-bandaid-rewrite", category: "architecture-review", language: "python",
+    id: "rev-py-denylist-bandaid-rewrite",
+    category: "architecture-review",
+    language: "python",
     spec: {
-      excluded: [], bounce: false,
-      defects: [{
-        id: "denylist_shell_rewrite", file: "app/git_preview.py", lineRange: [3, 18], minSeverity: 1,
-        conceptGroups: [
-          ["denylist", "deny-list", "blocklist", "block-list", "blacklist", "blocked", "shell=true", "shell injection", "command injection"],
-          [
-            "bypass", "newline", "\\n", "flag", "--no-index", "quote", "interpolat", "concatenat",
-            "fundamental", "symptom", "band-aid", "whack-a-mole", "fragile", "brittle", "insufficient",
-            "command separator", "does not block", "option parsing disabled",
+      excluded: [],
+      bounce: false,
+      defects: [
+        {
+          id: "denylist_shell_rewrite",
+          file: "app/git_preview.py",
+          lineRange: [3, 18],
+          minSeverity: 1,
+          conceptGroups: [
+            [
+              "denylist",
+              "deny-list",
+              "blocklist",
+              "block-list",
+              "blacklist",
+              "blocked",
+              "shell=true",
+              "shell injection",
+              "command injection",
+            ],
+            [
+              "bypass",
+              "newline",
+              "\\n",
+              "flag",
+              "--no-index",
+              "quote",
+              "interpolat",
+              "concatenat",
+              "fundamental",
+              "symptom",
+              "band-aid",
+              "whack-a-mole",
+              "fragile",
+              "brittle",
+              "insufficient",
+              "command separator",
+              "does not block",
+              "option parsing disabled",
+            ],
+            [
+              "allowlist",
+              "allow-list",
+              "whitelist",
+              "shell=false",
+              "argument list",
+              "argument vector",
+              "argv",
+              "list of arguments",
+              "sequence of arguments",
+              "without a shell",
+              "without shell",
+            ],
           ],
-          ["allowlist", "allow-list", "whitelist", "shell=false", "argument list", "argument vector", "argv", "list of arguments", "sequence of arguments", "without a shell", "without shell"],
-        ],
-        description: "Extending a substring denylist on a shell=True git command remains trivially bypassable; replace it with strict revision allowlisting and direct argument-list execution without a shell.",
-      }],
+          description:
+            "Extending a substring denylist on a shell=True git command remains trivially bypassable; replace it with strict revision allowlisting and direct argument-list execution without a shell.",
+        },
+      ],
     },
-    request: "Review {range} in {repo} for security and design flaws. preview_diff runs on an HTTP preview service where repo is a trusted local Path and revision_spec is an untrusted query parameter.",
+    request:
+      "Review {range} in {repo} for security and design flaws. preview_diff runs on an HTTP preview service where repo is a trusted local Path and revision_spec is an untrusted query parameter.",
     initial: {
       "app/git_preview.py": `import subprocess
 
@@ -663,10 +958,12 @@ def preview_diff(repo, revision_spec):
     return completed.stdout
 `,
     },
-    commits: [{
-      message: "security: Block redirections and output flags in preview_diff",
-      files: {
-        "app/git_preview.py": `import subprocess
+    commits: [
+      {
+        message:
+          "security: Block redirections and output flags in preview_diff",
+        files: {
+          "app/git_preview.py": `import subprocess
 
 BLOCKED = (";", "&&", "||", "|", "\`", "$(", ">", "<", "--output", "--ext-diff")
 
@@ -685,33 +982,81 @@ def preview_diff(repo, revision_spec):
     )
     return completed.stdout
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-ts-tautological-and-inverted-test", category: "standards-review", language: "typescript",
+    id: "rev-ts-tautological-and-inverted-test",
+    category: "standards-review",
+    language: "typescript",
     spec: {
-      excluded: [], bounce: false,
+      excluded: [],
+      bounce: false,
       defects: [
         {
-          id: "catalog_id_mismatch", file: "src/models.ts", lineRange: [44, 54], minSeverity: 1,
+          id: "catalog_id_mismatch",
+          file: "src/models.ts",
+          lineRange: [44, 54],
+          minSeverity: 1,
           conceptGroups: [
             ["wiremodel", "wire model", "wire name"],
-            ["entry.id", ".id", "`id`", " id", "identifier", "tosessionmodel", "session model", "alias"],
+            [
+              "entry.id",
+              ".id",
+              "`id`",
+              " id",
+              "identifier",
+              "tosessionmodel",
+              "session model",
+              "alias",
+            ],
           ],
-          description: "validateCatalogSpecs matches entry.wireModel instead of entry.id, diverging from the modelID passed by toSessionModel.",
+          description:
+            "validateCatalogSpecs matches entry.wireModel instead of entry.id, diverging from the modelID passed by toSessionModel.",
         },
         {
-          id: "tautological_and_inverted_tests", file: "tests/models.test.ts", lineRange: [17, 36], minSeverity: 3,
+          id: "tautological_and_inverted_tests",
+          file: "tests/models.test.ts",
+          lineRange: [17, 36],
+          minSeverity: 3,
           conceptGroups: [
-            ["tautolog", "copy", "duplicat", "change-detector", "literal", "verbatim", "hardcod", "default_models", "invert", "mirror", "enshrin", "circular", "wiremodel"],
-            ["test", "agents", "contract", "behavior", "public", "interface", "tosessionmodel", "assert", "bug", "wrong", "spec"],
+            [
+              "tautolog",
+              "copy",
+              "duplicat",
+              "change-detector",
+              "literal",
+              "verbatim",
+              "hardcod",
+              "default_models",
+              "invert",
+              "mirror",
+              "enshrin",
+              "circular",
+              "wiremodel",
+            ],
+            [
+              "test",
+              "agents",
+              "contract",
+              "behavior",
+              "public",
+              "interface",
+              "tosessionmodel",
+              "assert",
+              "bug",
+              "wrong",
+              "spec",
+            ],
           ],
-          description: "tests/models.test.ts duplicates DEFAULT_MODELS verbatim as a tautological assertion and enshrines the inverted wireModel lookup bug.",
+          description:
+            "tests/models.test.ts duplicates DEFAULT_MODELS verbatim as a tautological assertion and enshrines the inverted wireModel lookup bug.",
         },
       ],
     },
-    request: "Review {range} in {repo} for catalog validation regressions and conformance to the testing rules in AGENTS.md.",
+    request:
+      "Review {range} in {repo} for catalog validation regressions and conformance to the testing rules in AGENTS.md.",
     initial: {
       "AGENTS.md": `${TS_FILES["AGENTS.md"]}Do not write tautological or change-detector tests that duplicate exported constants or mirror implementation bugs.\n`,
       "src/models.ts": catalogModelModule,
@@ -732,10 +1077,11 @@ test("extracts provider, model ID, and optional variant", () => {
 });
 `,
     },
-    commits: [{
-      message: "models: Add catalog validation and model list tests",
-      files: {
-        "src/models.ts": `${catalogModelModule}
+    commits: [
+      {
+        message: "models: Add catalog validation and model list tests",
+        files: {
+          "src/models.ts": `${catalogModelModule}
 export function validateCatalogSpecs(specs: readonly string[], providers: readonly CatalogProvider[]): void {
   for (const spec of specs) {
     const parsed = parseModelSpec(spec);
@@ -749,7 +1095,7 @@ export function validateCatalogSpecs(specs: readonly string[], providers: readon
   }
 }
 `,
-        "tests/models.test.ts": `import { expect, test } from "bun:test";
+          "tests/models.test.ts": `import { expect, test } from "bun:test";
 
 import { DEFAULT_MODELS, parseModelSpec, toSessionModel, validateCatalogSpecs } from "../src/models.ts";
 
@@ -786,13 +1132,17 @@ test("validates model specs against catalog entries", () => {
   expect(() => validateCatalogSpecs(["openai/gpt-fast#medium"], providers)).toThrow(/Unknown model/u);
 });
 `,
+        },
       },
-    }],
+    ],
   }),
   reviewerTask({
-    id: "rev-py-clean-security-rewrite-restraint", category: "clean-review", language: "python",
+    id: "rev-py-clean-security-rewrite-restraint",
+    category: "clean-review",
+    language: "python",
     spec: { defects: [], excluded: [], bounce: false },
-    request: "Review {range} in {repo} for security flaws and regressions. Use CONTEXT.md for the service trust boundary and contract.",
+    request:
+      "Review {range} in {repo} for security flaws and regressions. Use CONTEXT.md for the service trust boundary and contract.",
     initial: {
       "CONTEXT.md": `# Git preview service
 
@@ -835,10 +1185,12 @@ def test_preview_diff_rejects_shell_metacharacters(tmp_path):
         preview_diff(tmp_path, "a" * 40, f"{'b' * 40};id")
 `,
     },
-    commits: [{
-      message: "security: Replace shell denylist with SHA allowlist and argv subprocess",
-      files: {
-        "app/git_preview.py": `import os
+    commits: [
+      {
+        message:
+          "security: Replace shell denylist with SHA allowlist and argv subprocess",
+        files: {
+          "app/git_preview.py": `import os
 import re
 import subprocess
 from pathlib import Path
@@ -878,7 +1230,7 @@ def preview_diff(repo: Path | str, base: str, head: str) -> str:
     )
     return completed.stdout
 `,
-        "tests/test_git_preview.py": `import subprocess
+          "tests/test_git_preview.py": `import subprocess
 
 import pytest
 
@@ -933,7 +1285,8 @@ def test_preview_diff_rejects_invalid_shas(tmp_path, bad_sha):
     with pytest.raises(ValueError):
         preview_diff(tmp_path, valid, bad_sha)
 `,
+        },
       },
-    }],
+    ],
   }),
 ];

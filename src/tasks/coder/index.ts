@@ -1,9 +1,19 @@
 import type { EvalTask } from "../base.ts";
 import { commitGuardTwoTask } from "./git.ts";
 import {
-  atomicAsyncLifecycle, blockerHonesty, conventionAutonomy, ssrfIpPinning, stitchCollapse, streamStopAndFeedback,
+  atomicAsyncLifecycle,
+  blockerHonesty,
+  conventionAutonomy,
+  ssrfIpPinning,
+  stitchCollapse,
+  streamStopAndFeedback,
 } from "./python.ts";
-import { boundaryDecoderHttp, catalogAliasAndTestRigor, shellHeredocSubst, sseChunkCrlf } from "./typescript.ts";
+import {
+  boundaryDecoderHttp,
+  catalogAliasAndTestRigor,
+  shellHeredocSubst,
+  sseChunkCrlf,
+} from "./typescript.ts";
 
 export const CODER_TASKS: readonly EvalTask[] = [
   stitchCollapse,

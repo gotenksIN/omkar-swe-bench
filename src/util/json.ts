@@ -8,23 +8,30 @@ export interface JsonObject {
 
 export type JsonValue = JsonPrimitive | JsonArray | JsonObject;
 
-function checkJsonValue(value: unknown, ancestors: Set<object>): value is JsonValue {
+const checkJsonValue = (
+  value: unknown,
+  ancestors: Set<object>
+): value is JsonValue => {
   if (value === null) {
     return true;
   }
 
-  const boxed: object = Object(value);
+  const boxed = new Object(value);
 
   if (value !== boxed) {
     const tag = Object.prototype.toString.call(value);
 
-    return tag === "[object String]" || tag === "[object Boolean]" || Number.isFinite(value);
+    return (
+      tag === "[object String]" ||
+      tag === "[object Boolean]" ||
+      Number.isFinite(value)
+    );
   }
 
   const array = Array.isArray(value);
 
   if (!array) {
-    const prototype = Object.getPrototypeOf(boxed);
+    const prototype: unknown = Object.getPrototypeOf(boxed);
 
     if (prototype !== Object.prototype && prototype !== null) {
       return false;
@@ -42,7 +49,11 @@ function checkJsonValue(value: unknown, ancestors: Set<object>): value is JsonVa
       for (let index = 0; index < value.length; index += 1) {
         const entry = Object.getOwnPropertyDescriptor(value, index);
 
-        if (!entry || !Object.hasOwn(entry, "value") || !checkJsonValue(entry.value, ancestors)) {
+        if (
+          !entry ||
+          !Object.hasOwn(entry, "value") ||
+          !checkJsonValue(entry.value, ancestors)
+        ) {
           return false;
         }
       }
@@ -50,7 +61,11 @@ function checkJsonValue(value: unknown, ancestors: Set<object>): value is JsonVa
       for (const key of Object.getOwnPropertyNames(boxed)) {
         const entry = Object.getOwnPropertyDescriptor(boxed, key);
 
-        if (!entry || !Object.hasOwn(entry, "value") || !checkJsonValue(entry.value, ancestors)) {
+        if (
+          !entry ||
+          !Object.hasOwn(entry, "value") ||
+          !checkJsonValue(entry.value, ancestors)
+        ) {
           return false;
         }
       }
@@ -60,63 +75,64 @@ function checkJsonValue(value: unknown, ancestors: Set<object>): value is JsonVa
   } finally {
     ancestors.delete(boxed);
   }
-}
+};
 
-export function isString(value: unknown): value is string {
-  return Object.prototype.toString.call(value) === "[object String]";
-}
+export const isString = (value: unknown): value is string =>
+  Object.prototype.toString.call(value) === "[object String]";
 
-export function isFiniteNumber(value: unknown): value is number {
-  return Number.isFinite(value);
-}
+export const isFiniteNumber = (value: unknown): value is number =>
+  Number.isFinite(value);
 
-export function isInteger(value: unknown): value is number {
-  return Number.isInteger(value);
-}
+export const isInteger = (value: unknown): value is number =>
+  Number.isInteger(value);
 
-export function isJsonRecord(value: JsonValue): value is JsonObject {
-  return value !== null && !Array.isArray(value) && Object(value) === value;
-}
+export const isJsonRecord = (value: JsonValue): value is JsonObject =>
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.prototype.toString.call(value) === "[object Object]";
 
-function isJsonValue(value: unknown): value is JsonValue {
-  return checkJsonValue(value, new Set());
-}
+const isJsonValue = (value: unknown): value is JsonValue =>
+  checkJsonValue(value, new Set());
 
-export function isJsonObject(value: unknown): value is JsonObject {
+export const isJsonObject = (value: unknown): value is JsonObject => {
   if (value === null || Array.isArray(value)) {
     return false;
   }
 
-  const boxed: object = Object(value);
+  const boxed = new Object(value);
 
   if (value !== boxed) {
     return false;
   }
 
-  const prototype = Object.getPrototypeOf(boxed);
+  const prototype: unknown = Object.getPrototypeOf(boxed);
 
-  return (prototype === Object.prototype || prototype === null) && checkJsonValue(value, new Set());
-}
+  return (
+    (prototype === Object.prototype || prototype === null) &&
+    checkJsonValue(value, new Set())
+  );
+};
 
-export function isJsonArray(value: unknown): value is JsonArray {
-  return Array.isArray(value) && checkJsonValue(value, new Set());
-}
+export const isJsonArray = (value: unknown): value is JsonArray =>
+  Array.isArray(value) && checkJsonValue(value, new Set());
 
-export function parseJsonText(text: string): JsonValue {
+export const parseJsonText = (text: string): JsonValue => {
   try {
-    const parsed = JSON.parse(text);
+    const parsed: unknown = JSON.parse(text);
 
     if (isJsonValue(parsed)) {
       return parsed;
     }
-  } catch (cause) {
-    throw new SyntaxError("Invalid JSON text.", { cause });
+  } catch (error) {
+    throw new SyntaxError("Invalid JSON text.", { cause: error });
   }
 
-  throw new SyntaxError("JSON text contains a value that cannot be represented as JSON.");
-}
+  throw new SyntaxError(
+    "JSON text contains a value that cannot be represented as JSON."
+  );
+};
 
-function stripJsonc(text: string): string {
+const stripJsonc = (text: string): string => {
   const output: string[] = [];
   let inString = false;
   let escaped = false;
@@ -143,7 +159,10 @@ function stripJsonc(text: string): string {
     const next = text.charAt(index + 1);
 
     if (char === "/" && next === "/") {
-      while (index + 1 < text.length && !"\r\n".includes(text.charAt(index + 1))) {
+      while (
+        index + 1 < text.length &&
+        !"\r\n".includes(text.charAt(index + 1))
+      ) {
         index += 1;
       }
 
@@ -168,9 +187,10 @@ function stripJsonc(text: string): string {
         output[trailingComma] = "";
       }
 
-      trailingComma = char === "," && lastToken !== "" && !"[{,:".includes(lastToken)
-        ? output.length
-        : undefined;
+      trailingComma =
+        char === "," && lastToken !== "" && !"[{,:".includes(lastToken)
+          ? output.length
+          : undefined;
       inString = char === '"';
       lastToken = char;
     }
@@ -179,9 +199,9 @@ function stripJsonc(text: string): string {
   }
 
   return output.join("");
-}
+};
 
-export function parseJsoncObject(text: string): JsonObject {
+export const parseJsoncObject = (text: string): JsonObject => {
   const value = parseJsonText(stripJsonc(text));
 
   if (isJsonRecord(value)) {
@@ -189,24 +209,41 @@ export function parseJsoncObject(text: string): JsonObject {
   }
 
   throw new SyntaxError("Expected a JSONC object at the root.");
-}
+};
 
-export function canonicalJsonStringify(value: JsonValue): string {
-  if (Array.isArray(value)) {
+const compareStrings = (left: string, right: string): number => {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+};
+
+const isJsonArrayValue = (value: JsonValue): value is JsonArray =>
+  Array.isArray(value);
+
+export const canonicalJsonStringify = (value: JsonValue): string => {
+  if (isJsonArrayValue(value)) {
     const entries: string[] = [];
 
-    for (let index = 0; index < value.length; index += 1) {
-      entries.push(canonicalJsonStringify(value[index] ?? null));
+    for (const item of value) {
+      entries.push(canonicalJsonStringify(item));
     }
 
     return `[${entries.join(",")}]`;
   }
 
   if (isJsonRecord(value)) {
-    const entries = Object.entries(value).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+    const entries = Object.entries(value).toSorted(([left], [right]) =>
+      compareStrings(left, right)
+    );
 
     return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJsonStringify(entry)}`).join(",")}}`;
   }
 
   return JSON.stringify(value);
-}
+};

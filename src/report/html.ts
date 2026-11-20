@@ -1,42 +1,61 @@
 import type { GeneratedChart } from "./charts.ts";
-import {
-  shortModelLabel, type BenchmarkSummary, type CombinedCoderSummary, type ModelRoleSummary,
+import { shortModelLabel } from "./scoring.ts";
+import type {
+  BenchmarkSummary,
+  CombinedCoderSummary,
+  ModelRoleSummary,
 } from "./scoring.ts";
 
-function esc(text: string): string {
-  return text
+const esc = (text: string): string =>
+  text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
 
-function pct(value: number, digits = 1): string {
-  return `${(100 * value).toFixed(digits)}%`;
-}
+const pct = (value: number, digits = 1): string =>
+  `${(100 * value).toFixed(digits)}%`;
 
-function usd(value: number | null, digits = 2): string {
-  return value === null ? "—" : `$${value.toFixed(digits)}`;
-}
+const usd = (value: number | null, digits = 2): string =>
+  value === null ? "—" : `$${value.toFixed(digits)}`;
 
-function num(value: number | null, digits = 1, suffix = ""): string {
-  return value === null ? "—" : `${value.toFixed(digits)}${suffix}`;
-}
+const num = (value: number | null, digits = 1, suffix = ""): string =>
+  value === null ? "—" : `${value.toFixed(digits)}${suffix}`;
 
-function providerClass(provider: string): string {
+const providerClass = (provider: string): string => {
   switch (provider) {
-    case "anthropic": return "p-anthropic";
-    case "google": return "p-google";
-    case "openai": return "p-openai";
-    case "deepseek": return "p-deepseek";
-    default: return "p-other";
+    case "anthropic": {
+      return "p-anthropic";
+    }
+
+    case "google": {
+      return "p-google";
+    }
+
+    case "openai": {
+      return "p-openai";
+    }
+
+    case "deepseek": {
+      return "p-deepseek";
+    }
+
+    default: {
+      return "p-other";
+    }
   }
-}
+};
 
-function renderCombinedCoderTable(rows: readonly CombinedCoderSummary[]): string {
-  if (rows.length === 0) return "";
+const renderCombinedCoderTable = (
+  rows: readonly CombinedCoderSummary[]
+): string => {
+  if (rows.length === 0) {
+    return "";
+  }
 
-  const body = rows.map((row, index) => `
+  const body = rows
+    .map(
+      (row, index) => `
     <tr>
       <td class="mono dim">${index + 1}</td>
       <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name">${esc(row.model)}</span></td>
@@ -50,7 +69,9 @@ function renderCombinedCoderTable(rows: readonly CombinedCoderSummary[]): string
       <td class="mono">${Math.round(row.totalWallS)}s</td>
       <td class="mono">${num(row.medianTotalTokPerS, 0)}</td>
       <td class="mono">${num(row.medianDiffRatio, 2, "×")}</td>
-    </tr>`).join("");
+    </tr>`
+    )
+    .join("");
 
   return `
     <div class="table-wrap">
@@ -65,30 +86,41 @@ function renderCombinedCoderTable(rows: readonly CombinedCoderSummary[]): string
         <tbody>${body}</tbody>
       </table>
     </div>`;
-}
+};
 
-function renderRoleTable(rows: readonly ModelRoleSummary[], isReviewer: boolean): string {
-  if (rows.length === 0) return "";
+const renderRoleTable = (
+  rows: readonly ModelRoleSummary[],
+  isReviewer: boolean
+): string => {
+  if (rows.length === 0) {
+    return "";
+  }
 
-  const body = rows.map((row, index) => `
+  const body = rows
+    .map(
+      (row, index) => `
     <tr>
       <td class="mono dim">${index + 1}</td>
       <td><span class="badge ${providerClass(row.provider)}"></span><span class="model-name">${esc(row.label)}</span></td>
       <td class="mono strong">${row.lsas.toFixed(1)}</td>
       <td class="mono">${pct(row.passRate)} <span class="dim">(${row.passedCount}/${row.trials})</span></td>
-      ${isReviewer
-        ? `<td class="mono">${row.defectRecall === null ? "—" : pct(row.defectRecall)}</td>
+      ${
+        isReviewer
+          ? `<td class="mono">${row.defectRecall === null ? "—" : pct(row.defectRecall)}</td>
            <td class="mono">${row.falsePositiveP0P2}</td>
            <td class="mono">${row.nitpickP3}</td>`
-        : `<td class="mono">${pct(row.zsdrRate)} <span class="dim">(${row.zsdrCount}/${row.trials})</span></td>
+          : `<td class="mono">${pct(row.zsdrRate)} <span class="dim">(${row.zsdrCount}/${row.trials})</span></td>
            <td class="mono">${pct(row.meanRawScore)}</td>
-           <td class="mono">${num(row.medianDiffRatio, 2, "×")}</td>`}
+           <td class="mono">${num(row.medianDiffRatio, 2, "×")}</td>`
+      }
       <td class="mono">${usd(row.totalCostUsd)}</td>
       <td class="mono">${num(row.medianWallS, 1, "s")}</td>
       <td class="mono">${num(row.coldVisibleS, 2, "s")}</td>
       <td class="mono">${num(row.medianTotalTokPerS, 0)}</td>
       <td class="mono">${pct(row.medianReasoningShare, 0)}</td>
-    </tr>`).join("");
+    </tr>`
+    )
+    .join("");
 
   return `
     <div class="table-wrap">
@@ -96,73 +128,93 @@ function renderRoleTable(rows: readonly ModelRoleSummary[], isReviewer: boolean)
         <thead>
           <tr>
             <th>#</th><th>Model</th><th>LSAS</th><th>Pass@1</th>
-            ${isReviewer
-              ? "<th>Defect Recall</th><th>P0–P2 FPs</th><th>P3 Nits</th>"
-              : "<th>ZSDR</th><th>Mean Check</th><th>Diff Ratio</th>"}
+            ${
+              isReviewer
+                ? "<th>Defect Recall</th><th>P0–P2 FPs</th><th>P3 Nits</th>"
+                : "<th>ZSDR</th><th>Mean Check</th><th>Diff Ratio</th>"
+            }
             <th>Suite Cost</th><th>Med Wall</th><th>Cold TTFT</th><th>Active tok/s</th><th>Reasoning %</th>
           </tr>
         </thead>
         <tbody>${body}</tbody>
       </table>
     </div>`;
-}
+};
 
-function chartBlock(chart: GeneratedChart | undefined): string {
-  if (chart === undefined) return "";
+const chartBlock = (chart: GeneratedChart | undefined): string => {
+  if (chart === undefined) {
+    return "";
+  }
 
   return `<div class="chart-card" data-chart-id="${esc(chart.id)}">${chart.svg}</div>`;
-}
+};
 
-export function renderHtmlReport(summary: BenchmarkSummary, charts: readonly GeneratedChart[]): string {
+export const renderHtmlReport = (
+  summary: BenchmarkSummary,
+  charts: readonly GeneratedChart[]
+): string => {
   const byId = new Map(charts.map((chart) => [chart.id, chart]));
-  const topCoder = summary.combinedCoderRows[0];
-  const topSolo = summary.coderRows[0];
-  const topReviewer = summary.reviewerCalibratedRows[0];
-  const topPair = summary.pairRows[0];
+  const [topCoder] = summary.combinedCoderRows;
+  const [topSolo] = summary.coderRows;
+  const [topReviewer] = summary.reviewerCalibratedRows;
+  const [topPair] = summary.pairRows;
 
-  const kpis: readonly { readonly label: string; readonly value: string; readonly sub: string }[] = [
+  const kpis: {
+    readonly label: string;
+    readonly value: string;
+    readonly sub: string;
+  }[] = [
     {
       label: "Evaluated Trials",
       value: `${summary.totalPassed}/${summary.totalTrials}`,
       sub: `${pct(summary.totalTrials === 0 ? 0 : summary.totalPassed / summary.totalTrials)} strict Pass@1 · $${summary.totalCostUsd.toFixed(2)} total`,
     },
-    ...(topCoder !== undefined
-      ? [{
-        label: "Top Autonomous Coder (ACI)",
-        value: shortModelLabel(topCoder.model),
-        sub: `ACI ${topCoder.aci.toFixed(1)} · ZSDR ${pct(topCoder.zsdrRate)} · $${topCoder.totalCostUsd.toFixed(2)}`,
-      }]
-      : topSolo !== undefined
-        ? [{
-          label: "Top Standalone Coder (LSAS)",
-          value: shortModelLabel(topSolo.model),
-          sub: `LSAS ${topSolo.lsas.toFixed(1)} · Pass ${topSolo.passedCount}/${topSolo.trials} · $${topSolo.totalCostUsd.toFixed(2)}`,
-        }]
-        : []),
-    ...(topReviewer !== undefined
-      ? [{
-        label: "Top Code Reviewer (LSAS)",
-        value: shortModelLabel(topReviewer.model),
-        sub: `LSAS ${topReviewer.lsas.toFixed(1)} · ${topReviewer.passedCount}/${topReviewer.trials} pass · med ${topReviewer.medianWallS.toFixed(1)}s`,
-      }]
-      : []),
-    ...(topPair !== undefined
-      ? [{
-        label: "Top Pair Cell",
-        value: topPair.label.split(" -> ").map(shortModelLabel).join(" → "),
-        sub: `LSAS ${topPair.lsas.toFixed(1)} · ${topPair.passedCount}/${topPair.trials} · med ${topPair.medianWallS.toFixed(1)}s`,
-      }]
-      : []),
   ];
 
-  const kpiHtml = kpis.map((kpi) => `
+  if (topCoder !== undefined) {
+    kpis.push({
+      label: "Top Autonomous Coder (ACI)",
+      value: shortModelLabel(topCoder.model),
+      sub: `ACI ${topCoder.aci.toFixed(1)} · ZSDR ${pct(topCoder.zsdrRate)} · $${topCoder.totalCostUsd.toFixed(2)}`,
+    });
+  } else if (topSolo !== undefined) {
+    kpis.push({
+      label: "Top Standalone Coder (LSAS)",
+      value: shortModelLabel(topSolo.model),
+      sub: `LSAS ${topSolo.lsas.toFixed(1)} · Pass ${topSolo.passedCount}/${topSolo.trials} · $${topSolo.totalCostUsd.toFixed(2)}`,
+    });
+  }
+
+  if (topReviewer !== undefined) {
+    kpis.push({
+      label: "Top Code Reviewer (LSAS)",
+      value: shortModelLabel(topReviewer.model),
+      sub: `LSAS ${topReviewer.lsas.toFixed(1)} · ${topReviewer.passedCount}/${topReviewer.trials} pass · med ${topReviewer.medianWallS.toFixed(1)}s`,
+    });
+  }
+
+  if (topPair !== undefined) {
+    kpis.push({
+      label: "Top Pair Cell",
+      value: topPair.label.split(" -> ").map(shortModelLabel).join(" → "),
+      sub: `LSAS ${topPair.lsas.toFixed(1)} · ${topPair.passedCount}/${topPair.trials} · med ${topPair.medianWallS.toFixed(1)}s`,
+    });
+  }
+
+  const kpiHtml = kpis
+    .map(
+      (kpi) => `
     <div class="kpi">
       <div class="kpi-label">${esc(kpi.label)}</div>
       <div class="kpi-value">${esc(kpi.value)}</div>
       <div class="kpi-sub">${esc(kpi.sub)}</div>
-    </div>`).join("");
+    </div>`
+    )
+    .join("");
 
-  const hasCoders = summary.combinedCoderRows.length > 0 || summary.coderRows.length > 0;
+  const hasCoders =
+    summary.combinedCoderRows.length > 0 || summary.coderRows.length > 0;
+
   const hasReviewers = summary.reviewerRows.length > 0;
   const hasPairs = summary.pairRows.length > 0;
 
@@ -241,7 +293,9 @@ export function renderHtmlReport(summary: BenchmarkSummary, charts: readonly Gen
     ${chartBlock(byId.get("failure-taxonomy"))}
   </section>
 
-  ${hasCoders ? `
+  ${
+    hasCoders
+      ? `
   <section class="panel" id="tab-coders">
     ${summary.combinedCoderRows.length > 0 ? `<h2>Combined Autonomous Coder Index (ACI = 0.6× Solo + 0.4× Pair)</h2>${renderCombinedCoderTable(summary.combinedCoderRows)}` : ""}
     ${chartBlock(byId.get("coder-cost-pareto"))}
@@ -249,24 +303,34 @@ export function renderHtmlReport(summary: BenchmarkSummary, charts: readonly Gen
     ${chartBlock(byId.get("overhead-and-diff"))}
     <h2>Phase 1 — Standalone Coder Leaderboard</h2>
     ${renderRoleTable(summary.coderRows, false)}
-  </section>` : ""}
+  </section>`
+      : ""
+  }
 
-  ${hasReviewers ? `
+  ${
+    hasReviewers
+      ? `
   <section class="panel" id="tab-reviewers">
     <h2>Phase 2 — Code Reviewer Leaderboard ${summary.excludedReviewerTasks.length > 0 ? `(Calibrated — excluding ${esc(summary.excludedReviewerTasks.join(", "))})` : ""}</h2>
     ${renderRoleTable(summary.reviewerCalibratedRows, true)}
     ${chartBlock(byId.get("reviewer-cost-pareto"))}
     ${chartBlock(byId.get("reviewer-calibration"))}
     ${summary.excludedReviewerTasks.length > 0 ? `<h2>All Phase 2 Tasks (Including 0%-Pass Bounce Fixture)</h2>${renderRoleTable(summary.reviewerRows, true)}` : ""}
-  </section>` : ""}
+  </section>`
+      : ""
+  }
 
-  ${hasPairs ? `
+  ${
+    hasPairs
+      ? `
   <section class="panel" id="tab-pairs">
     <h2>Phase 3 — Coder × Reviewer Synergy Matrix</h2>
     ${chartBlock(byId.get("pair-synergy-matrix"))}
     <h2>Full Pair Leaderboard</h2>
     ${renderRoleTable(summary.pairRows, false)}
-  </section>` : ""}
+  </section>`
+      : ""
+  }
 
   <section class="panel" id="tab-diagnostics">
     ${chartBlock(byId.get("task-heatmap"))}
@@ -305,4 +369,4 @@ export function renderHtmlReport(summary: BenchmarkSummary, charts: readonly Gen
 </body>
 </html>
 `;
-}
+};

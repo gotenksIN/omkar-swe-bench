@@ -1,4 +1,8 @@
-import type { ModelListOutput, OpenCodeClient, SessionCreateInput } from "@opencode/client";
+import type {
+  ModelListOutput,
+  OpenCodeClient,
+  SessionCreateInput,
+} from "@opencode/client";
 
 export const CODER_MODELS: readonly string[] = [
   "openai/gpt-6.2-sol#medium",
@@ -37,14 +41,26 @@ export interface ParsedModelSpec {
 
 export type ModelRef = NonNullable<SessionCreateInput["model"]>;
 
-export function parseModelSpec(spec: string): ParsedModelSpec {
-  const [, providerID, modelID, variant] = /^([^/#\s]+)\/([^#\s]+)(?:#([^/#\s]+))?$/u.exec(spec) ?? [];
+export const parseModelSpec = (spec: string): ParsedModelSpec => {
+  const match =
+    /^(?<providerID>[^/#\s]+)\/(?<modelID>[^#\s]+)(?:#(?<variant>[^/#\s]+))?$/u.exec(
+      spec
+    );
+
+  const providerID = match?.groups?.providerID;
+  const modelID = match?.groups?.modelID;
+  const variant = match?.groups?.variant;
 
   if (
-    providerID === undefined || modelID === undefined
-    || modelID.startsWith("/") || modelID.endsWith("/") || modelID.includes("//")
+    providerID === undefined ||
+    modelID === undefined ||
+    modelID.startsWith("/") ||
+    modelID.endsWith("/") ||
+    modelID.includes("//")
   ) {
-    throw new Error(`Invalid model spec ${JSON.stringify(spec)}. Use provider/model or provider/model#variant.`);
+    throw new Error(
+      `Invalid model spec ${JSON.stringify(spec)}. Use provider/model or provider/model#variant.`
+    );
   }
 
   return {
@@ -53,9 +69,9 @@ export function parseModelSpec(spec: string): ParsedModelSpec {
     modelID,
     variant,
   };
-}
+};
 
-export function parseModelRef(spec: string): ModelRef {
+export const parseModelRef = (spec: string): ModelRef => {
   const { modelID: id, providerID, variant } = parseModelSpec(spec);
 
   if (variant === undefined) {
@@ -63,7 +79,7 @@ export function parseModelRef(spec: string): ModelRef {
   }
 
   return { id, providerID, variant };
-}
+};
 
 export interface ValidateModelsOptions {
   readonly client?: Pick<OpenCodeClient, "model">;
@@ -71,10 +87,10 @@ export interface ValidateModelsOptions {
 }
 
 /** Reject invalid specs and return any warnings about skipped catalog validation. */
-export async function validateModels(
+export const validateModels = async (
   specs: readonly string[],
-  { client, directory }: ValidateModelsOptions = {},
-): Promise<readonly string[]> {
+  { client, directory }: ValidateModelsOptions = {}
+): Promise<readonly string[]> => {
   const parsedSpecs = specs.map(parseModelSpec);
 
   if (parsedSpecs.length === 0) {
@@ -82,7 +98,9 @@ export async function validateModels(
   }
 
   if (client === undefined) {
-    return ["No OpenCode catalog client supplied. Model and variant availability is unverified."];
+    return [
+      "No OpenCode catalog client supplied. Model and variant availability is unverified.",
+    ];
   }
 
   let catalog: ModelListOutput;
@@ -90,27 +108,38 @@ export async function validateModels(
   try {
     catalog = await client.model.list(
       directory === undefined ? undefined : { location: { directory } },
-      { signal: AbortSignal.timeout(5_000) },
+      { signal: AbortSignal.timeout(5000) }
     );
   } catch {
-    return ["Could not query the OpenCode model catalog. Model and variant availability is unverified."];
+    return [
+      "Could not query the OpenCode model catalog. Model and variant availability is unverified.",
+    ];
   }
 
   for (const { spec, providerID, modelID, variant } of parsedSpecs) {
-    const model = catalog.data.find((entry) => entry.providerID === providerID && entry.id === modelID);
+    const model = catalog.data.find(
+      (entry) => entry.providerID === providerID && entry.id === modelID
+    );
 
     if (model === undefined) {
-      throw new Error(`Unknown model ${providerID}/${modelID} in the OpenCode catalog.`);
+      throw new Error(
+        `Unknown model ${providerID}/${modelID} in the OpenCode catalog.`
+      );
     }
 
     if (!model.enabled) {
-      throw new Error(`Model ${providerID}/${modelID} is disabled in the OpenCode catalog.`);
+      throw new Error(
+        `Model ${providerID}/${modelID} is disabled in the OpenCode catalog.`
+      );
     }
 
-    if (variant !== undefined && !model.variants.some((entry) => entry.id === variant)) {
+    if (
+      variant !== undefined &&
+      !model.variants.some((entry) => entry.id === variant)
+    ) {
       throw new Error(`Unsupported variant in model spec ${spec}.`);
     }
   }
 
   return [];
-}
+};

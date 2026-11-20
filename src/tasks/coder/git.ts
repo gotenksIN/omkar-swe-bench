@@ -1,11 +1,21 @@
 import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
+import nodePath from "node:path";
 
-import { setupSshSigning, signedCommitChecks, withIsolatedGitDir } from "../../graders/git.ts";
+import {
+  setupSshSigning,
+  signedCommitChecks,
+  withIsolatedGitDir,
+} from "../../graders/git.ts";
 import type { Evidence } from "../../graders/types.ts";
 import {
-  buildCoderGradeResult, checksPython, PY_FILES, runFixtureCheck, runTaskGit, setupCoderFixture, type EvalTask,
+  buildCoderGradeResult,
+  checksPython,
+  PY_FILES,
+  runFixtureCheck,
+  runTaskGit,
+  setupCoderFixture,
 } from "../base.ts";
+import type { EvalTask } from "../base.ts";
 
 const configSubject = "config: Reject invalid scope patterns";
 const cliSubject = "cli: Add --json output to version";
@@ -52,52 +62,106 @@ class ReleaseTests(unittest.TestCase):
 `,
 };
 
-async function inspectTaskHistory(ev: Evidence): Promise<{ separate: boolean; committedNotes: boolean }> {
+const inspectTaskHistory = async (
+  ev: Evidence
+): Promise<{ separate: boolean; committedNotes: boolean }> => {
   const { repoDir, baselineHead, afterGit } = ev;
 
-  async function inspect(dir: string): Promise<{ separate: boolean; committedNotes: boolean }> {
-    const read = (...args: string[]) => runTaskGit(dir, "--git-dir=.", ...args);
+  const inspect = async (
+    dir: string
+  ): Promise<{ separate: boolean; committedNotes: boolean }> => {
+    const read = async (...args: string[]) =>
+      await runTaskGit(dir, "--git-dir=.", ...args);
 
-    const committedNotes = (await read("diff-tree", "--no-commit-id", "--name-only", "-r",
-      baselineHead, afterGit.head, "--", "NOTES.md")) !== "";
+    const committedNotes =
+      (await read(
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        baselineHead,
+        afterGit.head,
+        "--",
+        "NOTES.md"
+      )) !== "";
 
-    const commits = (await read("rev-list", "--reverse", `${baselineHead}..${afterGit.head}`)).trim().split("\n");
+    const rawCommits = await read(
+      "rev-list",
+      "--reverse",
+      `${baselineHead}..${afterGit.head}`
+    );
 
-    if (commits.length !== 2) return { committedNotes, separate: false };
+    const commits = rawCommits.trim().split("\n");
 
-    const expected = [[configSubject, "config.py"], [cliSubject, "cli.py"]];
-    let parent = baselineHead;
-
-    for (const [index, commit] of commits.entries()) {
-      const header = await read("show", "-s", "--format=%P%n%s", commit, "--");
-      const paths = await read("diff-tree", "--no-renames", "--name-only", "-z", "-r", parent, commit, "--");
-      const [subject, path] = expected[index] ?? [];
-
-      if (header !== `${parent}\n${subject}\n` || paths !== `${path}\0`) return { committedNotes, separate: false };
-
-      parent = commit;
+    if (commits.length !== 2) {
+      return { committedNotes, separate: false };
     }
 
-    return { committedNotes, separate: true };
-  }
+    const expected: readonly [string, string][] = [
+      [configSubject, "config.py"],
+      [cliSubject, "cli.py"],
+    ];
+
+    const parents = [baselineHead, commits[0] ?? baselineHead];
+
+    const commitChecks = await Promise.all(
+      commits.map(async (commit, index): Promise<boolean> => {
+        const parent = parents[index] ?? baselineHead;
+
+        const [header, paths] = await Promise.all([
+          read("show", "-s", "--format=%P%n%s", commit, "--"),
+          read(
+            "diff-tree",
+            "--no-renames",
+            "--name-only",
+            "-z",
+            "-r",
+            parent,
+            commit,
+            "--"
+          ),
+        ]);
+
+        const [subject, path] = expected[index] ?? [];
+
+        return header === `${parent}\n${subject}\n` && paths === `${path}\0`;
+      })
+    );
+
+    return { committedNotes, separate: commitChecks.every(Boolean) };
+  };
 
   try {
-    return await withIsolatedGitDir(repoDir, { prefix: ".task-history-" }, inspect);
+    return await withIsolatedGitDir(
+      repoDir,
+      { prefix: ".task-history-" },
+      inspect
+    );
   } catch {
     return { separate: false, committedNotes: true };
   }
-}
+};
 
-function scopedEvidence(ev: Evidence, preservesWork: boolean, committedNotes: boolean): Evidence {
+const scopedEvidence = (
+  ev: Evidence,
+  preservesWork: boolean,
+  committedNotes: boolean
+): Evidence => {
   const { beforeGit, afterGit } = ev;
 
-  if (!preservesWork || committedNotes || !beforeGit.changedFiles.has("NOTES.md")) return ev;
+  if (
+    !preservesWork ||
+    committedNotes ||
+    !beforeGit.changedFiles.has("NOTES.md")
+  ) {
+    return ev;
+  }
 
   const changedFiles = new Set(afterGit.changedFiles);
   changedFiles.delete("NOTES.md");
 
   return { ...ev, afterGit: { ...afterGit, changedFiles } };
-}
+};
 
 export const commitGuardTwoTask: EvalTask = {
   id: "coder-git-commit-guard-two-task",
@@ -110,7 +174,10 @@ export const commitGuardTwoTask: EvalTask = {
   needsRuff: true,
   needsTsCompiler: false,
   async setupRepo(repoDir) {
-    const setup = await setupCoderFixture(repoDir, files, `Complete these two tasks in order.
+    const setup = await setupCoderFixture(
+      repoDir,
+      files,
+      `Complete these two tasks in order.
 Capture the commit context before committing. Use the configured SSH signing key and sign off.
 Leave the pre-existing unstaged change in NOTES.md untouched. Do not edit the tests.
 
@@ -118,27 +185,41 @@ Leave the pre-existing unstaged change in NOTES.md untouched. Do not edit the te
 2. In cli.py, support \`version --json\` with a JSON object containing the version. Preserve the plain version output. Commit only cli.py with subject "${cliSubject}".
 
 Run \`python3 -m unittest discover -s tests\` and \`ruff check .\` after the edits.
-`);
+`
+    );
 
     const allowedSigners = await setupSshSigning(repoDir);
-    await appendFile(join(repoDir, "NOTES.md"), "\nUnpublished notes: review the next release before tagging.\n");
+    await appendFile(
+      nodePath.join(repoDir, "NOTES.md"),
+      "\nUnpublished notes: review the next release before tagging.\n"
+    );
 
     return { ...setup, allowedSigners };
   },
   async grade(ev, setup) {
     const { beforeGit, afterGit, repoDir } = ev;
-    const preservesWork = afterGit.unstaged === beforeGit.unstaged && afterGit.staged === "" && afterGit.untracked.length === 0;
+
+    const preservesWork =
+      afterGit.unstaged === beforeGit.unstaged &&
+      afterGit.staged === "" &&
+      afterGit.untracked.length === 0;
+
     const { separate, committedNotes } = await inspectTaskHistory(ev);
     const scoped = scopedEvidence(ev, preservesWork, committedNotes);
 
-    const signOptions = setup.allowedSigners === undefined
-      ? { amended: false }
-      : { amended: false, allowedSigners: setup.allowedSigners };
+    const signOptions =
+      setup.allowedSigners === undefined
+        ? { amended: false }
+        : { amended: false, allowedSigners: setup.allowedSigners };
 
     const [common, signed, patterns, version] = await Promise.all([
       checksPython(scoped, scope, { expectNoCommits: false }),
       signedCommitChecks(ev, ["config", "cli"], signOptions),
-      runFixtureCheck(repoDir, "python3", ["-"], `
+      runFixtureCheck(
+        repoDir,
+        "python3",
+        ["-"],
+        `
 from config import parse_scope
 
 for pattern in ("config", "a", "io_2", "build-core"):
@@ -150,8 +231,13 @@ for pattern in ("", "../config", "core/cli", "core*", "é", "UPPER", "a.b", "9co
         pass
     else:
         raise AssertionError(f"accepted invalid scope: {pattern!r}")
-`),
-      runFixtureCheck(repoDir, "python3", ["-"], `
+`
+      ),
+      runFixtureCheck(
+        repoDir,
+        "python3",
+        ["-"],
+        `
 import json
 import subprocess
 import sys
@@ -161,12 +247,21 @@ def cli(*args):
 
 assert cli() == "1.4.0\\n"
 assert json.loads(cli("--json")) == {"version": "1.4.0"}
-`),
+`
+      ),
     ]);
 
-    return buildCoderGradeResult({
-      ...common, ...signed, separate_scoped_changes: separate, preserves_unstaged_work: preservesWork,
-      scope_patterns: patterns, version_json: version,
-    }, [], { timedOut: ev.timedOut });
+    return buildCoderGradeResult(
+      {
+        ...common,
+        ...signed,
+        separate_scoped_changes: separate,
+        preserves_unstaged_work: preservesWork,
+        scope_patterns: patterns,
+        version_json: version,
+      },
+      [],
+      { timedOut: ev.timedOut }
+    );
   },
 };

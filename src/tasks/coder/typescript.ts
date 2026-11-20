@@ -1,14 +1,27 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { parseSync, Visitor, type Expression } from "oxc-parser";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import nodePath from "node:path";
+
+import { parseSync, Visitor } from "oxc-parser";
+import type { Expression } from "oxc-parser";
 
 import type { CheckOutcomes, Evidence } from "../../graders/types.ts";
 import { assertNoSymlinkBoundary } from "../../util/fs.ts";
 import { isString } from "../../util/json.ts";
 import {
-  buildCoderGradeResult, checksTypeScript, runFixtureCheck, setupCoderFixture, TS_FILES,
-  type EvalTask, type FixtureFiles,
+  buildCoderGradeResult,
+  checksTypeScript,
+  runFixtureCheck,
+  setupCoderFixture,
+  TS_FILES,
 } from "../base.ts";
+import type { EvalTask, FixtureFiles } from "../base.ts";
 
 interface TypeScriptTask {
   readonly id: string;
@@ -20,31 +33,56 @@ interface TypeScriptTask {
   readonly check: string;
   readonly probe: string;
   readonly checkSource?: (repoDir: string) => Promise<boolean>;
-  readonly extraChecks?: (ev: Evidence, common: CheckOutcomes) => Promise<CheckOutcomes>;
+  readonly extraChecks?: (
+    ev: Evidence,
+    common: CheckOutcomes
+  ) => Promise<CheckOutcomes>;
 }
 
-function typeScriptTask({
-  id, category, timeoutSeconds = 480, files, scope, prompt, check, probe, checkSource, extraChecks,
-}: TypeScriptTask): EvalTask {
-  return {
-    id, category, role: "coder", language: "typescript", timeoutSeconds,
-    commitGuard: false, readOnlyRepo: false, needsTsCompiler: true, needsRuff: false,
-    setupRepo: (repoDir) => setupCoderFixture(repoDir, { ...TS_FILES, ...files },
+const typeScriptTask = ({
+  id,
+  category,
+  timeoutSeconds = 480,
+  files,
+  scope,
+  prompt,
+  check,
+  probe,
+  checkSource,
+  extraChecks,
+}: TypeScriptTask): EvalTask => ({
+  id,
+  category,
+  role: "coder",
+  language: "typescript",
+  timeoutSeconds,
+  commitGuard: false,
+  readOnlyRepo: false,
+  needsTsCompiler: true,
+  needsRuff: false,
+  setupRepo: async (repoDir) =>
+    await setupCoderFixture(
+      repoDir,
+      { ...TS_FILES, ...files },
       `${prompt.trim()}\n\nEdit only ${scope.join(", ")} and tests/**/*.test.ts. Do not stage or commit.\n` +
-      "Run `bun test` and `tsc --noEmit` after your edits."),
-    async grade(ev: Evidence) {
-      const [common, behavior, source] = await Promise.all([
-        checksTypeScript(ev, new Set(scope)),
-        runFixtureCheck(ev.repoDir, "bun", ["--no-env-file", "run", "-"], probe),
-        checkSource?.(ev.repoDir) ?? true,
-      ]);
+        "Run `bun test` and `tsc --noEmit` after your edits."
+    ),
+  async grade(ev: Evidence) {
+    const [common, behavior, source] = await Promise.all([
+      checksTypeScript(ev, new Set(scope)),
+      runFixtureCheck(ev.repoDir, "bun", ["--no-env-file", "run", "-"], probe),
+      checkSource?.(ev.repoDir) ?? true,
+    ]);
 
-      const extra = extraChecks ? await extraChecks(ev, common) : {};
+    const extra = extraChecks ? await extraChecks(ev, common) : {};
 
-      return buildCoderGradeResult({ ...common, [check]: behavior && source, ...extra }, [], { timedOut: ev.timedOut });
-    },
-  };
-}
+    return buildCoderGradeResult(
+      { ...common, [check]: behavior && source, ...extra },
+      [],
+      { timedOut: ev.timedOut }
+    );
+  },
+});
 
 export const sseChunkCrlf = typeScriptTask({
   id: "coder-ts-sse-chunk-crlf",
@@ -183,15 +221,20 @@ for (const { body, nested } of cases) {
 `,
 });
 
-async function decoderSourcePasses(repoDir: string): Promise<boolean> {
+const decoderSourcePasses = async (repoDir: string): Promise<boolean> => {
   try {
-    const path = join(repoDir, "src/decoder.ts");
+    const path = nodePath.join(repoDir, "src/decoder.ts");
 
     assertNoSymlinkBoundary(path);
 
-    const { program, errors } = parseSync(path, await readFile(path, "utf8"), { lang: "ts", sourceType: "module" });
+    const { program, errors } = parseSync(path, await readFile(path, "utf-8"), {
+      lang: "ts",
+      sourceType: "module",
+    });
 
-    if (errors.length > 0) return false;
+    if (errors.length > 0) {
+      return false;
+    }
 
     let forbidden = false;
     let formatter: { start: number; end: number } | undefined;
@@ -199,45 +242,74 @@ async function decoderSourcePasses(repoDir: string): Promise<boolean> {
 
     new Visitor({
       FunctionDeclaration(node) {
-        if (node.id?.name === "formatEvent") formatter = node;
+        if (node.id?.name === "formatEvent") {
+          formatter = node;
+        }
       },
       VariableDeclarator(node) {
-        if (node.id.type === "Identifier" && node.id.name === "formatEvent") formatter = node;
+        if (node.id.type === "Identifier" && node.id.name === "formatEvent") {
+          formatter = node;
+        }
       },
       TSAsExpression(node) {
-        const isConst = node.typeAnnotation.type === "TSTypeReference"
-          && node.typeAnnotation.typeName.type === "Identifier"
-          && node.typeAnnotation.typeName.name === "const";
+        const isConst =
+          node.typeAnnotation.type === "TSTypeReference" &&
+          node.typeAnnotation.typeName.type === "Identifier" &&
+          node.typeAnnotation.typeName.name === "const";
 
-        if (!isConst) forbidden = true;
+        if (!isConst) {
+          forbidden = true;
+        }
       },
-      TSTypeAssertion() { forbidden = true; },
+      TSTypeAssertion() {
+        forbidden = true;
+      },
       UnaryExpression(node) {
-        if (node.operator === "typeof") forbidden = true;
+        if (node.operator === "typeof") {
+          forbidden = true;
+        }
       },
       SwitchStatement(node) {
         const value = node.discriminant;
 
-        const usesKind = value.type === "Identifier" && value.name === "kind" ||
-          value.type === "MemberExpression" && (value.computed
-            ? value.property.type === "Literal" && value.property.value === "kind"
-            : value.property.type === "Identifier" && value.property.name === "kind");
+        const usesKind =
+          (value.type === "Identifier" && value.name === "kind") ||
+          (value.type === "MemberExpression" &&
+            (value.computed
+              ? value.property.type === "Literal" &&
+                value.property.value === "kind"
+              : value.property.type === "Identifier" &&
+                value.property.name === "kind"));
 
-        if (!usesKind) return;
+        if (!usesKind) {
+          return;
+        }
 
-        const labels = new Set(node.cases.flatMap(({ test }) => test?.type === "Literal" ? [test.value] : []));
+        const labels = new Set(
+          node.cases.flatMap(({ test }) =>
+            test?.type === "Literal" ? [test.value] : []
+          )
+        );
 
-        if (labels.has("ready") && labels.has("error")) switches.push(node);
+        if (labels.has("ready") && labels.has("error")) {
+          switches.push(node);
+        }
       },
     }).visit(program);
 
     const format = formatter;
 
-    return !forbidden && format !== undefined && switches.some(({ start, end }) => start >= format.start && end <= format.end);
+    return (
+      !forbidden &&
+      format !== undefined &&
+      switches.some(
+        ({ start, end }) => start >= format.start && end <= format.end
+      )
+    );
   } catch {
     return false;
   }
-}
+};
 
 export const boundaryDecoderHttp = typeScriptTask({
   id: "coder-ts-boundary-decoder-http",
@@ -385,121 +457,158 @@ export function validateModels(specs: readonly string[], providers: readonly imp
 `,
 ];
 
-async function collectTsFiles(rootDir: string, relativeDir: string): Promise<string[]> {
-  const fullDir = join(rootDir, relativeDir);
+const collectTsFiles = async (
+  rootDir: string,
+  relativeDir: string
+): Promise<string[]> => {
+  const fullDir = nodePath.join(rootDir, relativeDir);
 
   assertNoSymlinkBoundary(fullDir, rootDir);
 
   const files: string[] = [];
 
   try {
-    for (const entry of await readdir(fullDir, { withFileTypes: true })) {
-      const relPath = `${relativeDir}/${entry.name}`;
+    const entries = await readdir(fullDir, { withFileTypes: true });
 
-      if (entry.isSymbolicLink()) throw new Error(`Symlink not allowed in tests: ${relPath}`);
+    const nested = await Promise.all(
+      entries.map(async (entry): Promise<string[]> => {
+        const relPath = `${relativeDir}/${entry.name}`;
 
-      if (entry.isDirectory()) {
-        files.push(...await collectTsFiles(rootDir, relPath));
-      } else if (entry.isFile() && /\.tsx?$/u.test(entry.name)) {
-        files.push(relPath);
-      }
+        if (entry.isSymbolicLink()) {
+          throw new Error(`Symlink not allowed in tests: ${relPath}`);
+        }
+
+        if (entry.isDirectory()) {
+          return await collectTsFiles(rootDir, relPath);
+        }
+
+        return entry.isFile() && /\.tsx?$/u.test(entry.name) ? [relPath] : [];
+      })
+    );
+
+    files.push(...nested.flat());
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      error.code !== "ENOENT"
+    ) {
+      throw error;
     }
-  } catch (cause) {
-    if (!(cause instanceof Error) || !("code" in cause) || cause.code !== "ENOENT") throw cause;
   }
 
   return files;
-}
+};
 
-function unwrapExpression(expression: Expression): Expression {
+const unwrapExpression = (expression: Expression): Expression => {
   let current = expression;
 
   while (
-    current.type === "ParenthesizedExpression"
-    || current.type === "TSAsExpression"
-    || current.type === "TSTypeAssertion"
-    || current.type === "TSSatisfiesExpression"
+    current.type === "ParenthesizedExpression" ||
+    current.type === "TSAsExpression" ||
+    current.type === "TSTypeAssertion" ||
+    current.type === "TSSatisfiesExpression"
   ) {
     current = current.expression;
   }
 
   return current;
-}
+};
 
-function isDefaultModelsRef(expression: Expression): boolean {
+const isDefaultModelsRef = (expression: Expression): boolean => {
   const expr = unwrapExpression(expression);
 
-  if (expr.type === "Identifier") return expr.name === "DEFAULT_MODELS";
+  if (expr.type === "Identifier") {
+    return expr.name === "DEFAULT_MODELS";
+  }
 
   if (expr.type === "ArrayExpression" && expr.elements.length === 1) {
-    const first = expr.elements[0];
+    const [first] = expr.elements;
 
-    return first?.type === "SpreadElement" && isDefaultModelsRef(first.argument);
+    return (
+      first?.type === "SpreadElement" && isDefaultModelsRef(first.argument)
+    );
   }
 
   if (
-    expr.type === "CallExpression"
-    && expr.callee.type === "MemberExpression"
-    && !expr.callee.computed
-    && expr.callee.object.type === "Identifier"
-    && expr.callee.object.name === "Array"
-    && expr.callee.property.type === "Identifier"
-    && expr.callee.property.name === "from"
-    && expr.arguments[0]
-    && expr.arguments[0].type !== "SpreadElement"
+    expr.type === "CallExpression" &&
+    expr.callee.type === "MemberExpression" &&
+    !expr.callee.computed &&
+    expr.callee.object.type === "Identifier" &&
+    expr.callee.object.name === "Array" &&
+    expr.callee.property.type === "Identifier" &&
+    expr.callee.property.name === "from" &&
+    expr.arguments[0] &&
+    expr.arguments[0].type !== "SpreadElement"
   ) {
     return isDefaultModelsRef(expr.arguments[0]);
   }
 
   return false;
-}
+};
 
-function isDefaultModelsIndexAccess(expression: Expression): boolean {
+const isDefaultModelsIndexAccess = (expression: Expression): boolean => {
   const expr = unwrapExpression(expression);
 
   return expr.type === "MemberExpression" && isDefaultModelsRef(expr.object);
-}
+};
 
-function isStringArrayLiteral(expression: Expression, literalArrayNames: ReadonlySet<string>): boolean {
+const isStringArrayLiteral = (
+  expression: Expression,
+  literalArrayNames: ReadonlySet<string>
+): boolean => {
   const expr = unwrapExpression(expression);
 
-  if (expr.type === "Identifier") return literalArrayNames.has(expr.name);
+  if (expr.type === "Identifier") {
+    return literalArrayNames.has(expr.name);
+  }
 
-  if (expr.type !== "ArrayExpression" || expr.elements.length === 0) return false;
+  if (expr.type !== "ArrayExpression" || expr.elements.length === 0) {
+    return false;
+  }
 
   return expr.elements.every((el) => {
-    if (el === null || el.type === "SpreadElement") return false;
+    if (el === null || el.type === "SpreadElement") {
+      return false;
+    }
 
     const item = unwrapExpression(el);
 
     return item.type === "Literal" && isString(item.value);
   });
-}
+};
 
-function defaultModelLiteralValue(expression: Expression): string | null {
+const defaultModelLiteralValue = (expression: Expression): string | null => {
   const expr = unwrapExpression(expression);
 
-  return expr.type === "Literal" && isString(expr.value) && DEFAULT_MODEL_LITERALS.has(expr.value)
+  return expr.type === "Literal" &&
+    isString(expr.value) &&
+    DEFAULT_MODEL_LITERALS.has(expr.value)
     ? expr.value
     : null;
-}
+};
 
-function hasTautologicalDefaultModelsTest(path: string, source: string): boolean {
+const hasTautologicalDefaultModelsTest = (
+  path: string,
+  source: string
+): boolean => {
   const { program, errors } = parseSync(path, source, {
     lang: path.endsWith(".tsx") ? "tsx" : "ts",
     sourceType: "module",
   });
 
-  if (errors.length > 0) return true;
+  if (errors.length > 0) {
+    return true;
+  }
 
   const literalArrayNames = new Set<string>();
 
   new Visitor({
     VariableDeclarator(node) {
       if (
-        node.id.type === "Identifier"
-        && node.init
-        && isStringArrayLiteral(node.init, literalArrayNames)
+        node.id.type === "Identifier" &&
+        node.init &&
+        isStringArrayLiteral(node.init, literalArrayNames)
       ) {
         literalArrayNames.add(node.id.name);
       }
@@ -507,180 +616,246 @@ function hasTautologicalDefaultModelsTest(path: string, source: string): boolean
   }).visit(program);
 
   let tautological = false;
-  const equalityMatchers = new Set(["toEqual", "toStrictEqual", "toMatchObject"]);
+
+  const equalityMatchers = new Set([
+    "toEqual",
+    "toStrictEqual",
+    "toMatchObject",
+  ]);
+
   const containMatchers = new Set(["toContain", "toContainEqual"]);
-  const snapshotMatchers = new Set(["toMatchSnapshot", "toMatchInlineSnapshot"]);
+
+  const snapshotMatchers = new Set([
+    "toMatchSnapshot",
+    "toMatchInlineSnapshot",
+  ]);
+
   const assertDeepMethods = new Set(["deepEqual", "deepStrictEqual"]);
   const containedDefaults = new Set<string>();
 
+  const checkExpectCall = (
+    method: string,
+    subject: Expression,
+    firstArg: Expression | undefined
+  ): boolean => {
+    if (isDefaultModelsRef(subject)) {
+      if (snapshotMatchers.has(method)) {
+        return true;
+      }
+
+      if (
+        equalityMatchers.has(method) &&
+        firstArg !== undefined &&
+        isStringArrayLiteral(firstArg, literalArrayNames)
+      ) {
+        return true;
+      }
+
+      if (containMatchers.has(method) && firstArg !== undefined) {
+        const literal = defaultModelLiteralValue(firstArg);
+
+        if (literal !== null) {
+          containedDefaults.add(literal);
+
+          if (containedDefaults.size >= 2) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return (
+      isDefaultModelsIndexAccess(subject) &&
+      (method === "toBe" ||
+        method === "toEqual" ||
+        method === "toStrictEqual") &&
+      firstArg !== undefined &&
+      defaultModelLiteralValue(firstArg) !== null
+    );
+  };
+
+  const isTautologicalDeepAssert = (
+    method: string,
+    left: Expression | undefined,
+    right: Expression | undefined
+  ): boolean =>
+    assertDeepMethods.has(method) &&
+    left !== undefined &&
+    right !== undefined &&
+    ((isDefaultModelsRef(left) &&
+      isStringArrayLiteral(right, literalArrayNames)) ||
+      (isDefaultModelsRef(right) &&
+        isStringArrayLiteral(left, literalArrayNames)));
+
   new Visitor({
     CallExpression(node) {
-      if (tautological) return;
+      if (tautological) {
+        return;
+      }
 
       const callee = unwrapExpression(node.callee);
 
-      if (callee.type === "MemberExpression" && !callee.computed && callee.property.type === "Identifier") {
-        const method = callee.property.name;
-        const receiver = unwrapExpression(callee.object);
+      if (
+        callee.type !== "MemberExpression" ||
+        callee.computed ||
+        callee.property.type !== "Identifier"
+      ) {
+        return;
+      }
+
+      const method = callee.property.name;
+      const receiver = unwrapExpression(callee.object);
+      const [firstNodeArg, secondNodeArg] = node.arguments;
+
+      const leftExpr =
+        firstNodeArg !== undefined && firstNodeArg.type !== "SpreadElement"
+          ? firstNodeArg
+          : undefined;
+
+      const rightExpr =
+        secondNodeArg !== undefined && secondNodeArg.type !== "SpreadElement"
+          ? secondNodeArg
+          : undefined;
+
+      if (
+        receiver.type === "CallExpression" &&
+        receiver.callee.type === "Identifier" &&
+        receiver.callee.name === "expect"
+      ) {
+        const [subject] = receiver.arguments;
 
         if (
-          receiver.type === "CallExpression"
-          && receiver.callee.type === "Identifier"
-          && receiver.callee.name === "expect"
-          && receiver.arguments[0]
-          && receiver.arguments[0].type !== "SpreadElement"
+          subject !== undefined &&
+          subject.type !== "SpreadElement" &&
+          checkExpectCall(method, subject, leftExpr)
         ) {
-          const subject = receiver.arguments[0];
-          const firstArg = node.arguments[0];
+          tautological = true;
 
-          if (isDefaultModelsRef(subject)) {
-            if (snapshotMatchers.has(method)) {
-              tautological = true;
-
-              return;
-            }
-
-            if (equalityMatchers.has(method) && firstArg && firstArg.type !== "SpreadElement"
-              && isStringArrayLiteral(firstArg, literalArrayNames)) {
-              tautological = true;
-
-              return;
-            }
-
-            if (containMatchers.has(method) && firstArg && firstArg.type !== "SpreadElement") {
-              const literal = defaultModelLiteralValue(firstArg);
-
-              if (literal !== null) {
-                containedDefaults.add(literal);
-
-                if (containedDefaults.size >= 2) {
-                  tautological = true;
-
-                  return;
-                }
-              }
-            }
-          }
-
-          if (
-            isDefaultModelsIndexAccess(subject)
-            && (method === "toBe" || method === "toEqual" || method === "toStrictEqual")
-            && firstArg
-            && firstArg.type !== "SpreadElement"
-            && defaultModelLiteralValue(firstArg) !== null
-          ) {
-            tautological = true;
-
-            return;
-          }
+          return;
         }
+      }
 
-        if (assertDeepMethods.has(method) && node.arguments.length >= 2) {
-          const left = node.arguments[0];
-          const right = node.arguments[1];
-
-          if (
-            left && right && left.type !== "SpreadElement" && right.type !== "SpreadElement"
-            && (
-              isDefaultModelsRef(left) && isStringArrayLiteral(right, literalArrayNames)
-              || isDefaultModelsRef(right) && isStringArrayLiteral(left, literalArrayNames)
-            )
-          ) {
-            tautological = true;
-
-            return;
-          }
-        }
+      if (isTautologicalDeepAssert(method, leftExpr, rightExpr)) {
+        tautological = true;
       }
     },
   }).visit(program);
 
   return tautological;
-}
+};
 
-async function noTautologicalDefaultModelsTests(repoDir: string): Promise<boolean> {
+const noTautologicalDefaultModelsTests = async (
+  repoDir: string
+): Promise<boolean> => {
   try {
     const testPaths = await collectTsFiles(repoDir, "tests");
 
-    if (testPaths.length === 0) return false;
-
-    for (const relPath of testPaths) {
-      const fullPath = join(repoDir, relPath);
-
-      assertNoSymlinkBoundary(fullPath, repoDir);
-
-      if (hasTautologicalDefaultModelsTest(fullPath, await readFile(fullPath, "utf8"))) {
-        return false;
-      }
+    if (testPaths.length === 0) {
+      return false;
     }
 
-    return true;
+    const results = await Promise.all(
+      testPaths.map(async (relPath): Promise<boolean> => {
+        const fullPath = nodePath.join(repoDir, relPath);
+        assertNoSymlinkBoundary(fullPath, repoDir);
+        const content = await readFile(fullPath, "utf-8");
+
+        return !hasTautologicalDefaultModelsTest(fullPath, content);
+      })
+    );
+
+    return results.every(Boolean);
   } catch {
     return false;
   }
-}
+};
 
-async function runTestsAgainstModelWrapper(
+const runTestsAgainstModelWrapper = async (
   trialDir: string,
   modelImplSource: string,
-  testContents: ReadonlyArray<readonly [string, string]>,
-  wrapperSource: string,
-): Promise<boolean> {
-  const sandboxDir = await mkdtemp(join(trialDir, "ts-mutant-"));
+  testContents: readonly (readonly [string, string])[],
+  wrapperSource: string
+): Promise<boolean> => {
+  const sandboxDir = await mkdtemp(nodePath.join(trialDir, "ts-mutant-"));
 
   try {
-    await mkdir(join(sandboxDir, "src"), { recursive: true });
-    await writeFile(join(sandboxDir, "package.json"), TS_FILES["package.json"]);
-    await writeFile(join(sandboxDir, "tsconfig.json"), TS_FILES["tsconfig.json"]);
-    await writeFile(join(sandboxDir, "src/models.impl.ts"), modelImplSource);
-    await writeFile(join(sandboxDir, "src/models.ts"), wrapperSource);
+    await mkdir(nodePath.join(sandboxDir, "src"), { recursive: true });
+    await writeFile(
+      nodePath.join(sandboxDir, "package.json"),
+      TS_FILES["package.json"]
+    );
+    await writeFile(
+      nodePath.join(sandboxDir, "tsconfig.json"),
+      TS_FILES["tsconfig.json"]
+    );
+    await writeFile(
+      nodePath.join(sandboxDir, "src/models.impl.ts"),
+      modelImplSource
+    );
+    await writeFile(nodePath.join(sandboxDir, "src/models.ts"), wrapperSource);
 
-    for (const [relPath, content] of testContents) {
-      const target = join(sandboxDir, relPath);
-
-      await mkdir(dirname(target), { recursive: true });
-      await writeFile(target, content);
-    }
+    await Promise.all(
+      testContents.map(async ([relPath, content]) => {
+        const target = nodePath.join(sandboxDir, relPath);
+        await mkdir(nodePath.dirname(target), { recursive: true });
+        await writeFile(target, content);
+      })
+    );
 
     return await runFixtureCheck(sandboxDir, "bun", ["--no-env-file", "test"]);
   } finally {
     await rm(sandboxDir, { recursive: true, force: true });
   }
-}
+};
 
-async function testsKillModelMutants(ev: Evidence, bunTestsPass: boolean): Promise<boolean> {
-  if (!bunTestsPass) return false;
+const testsKillModelMutants = async (
+  ev: Evidence,
+  bunTestsPass: boolean
+): Promise<boolean> => {
+  if (!bunTestsPass) {
+    return false;
+  }
 
   try {
-    const modelsPath = join(ev.repoDir, "src/models.ts");
+    const modelsPath = nodePath.join(ev.repoDir, "src/models.ts");
 
     assertNoSymlinkBoundary(modelsPath, ev.repoDir);
 
     const [modelImplSource, testPaths] = await Promise.all([
-      readFile(modelsPath, "utf8"),
+      readFile(modelsPath, "utf-8"),
       collectTsFiles(ev.repoDir, "tests"),
     ]);
 
-    if (testPaths.length === 0) return false;
-
-    const testContents: Array<readonly [string, string]> = [];
-
-    for (const relPath of testPaths) {
-      const fullPath = join(ev.repoDir, relPath);
-
-      assertNoSymlinkBoundary(fullPath, ev.repoDir);
-      testContents.push([relPath, await readFile(fullPath, "utf8")]);
+    if (testPaths.length === 0) {
+      return false;
     }
 
+    const testContents = await Promise.all(
+      testPaths.map(async (relPath): Promise<readonly [string, string]> => {
+        const fullPath = nodePath.join(ev.repoDir, relPath);
+        assertNoSymlinkBoundary(fullPath, ev.repoDir);
+
+        return [relPath, await readFile(fullPath, "utf-8")];
+      })
+    );
+
     const mutantResults = await Promise.all(
-      MODEL_MUTANT_WRAPPERS.map((wrapper) => runTestsAgainstModelWrapper(ev.trialDir, modelImplSource, testContents, wrapper)),
+      MODEL_MUTANT_WRAPPERS.map(
+        async (wrapper) =>
+          await runTestsAgainstModelWrapper(
+            ev.trialDir,
+            modelImplSource,
+            testContents,
+            wrapper
+          )
+      )
     );
 
     return mutantResults.every((passed) => !passed);
   } catch {
     return false;
   }
-}
+};
 
 export const catalogAliasAndTestRigor = typeScriptTask({
   id: "coder-ts-catalog-alias-and-test-rigor",

@@ -10,8 +10,15 @@ interface TrialMatrix {
   readonly trialsPerCell: number;
 }
 
-export function scheduleTrials(matrix: TrialMatrix): readonly TrialJob[] {
-  const { tasks, coderModels, reviewerModels, pairReviewerModels, trialsPerCell } = matrix;
+export const scheduleTrials = (matrix: TrialMatrix): readonly TrialJob[] => {
+  const {
+    tasks,
+    coderModels,
+    reviewerModels,
+    pairReviewerModels,
+    trialsPerCell,
+  } = matrix;
+
   const jobs: TrialJob[] = [];
 
   for (const task of tasks) {
@@ -28,7 +35,7 @@ export function scheduleTrials(matrix: TrialMatrix): readonly TrialJob[] {
   }
 
   return jobs;
-}
+};
 
 interface PoolOptions {
   readonly workers?: number;
@@ -37,7 +44,7 @@ interface PoolOptions {
   readonly onResult?: (completed: readonly TrialResult[]) => void;
 }
 
-function jobProviders(job: TrialJob): readonly string[] {
+const jobProviders = (job: TrialJob): readonly string[] => {
   const providers = new Set([parseModelSpec(job.model).providerID]);
 
   if (job.reviewerModel !== null) {
@@ -45,13 +52,13 @@ function jobProviders(job: TrialJob): readonly string[] {
   }
 
   return [...providers];
-}
+};
 
-export async function runPool(
+export const runPool = async (
   jobs: readonly TrialJob[],
   execute: (job: TrialJob, signal: AbortSignal) => Promise<TrialResult>,
-  { workers = 4, maxPerProvider = 2, signal, onResult }: PoolOptions,
-): Promise<readonly TrialResult[]> {
+  { workers = 4, maxPerProvider = 2, signal, onResult }: PoolOptions
+): Promise<readonly TrialResult[]> => {
   if (!Number.isSafeInteger(workers) || workers < 1) {
     throw new RangeError("Set workers to a positive integer.");
   }
@@ -60,74 +67,107 @@ export async function runPool(
     throw new RangeError("Set maxPerProvider to a positive integer.");
   }
 
-  const results: (TrialResult | undefined)[] = Array.from({ length: jobs.length });
-  const pending = jobs.map((job, index) => ({ index, job, providers: jobProviders(job) }));
+  const results: (TrialResult | undefined)[] = Array.from({
+    length: jobs.length,
+  });
+
+  const pending = jobs.map((job, index) => ({
+    index,
+    job,
+    providers: jobProviders(job),
+  }));
+
   const activeByProvider = new Map<string, number>();
   const inFlight = new Set<Promise<void>>();
-  const done = Promise.withResolvers<void>();
+  const done = Promise.withResolvers<undefined>();
   let activeTotal = 0;
   let hasError = false;
   let firstError: unknown;
 
-  function completedResults(): TrialResult[] {
-    return results.flatMap((entry) => entry === undefined ? [] : [entry]);
-  }
+  const completedResults = (): TrialResult[] =>
+    results.flatMap((entry) => (entry === undefined ? [] : [entry]));
 
-  function canRun(providers: readonly string[]): boolean {
-    return providers.every((provider) => (activeByProvider.get(provider) ?? 0) < maxPerProvider);
-  }
+  const canRun = (providers: readonly string[]): boolean =>
+    providers.every(
+      (provider) => (activeByProvider.get(provider) ?? 0) < maxPerProvider
+    );
 
-  function dispatch(): void {
-    while (!signal.aborted && !hasError && activeTotal < workers) {
-      const nextPos = pending.findIndex(({ providers }) => canRun(providers));
+  const launch = (entry: (typeof pending)[number]): void => {
+    for (const provider of entry.providers) {
+      activeByProvider.set(provider, (activeByProvider.get(provider) ?? 0) + 1);
+    }
 
-      if (nextPos === -1) break;
-
-      const [entry] = pending.splice(nextPos, 1);
-
-      if (entry === undefined) break;
-
-      activeTotal += 1;
-
-      for (const provider of entry.providers) {
-        activeByProvider.set(provider, (activeByProvider.get(provider) ?? 0) + 1);
-      }
-
-      const task = execute(entry.job, signal).then((result) => {
-        results[entry.index] = signal.aborted && !result.partial
-          ? { ...result, partial: true, passed: false, exit_code: 130 }
-          : result;
+    const runEntry = async (): Promise<void> => {
+      try {
+        const result = await execute(entry.job, signal);
+        results[entry.index] =
+          signal.aborted && !result.partial
+            ? { ...result, partial: true, passed: false, exit_code: 130 }
+            : result;
         onResult?.(completedResults());
-      }, (cause: unknown) => {
+      } catch (error) {
         if (!hasError) {
           hasError = true;
-          firstError = cause;
+          firstError = error;
         }
-      }).finally(() => {
+      } finally {
         activeTotal -= 1;
 
         for (const provider of entry.providers) {
           const remaining = (activeByProvider.get(provider) ?? 1) - 1;
 
-          if (remaining <= 0) activeByProvider.delete(provider);
-          else activeByProvider.set(provider, remaining);
+          if (remaining <= 0) {
+            activeByProvider.delete(provider);
+          } else {
+            activeByProvider.set(provider, remaining);
+          }
         }
 
         inFlight.delete(task);
         dispatch();
 
-        if (inFlight.size === 0) done.resolve();
-      });
+        if (inFlight.size === 0) {
+          done.resolve(undefined);
+        }
+      }
+    };
 
-      inFlight.add(task);
+    const task = runEntry();
+    inFlight.add(task);
+  };
+
+  const dispatch = (): void => {
+    if (hasError) {
+      return;
     }
-  }
+
+    while (!signal.aborted && activeTotal < workers) {
+      const nextPos = pending.findIndex(({ providers }) => canRun(providers));
+
+      if (nextPos === -1) {
+        break;
+      }
+
+      const [entry] = pending.splice(nextPos, 1);
+
+      if (entry === undefined) {
+        break;
+      }
+
+      activeTotal += 1;
+      launch(entry);
+    }
+  };
 
   dispatch();
 
-  if (inFlight.size > 0) await done.promise;
+  if (inFlight.size > 0) {
+    await done.promise;
+  }
 
-  if (hasError) throw firstError;
+  if (hasError) {
+    throw firstError;
+  }
 
   return completedResults();
-}
+};

@@ -1,21 +1,42 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { join } from "node:path";
+import nodePath from "node:path";
 
 import { extractGitCommit, unwrapSimpleCommand } from "../../ast/bash.ts";
-import { checkPythonDividePagesMinimal, checkPythonHasTestMethods } from "../../ast/python.ts";
+import {
+  checkPythonDividePagesMinimal,
+  checkPythonHasTestMethods,
+} from "../../ast/python.ts";
 import { isSafePairReviewerShellCommand } from "../../driver/session-runner.ts";
-import { defectMatchesFinding, parseFindings, statesNoFindings } from "../../graders/findings.ts";
-import { setupSshSigning, signedCommitChecks, type SignedCommitOptions } from "../../graders/git.ts";
+import {
+  defectMatchesFinding,
+  parseFindings,
+  statesNoFindings,
+} from "../../graders/findings.ts";
+import { setupSshSigning, signedCommitChecks } from "../../graders/git.ts";
+import type { SignedCommitOptions } from "../../graders/git.ts";
 import { ranCommand } from "../../graders/trace.ts";
 import {
-  commandCanProduceOutput, computeGradeResult, type CheckOutcomes, type Defect, type Evidence, type ShellRunTrace,
+  commandCanProduceOutput,
+  computeGradeResult,
+} from "../../graders/types.ts";
+import type {
+  CheckOutcomes,
+  Defect,
+  Evidence,
+  ShellRunTrace,
 } from "../../graders/types.ts";
 import { isString } from "../../util/json.ts";
 import {
-  PY_FILES, pytestRun, pythonTestFiles, runFixtureCheck, setupCoderFixture, unittestRun,
-  type EvalTask, type FixtureFiles,
+  PY_FILES,
+  pytestRun,
+  pythonTestFiles,
+  runFixtureCheck,
+  setupCoderFixture,
+  unittestRun,
 } from "../base.ts";
-import { pairReflog, withPairHistory, type ReadPairGit } from "./handoffs.ts";
+import type { EvalTask, FixtureFiles } from "../base.ts";
+import { pairReflog, withPairHistory } from "./handoffs.ts";
+import type { ReadPairGit } from "./handoffs.ts";
 
 const signedPrompt = `Capture the commit context before the first commit. Format each commit subject as \`<scope>: <Capitalized summary>\` (at most 72 characters, no trailing period), sign with the configured SSH signing key, and sign off with \`-s\`. Run each \`git commit\` as a standalone or final \`&&\`-chained command without trailing commands.
 For each task, run \`python3 -m unittest discover -s tests\` and \`ruff check .\` before committing.
@@ -49,50 +70,83 @@ interface PairFixture {
   readonly brief: string;
   readonly ordinaryProbe: string;
   readonly edgeProbe: string;
-  readonly checks: (ev: Evidence, results: PairEvidence, finalDir: string | null) => Promise<CheckOutcomes> | CheckOutcomes;
+  readonly checks: (
+    ev: Evidence,
+    results: PairEvidence,
+    finalDir: string | null
+  ) => Promise<CheckOutcomes> | CheckOutcomes;
 }
 
-async function withCommitSnapshot<T>(
-  ev: Evidence, read: ReadPairGit, sha: string, check: (dir: string) => Promise<T>,
-): Promise<T> {
-  const dir = await mkdtemp(join(ev.trialDir, ".pair-snapshot-"));
+const withCommitSnapshot = async <T>(
+  ev: Evidence,
+  read: ReadPairGit,
+  sha: string,
+  check: (dir: string) => Promise<T>
+): Promise<T> => {
+  const dir = await mkdtemp(nodePath.join(ev.trialDir, ".pair-snapshot-"));
 
   try {
     const entries = await read("ls-tree", "-r", "-z", sha, "--");
 
-    if (entries.split("\0").some((entry) => entry !== "" && !/^100(?:644|755) blob /u.test(entry))) {
+    if (
+      entries
+        .split("\0")
+        .some((entry) => entry !== "" && !/^100(?:644|755) blob /u.test(entry))
+    ) {
       throw new Error("Expected only regular files in the trial commit.");
     }
 
-    const archive = join(dir, "commit.tar");
+    const archive = nodePath.join(dir, "commit.tar");
 
     await read("archive", "--format=tar", `--output=${archive}`, sha);
-    await new Bun.Archive(await readFile(archive)).extract(join(dir, "repo"));
+    await new Bun.Archive(await readFile(archive)).extract(
+      nodePath.join(dir, "repo")
+    );
 
-    return await check(join(dir, "repo"));
+    return await check(nodePath.join(dir, "repo"));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
-}
+};
 
-async function unitTests(dir: string): Promise<boolean> {
+const unitTests = async (dir: string): Promise<boolean> => {
   const files = await pythonTestFiles(dir);
 
-  return files.length > 0 && await checkPythonHasTestMethods(dir, files) &&
-    await runFixtureCheck(dir, "python3", ["-"], `
+  return (
+    files.length > 0 &&
+    (await checkPythonHasTestMethods(dir, files)) &&
+    (await runFixtureCheck(
+      dir,
+      "python3",
+      ["-"],
+      `
 import unittest
 
 suite = unittest.defaultTestLoader.discover("tests")
 result = unittest.TextTestRunner().run(suite)
 raise SystemExit(not (result.testsRun > 0 and result.wasSuccessful()))
-`);
-}
+`
+    ))
+  );
+};
 
-function probe(dir: string, script: string, expectEdge = true): Promise<boolean> {
+const probe = async (
+  dir: string,
+  script: string,
+  expectEdge = true
+): Promise<boolean> =>
   // Confirm the probe ran even when the edge fails; a sandbox failure must not count as evidence.
-  return runFixtureCheck(dir, "python3", ["-"], `
+  await runFixtureCheck(
+    dir,
+    "python3",
+    ["-"],
+    `
 def check():
-${script.trim().split("\n").map((line) => `    ${line}`).join("\n")}
+${script
+  .trim()
+  .split("\n")
+  .map((line) => `    ${line}`)
+  .join("\n")}
 
 try:
     check()
@@ -100,183 +154,364 @@ except (AssertionError, TypeError, ZeroDivisionError):
     assert ${expectEdge ? "False" : "True"}
 else:
     assert ${expectEdge ? "True" : "False"}
-`);
-}
+`
+  );
 
 const reviewerMutatingTools = new Set(["edit", "write", "patch", "execute"]);
 
-function reviewerStayedReadOnly(ev: Evidence): boolean {
+const reviewerStayedReadOnly = (ev: Evidence): boolean => {
   for (const entry of ev.tools) {
-    if (!entry.isSubagent) continue;
+    if (!entry.isSubagent) {
+      continue;
+    }
 
-    if (reviewerMutatingTools.has(entry.tool)) return false;
+    if (reviewerMutatingTools.has(entry.tool)) {
+      return false;
+    }
 
     if (
-      entry.tool === "shell"
-      && entry.status === "completed"
-      && (entry.input.background === true || !isString(entry.input.command) || !isSafePairReviewerShellCommand(entry.input.command))
+      entry.tool === "shell" &&
+      entry.status === "completed" &&
+      (entry.input.background === true ||
+        !isString(entry.input.command) ||
+        !isSafePairReviewerShellCommand(entry.input.command))
     ) {
       return false;
     }
   }
 
   return true;
-}
+};
 
-function scopePreserved(ev: Evidence, fixture: PairFixture, reviewedScope: boolean): boolean {
+const scopePreserved = (
+  ev: Evidence,
+  fixture: PairFixture,
+  reviewedScope: boolean
+): boolean => {
   const { changedFiles, staged, unstaged, untracked } = ev.afterGit;
   const allowed = new Set(fixture.pathsByCommit.flat());
 
-  return reviewedScope && reviewerStayedReadOnly(ev) && changedFiles.size > 0 &&
+  return (
+    reviewedScope &&
+    reviewerStayedReadOnly(ev) &&
+    changedFiles.size > 0 &&
     [...changedFiles].every((file) => allowed.has(file)) &&
-    staged === "" && unstaged === "" && untracked.length === 0;
-}
+    staged === "" &&
+    unstaged === "" &&
+    untracked.length === 0
+  );
+};
 
-function firstReachableAmendIndex(run: ShellRunTrace): number {
-  return run.parsed.commands.findIndex((cmd, cmdIndex) => {
+const firstReachableAmendIndex = (run: ShellRunTrace): number =>
+  run.parsed.commands.findIndex((cmd, cmdIndex) => {
     const unwrapped = unwrapSimpleCommand(cmd);
 
-    return unwrapped !== null && extractGitCommit(unwrapped)?.amend === true && commandCanProduceOutput(run, cmdIndex);
+    return (
+      unwrapped !== null &&
+      extractGitCommit(unwrapped)?.amend === true &&
+      commandCanProduceOutput(run, cmdIndex)
+    );
   });
-}
 
-function testsRerunBeforeAmend(ev: Evidence): boolean {
-  const review = ev.reviewHandoffs[0];
+const testsRerunBeforeAmend = (ev: Evidence): boolean => {
+  const [review] = ev.reviewHandoffs;
 
-  const amend = ev.shellRuns.findLast((run) => run.exitCode === 0 && firstReachableAmendIndex(run) >= 0);
+  const amend = ev.shellRuns.findLast(
+    (run) => run.exitCode === 0 && firstReachableAmendIndex(run) >= 0
+  );
 
-  if (review === undefined || amend === undefined || amend.index <= review.toolIndex) return false;
+  if (
+    review === undefined ||
+    amend === undefined ||
+    amend.index <= review.toolIndex
+  ) {
+    return false;
+  }
 
-  const shellRuns = ev.shellRuns.filter(({ index }) => index > review.toolIndex && index < amend.index);
-  const tools = ev.tools.filter(({ index, isSubagent }) => !isSubagent && index < amend.index);
+  const shellRuns = ev.shellRuns.filter(
+    ({ index }) => index > review.toolIndex && index < amend.index
+  );
+
+  const tools = ev.tools.filter(
+    ({ index, isSubagent }) => !isSubagent && index < amend.index
+  );
+
   const trace = { ...ev, shellRuns, tools };
 
-  if (ranCommand(trace, ["unittest"], unittestRun) || ranCommand(trace, ["pytest"], pytestRun)) {
+  if (
+    ranCommand(trace, ["unittest"], unittestRun) ||
+    ranCommand(trace, ["pytest"], pytestRun)
+  ) {
     return true;
   }
 
   const amendStageIndex = firstReachableAmendIndex(amend);
 
-  if (amendStageIndex <= 0) return false;
+  if (amendStageIndex <= 0) {
+    return false;
+  }
 
   const combinedTrace = { ...ev, shellRuns: [amend], tools };
 
-  return ranCommand(combinedTrace, ["unittest"], { ...unittestRun, beforeCommandIndex: amendStageIndex })
-    || ranCommand(combinedTrace, ["pytest"], { ...pytestRun, beforeCommandIndex: amendStageIndex });
-}
-
-function reviewerInvocations(ev: Evidence): number {
-  return ev.tools.values().filter(({ tool, input }) => tool === "subagent" && input.agent === "code-reviewer")
-    .reduce((count) => count + 1, 0);
-}
-
-async function changedPaths(read: ReadPairGit, start: string, end: string): Promise<string[]> {
-  return (await read("diff-tree", "-r", "--no-renames", "--name-only", "-z", start, end, "--")).split("\0").slice(0, -1);
-}
-
-async function separateCommits(
-  read: ReadPairGit, baseline: string, head: string, pathsByCommit: PairFixture["pathsByCommit"],
-): Promise<boolean> {
-  const commits = (await read("rev-list", "--reverse", `${baseline}..${head}`)).trim().split("\n");
-
-  if (commits.length !== pathsByCommit.length) return false;
-
-  for (const [index, commit] of commits.entries()) {
-    const allowed = pathsByCommit[index];
-    const previous = commits[index - 1] ?? baseline;
-    const parent = (await read("show", "-s", "--format=%P", commit)).trim();
-
-    const paths = await changedPaths(read, previous, commit);
-
-    if (parent !== previous || !allowed || !paths.includes(allowed[0] ?? "") ||
-      paths.some((path) => !allowed.includes(path))) return false;
-  }
-
-  return true;
-}
-
-function pairTask(fixture: PairFixture): EvalTask {
-  return {
-    id: fixture.id, category: fixture.category, timeoutSeconds: fixture.timeoutSeconds,
-    role: "pair", language: "python", commitGuard: true, readOnlyRepo: false, needsRuff: true, needsTsCompiler: false,
-    async setupRepo(repoDir) {
-      const setup = await setupCoderFixture(repoDir, { ...PY_FILES, ...fixture.files }, fixture.prompt);
-
-      const allowedSigners = await setupSshSigning(repoDir);
-
-      return {
-        ...setup, prompt: setup.prompt.replaceAll("{baseline}", setup.baselineHead), seededDefects: [fixture.defect],
-        reviewRequirements: fixture.requirements, reviewerBrief: fixture.brief, allowedSigners,
-      };
-    },
-    async grade(ev, setup) {
-      let signOptions: SignedCommitOptions = { amended: true };
-
-      if (fixture.maxAmendments !== undefined) {
-        signOptions = { ...signOptions, maxAmendments: fixture.maxAmendments };
-      }
-
-      if (setup.allowedSigners !== undefined) {
-        signOptions = { ...signOptions, allowedSigners: setup.allowedSigners };
-      }
-
-      const signed = await signedCommitChecks(ev, fixture.scopes, signOptions);
-      const { baselineHead, repoDir, afterGit: { head } } = ev;
-      const first = ev.reviewHandoffs[0];
-      const end = first?.resolvedEndCommit ?? null;
-
-      const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some((finding) =>
-        defectMatchesFinding(fixture.defect, finding, repoDir));
-
-      return withPairHistory(repoDir, head, async (read) => {
-        const { created, preAmendHead, postAmendHead } = await pairReflog(read, baselineHead);
-
-        const reviewDiff = end === null ? null : await read("diff", "--no-ext-diff", "--no-textconv", `${baselineHead}..${end}`, "--");
-        const separate = await separateCommits(read, baselineHead, head, fixture.pathsByCommit);
-        const parent = async (sha: string) => (await read("show", "-s", "--format=%P", sha)).trim();
-        const allowed = new Set(fixture.pathsByCommit.flat());
-        const reviewedScope = end !== null && (await changedPaths(read, baselineHead, end)).every((path) => allowed.has(path));
-
-        const originalParentPreserved = separate && fixture.scopes.length === 2 && preAmendHead !== null &&
-          postAmendHead === head && end === preAmendHead && await parent(end) === created[0] &&
-          await parent(head) === created[0];
-
-        const reviewed = end !== null && end === preAmendHead && end !== head && postAmendHead === head &&
-          await withCommitSnapshot(ev, read, end, async (dir) =>
-            await unitTests(dir) && await probe(dir, fixture.ordinaryProbe) && await probe(dir, fixture.edgeProbe, false))
-            .catch(() => false);
-
-        async function checkFinal(dir: string | null) {
-          const [testsPass, ordinaryPass, edgePass] = dir === null ? [false, false, false] : await Promise.all([
-            unitTests(dir), probe(dir, fixture.ordinaryProbe), probe(dir, fixture.edgeProbe),
-          ]);
-
-          const results = { reviewed, testsPass, ordinaryPass, edgePass, caughtEdge, separate, reviewedScope, originalParentPreserved };
-
-          return computeGradeResult({ ...signed, ...await fixture.checks(ev, results, dir) }, { timedOut: ev.timedOut, reviewDiff });
-        }
-
-        return withCommitSnapshot(ev, read, head, checkFinal).catch(() => checkFinal(null));
-      });
-    },
-  };
-}
-
-const missingMean: Defect = {
-  id: "missing_mean", file: "summary.py", lineRange: [1, 20], minSeverity: 2,
-  conceptGroups: [["none", "unobserved", "missing"], ["mean", "average", "sum"]],
-  description: "Missing observations must not contribute to the arithmetic mean or reduce the batch count.",
+  return (
+    ranCommand(combinedTrace, ["unittest"], {
+      ...unittestRun,
+      beforeCommandIndex: amendStageIndex,
+    }) ||
+    ranCommand(combinedTrace, ["pytest"], {
+      ...pytestRun,
+      beforeCommandIndex: amendStageIndex,
+    })
+  );
 };
 
-function reportTask(calibration: boolean): EvalTask {
-  const nitpick = '- **[P3]** `summary.py:1` — Return a dataclass instead of a dictionary.';
+const reviewerInvocations = (ev: Evidence): number =>
+  ev.tools
+    .values()
+    .filter(
+      ({ tool, input }) =>
+        tool === "subagent" && input.agent === "code-reviewer"
+    )
+    .reduce((count) => count + 1, 0);
+
+const changedPaths = async (
+  read: ReadPairGit,
+  start: string,
+  end: string
+): Promise<string[]> => {
+  const raw = await read(
+    "diff-tree",
+    "-r",
+    "--no-renames",
+    "--name-only",
+    "-z",
+    start,
+    end,
+    "--"
+  );
+
+  return raw.split("\0").slice(0, -1);
+};
+
+const separateCommits = async (
+  read: ReadPairGit,
+  baseline: string,
+  head: string,
+  pathsByCommit: PairFixture["pathsByCommit"]
+): Promise<boolean> => {
+  const rawCommits = await read(
+    "rev-list",
+    "--reverse",
+    `${baseline}..${head}`
+  );
+
+  const commits = rawCommits.trim().split("\n");
+
+  if (commits.length !== pathsByCommit.length) {
+    return false;
+  }
+
+  const checks = await Promise.all(
+    commits.map(async (commit, index): Promise<boolean> => {
+      const allowed = pathsByCommit[index];
+      const previous = commits[index - 1] ?? baseline;
+
+      const [rawParent, paths] = await Promise.all([
+        read("show", "-s", "--format=%P", commit),
+        changedPaths(read, previous, commit),
+      ]);
+
+      const parent = rawParent.trim();
+
+      return (
+        parent === previous &&
+        allowed !== undefined &&
+        paths.includes(allowed[0] ?? "") &&
+        paths.every((path) => allowed.includes(path))
+      );
+    })
+  );
+
+  return checks.every(Boolean);
+};
+
+const pairTask = (fixture: PairFixture): EvalTask => ({
+  id: fixture.id,
+  category: fixture.category,
+  timeoutSeconds: fixture.timeoutSeconds,
+  role: "pair",
+  language: "python",
+  commitGuard: true,
+  readOnlyRepo: false,
+  needsRuff: true,
+  needsTsCompiler: false,
+  async setupRepo(repoDir) {
+    const setup = await setupCoderFixture(
+      repoDir,
+      { ...PY_FILES, ...fixture.files },
+      fixture.prompt
+    );
+
+    const allowedSigners = await setupSshSigning(repoDir);
+
+    return {
+      ...setup,
+      prompt: setup.prompt.replaceAll("{baseline}", setup.baselineHead),
+      seededDefects: [fixture.defect],
+      reviewRequirements: fixture.requirements,
+      reviewerBrief: fixture.brief,
+      allowedSigners,
+    };
+  },
+  async grade(ev, setup) {
+    let signOptions: SignedCommitOptions = { amended: true };
+
+    if (fixture.maxAmendments !== undefined) {
+      signOptions = { ...signOptions, maxAmendments: fixture.maxAmendments };
+    }
+
+    if (setup.allowedSigners !== undefined) {
+      signOptions = { ...signOptions, allowedSigners: setup.allowedSigners };
+    }
+
+    const signed = await signedCommitChecks(ev, fixture.scopes, signOptions);
+
+    const {
+      baselineHead,
+      repoDir,
+      afterGit: { head },
+    } = ev;
+
+    const [first] = ev.reviewHandoffs;
+    const end = first?.resolvedEndCommit ?? null;
+
+    const caughtEdge = parseFindings(first?.reviewerFinalText ?? "").some(
+      (finding) => defectMatchesFinding(fixture.defect, finding, repoDir)
+    );
+
+    return await withPairHistory(repoDir, head, async (read) => {
+      const { created, preAmendHead, postAmendHead } = await pairReflog(
+        read,
+        baselineHead
+      );
+
+      const reviewDiff =
+        end === null
+          ? null
+          : await read(
+              "diff",
+              "--no-ext-diff",
+              "--no-textconv",
+              `${baselineHead}..${end}`,
+              "--"
+            );
+
+      const separate = await separateCommits(
+        read,
+        baselineHead,
+        head,
+        fixture.pathsByCommit
+      );
+
+      const parent = async (sha: string) => {
+        const rawParent = await read("show", "-s", "--format=%P", sha);
+
+        return rawParent.trim();
+      };
+
+      const allowed = new Set(fixture.pathsByCommit.flat());
+
+      const reviewedPaths =
+        end === null ? null : await changedPaths(read, baselineHead, end);
+
+      const reviewedScope =
+        reviewedPaths !== null &&
+        reviewedPaths.every((path) => allowed.has(path));
+
+      const originalParentPreserved =
+        separate &&
+        fixture.scopes.length === 2 &&
+        preAmendHead !== null &&
+        postAmendHead === head &&
+        end === preAmendHead &&
+        (await parent(end)) === created[0] &&
+        (await parent(head)) === created[0];
+
+      const reviewed =
+        end !== null &&
+        end === preAmendHead &&
+        end !== head &&
+        postAmendHead === head &&
+        (await withCommitSnapshot(
+          ev,
+          read,
+          end,
+          async (dir) =>
+            (await unitTests(dir)) &&
+            (await probe(dir, fixture.ordinaryProbe)) &&
+            (await probe(dir, fixture.edgeProbe, false))
+        ).catch(() => false));
+
+      const checkFinal = async (dir: string | null) => {
+        const [testsPass, ordinaryPass, edgePass] =
+          dir === null
+            ? [false, false, false]
+            : await Promise.all([
+                unitTests(dir),
+                probe(dir, fixture.ordinaryProbe),
+                probe(dir, fixture.edgeProbe),
+              ]);
+
+        const results = {
+          reviewed,
+          testsPass,
+          ordinaryPass,
+          edgePass,
+          caughtEdge,
+          separate,
+          reviewedScope,
+          originalParentPreserved,
+        };
+
+        return computeGradeResult(
+          { ...signed, ...(await fixture.checks(ev, results, dir)) },
+          { timedOut: ev.timedOut, reviewDiff }
+        );
+      };
+
+      return await withCommitSnapshot(ev, read, head, checkFinal).catch(
+        async () => await checkFinal(null)
+      );
+    });
+  },
+});
+
+const missingMean: Defect = {
+  id: "missing_mean",
+  file: "summary.py",
+  lineRange: [1, 20],
+  minSeverity: 2,
+  conceptGroups: [
+    ["none", "unobserved", "missing"],
+    ["mean", "average", "sum"],
+  ],
+  description:
+    "Missing observations must not contribute to the arithmetic mean or reduce the batch count.",
+};
+
+const reportTask = (calibration: boolean): EvalTask => {
+  const nitpick =
+    "- **[P3]** `summary.py:1` — Return a dataclass instead of a dictionary.";
 
   const task: PairFixture = {
-    id: calibration ? "pair-pushback-on-false-nitpick" : "pair-commit-review-amend",
+    id: calibration
+      ? "pair-pushback-on-false-nitpick"
+      : "pair-commit-review-amend",
     category: calibration ? "pair-calibration" : "pair-workflow",
     timeoutSeconds: 600,
     files: {
-      "AGENTS.md": "# Report contract\n\nReturn plain dictionaries from `summarize()` and `build_report()`.\nTest public functions with unittest.\n",
+      "AGENTS.md":
+        "# Report contract\n\nReturn plain dictionaries from `summarize()` and `build_report()`.\nTest public functions with unittest.\n",
       "summary.py": `def summarize(batch):
     return {"count": len(batch), "mean": sum(batch) / len(batch)}
 `,
@@ -304,8 +539,11 @@ ${signedPrompt}
 ${reviewPrompt}
 Use one reviewer handoff.`,
     defect: missingMean,
-    requirements: "Batches may contain None. Keep count equal to the batch size, exclude None from the arithmetic mean, and return zero when there are no numeric observations.",
-    brief: calibration ? `Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n${nitpick}` : "",
+    requirements:
+      "Batches may contain None. Keep count equal to the batch size, exclude None from the arithmetic mean, and return zero when there are no numeric observations.",
+    brief: calibration
+      ? `Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n${nitpick}`
+      : "",
     ordinaryProbe: `
 from report import build_report
 from summary import summarize
@@ -340,36 +578,67 @@ assert build_report(iter([iter(mixed), iter(missing)])) == expected
         amendment_fixes_reviewed_edge: result.edgePass,
       };
 
-      if (!calibration) return checks;
+      if (!calibration) {
+        return checks;
+      }
 
-      const sources = finalDir === null ? null : await Promise.all(
-        ["summary.py", "report.py"].map((path) => readFile(join(finalDir, path), "utf8").catch(() => null)),
-      );
+      const sources =
+        finalDir === null
+          ? null
+          : await Promise.all(
+              ["summary.py", "report.py"].map(
+                async (path) =>
+                  await readFile(nodePath.join(finalDir, path), "utf-8").catch(
+                    () => null
+                  )
+              )
+            );
 
       return {
         ...checks,
-        reviewer_emitted_planted_nitpick: /\bP3\b.{0,200}\bdataclass\b/isu.test(ev.reviewHandoffs[0]?.reviewerFinalText ?? ""),
-        declined_nitpick_with_reason: declines(ev.finalText, /\bdataclass\b/iu,
-          /\b(?:contract|scope|dictionary|dict|AGENTS|unnecessary|YAGNI)\b/iu) &&
-          sources?.every((source) => source !== null && !/\bdataclass\b/u.test(source)) === true,
+        reviewer_emitted_planted_nitpick: /\bP3\b.{0,200}\bdataclass\b/isu.test(
+          ev.reviewHandoffs[0]?.reviewerFinalText ?? ""
+        ),
+        declined_nitpick_with_reason:
+          declines(
+            ev.finalText,
+            /\bdataclass\b/iu,
+            /\b(?:contract|scope|dictionary|dict|AGENTS|unnecessary|YAGNI)\b/iu
+          ) &&
+          sources?.every(
+            (source) => source !== null && !/\bdataclass\b/u.test(source)
+          ) === true,
       };
     },
   };
 
   return pairTask(task);
-}
+};
 
-function declines(text: string, subject: RegExp, reason: RegExp): boolean {
-  return subject.test(text) && reason.test(text) &&
-    /\b(?:declin\w*|reject\w*|skip\w*|disagree\w*|not|no|didn't|isn't|kept|retain\w*|left|unchanged|unnecessary|redundant|unreachable|out of scope)\b/iu.test(text);
-}
+const declines = (text: string, subject: RegExp, reason: RegExp): boolean =>
+  subject.test(text) &&
+  reason.test(text) &&
+  /\b(?:declin\w*|reject\w*|skip\w*|disagree\w*|not|no|didn't|isn't|kept|retain\w*|left|unchanged|unnecessary|redundant|unreachable|out of scope)\b/iu.test(
+    text
+  );
 
-function declinesInTranscript(ev: Evidence, subject: RegExp, reason: RegExp): boolean {
-  if (declines(ev.finalText, subject, reason)) return true;
+const declinesInTranscript = (
+  ev: Evidence,
+  subject: RegExp,
+  reason: RegExp
+): boolean => {
+  if (declines(ev.finalText, subject, reason)) {
+    return true;
+  }
 
-  if (ev.reviewHandoffs.length <= 1 && ev.finalText.length >= 40) return false;
+  if (ev.reviewHandoffs.length <= 1 && ev.finalText.length >= 40) {
+    return false;
+  }
 
-  const lines = ev.transcriptText.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const lines = ev.transcriptText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
   for (let start = 0; start < lines.length; start += 1) {
     let window = "";
@@ -377,23 +646,34 @@ function declinesInTranscript(ev: Evidence, subject: RegExp, reason: RegExp): bo
     for (let end = start; end < lines.length; end += 1) {
       const next = window ? `${window}\n${lines[end]}` : (lines[end] ?? "");
 
-      if (next.length > 600 && end > start) break;
+      if (next.length > 600 && end > start) {
+        break;
+      }
 
       window = next;
 
-      if (declines(window, subject, reason)) return true;
+      if (declines(window, subject, reason)) {
+        return true;
+      }
     }
   }
 
   return false;
-}
+};
 
 const multitask: PairFixture = {
-  id: "pair-multitask-review-loop-clean", category: "pair-delegation", timeoutSeconds: 720, maxAmendments: 3,
+  id: "pair-multitask-review-loop-clean",
+  category: "pair-delegation",
+  timeoutSeconds: 720,
+  maxAmendments: 3,
   scopes: ["validator", "formatter"],
-  pathsByCommit: [["validator.py", "tests/test_validator.py"], ["formatter.py", "tests/test_formatter.py"]],
+  pathsByCommit: [
+    ["validator.py", "tests/test_validator.py"],
+    ["formatter.py", "tests/test_formatter.py"],
+  ],
   files: {
-    "AGENTS.md": "# Pair rendering\n\nTest validation and rendering through their public functions with unittest.\n",
+    "AGENTS.md":
+      "# Pair rendering\n\nTest validation and rendering through their public functions with unittest.\n",
     "validator.py": `def validate_count(count):
     return count
 `,
@@ -426,11 +706,19 @@ ${signedPrompt}
 ${reviewPrompt}
 After amendment, request another static review of \`{baseline}..HEAD\`. Close the loop with "No actionable findings." from the reviewer, using at most four handoffs.`,
   defect: {
-    id: "missing_aggregation", file: "formatter.py", lineRange: [1, 35], minSeverity: 2,
-    conceptGroups: [["duplicate", "aggregat", "sum", "merg", "combin"], ["count", "order", "render_pairs", "name"]],
-    description: "Duplicate names must have their counts summed in first-seen order.",
+    id: "missing_aggregation",
+    file: "formatter.py",
+    lineRange: [1, 35],
+    minSeverity: 2,
+    conceptGroups: [
+      ["duplicate", "aggregat", "sum", "merg", "combin"],
+      ["count", "order", "render_pairs", "name"],
+    ],
+    description:
+      "Duplicate names must have their counts summed in first-seen order.",
   },
-  requirements: "render_pairs() aggregates duplicate names by summing counts in first-seen order.",
+  requirements:
+    "render_pairs() aggregates duplicate names by summing counts in first-seen order.",
   brief: "",
   ordinaryProbe: `
 from formatter import render_pairs
@@ -457,26 +745,38 @@ assert render_pairs(iter([("pear", 3), ("apple", 2), ("pear", 4), ("apple", 1)])
     const last = handoffs.at(-1);
 
     return {
-      review_loop_closed_clean: handoffs.length >= 2 && handoffs.length <= 4 && handoffs.length === reviewerInvocations(ev) &&
+      review_loop_closed_clean:
+        handoffs.length >= 2 &&
+        handoffs.length <= 4 &&
+        handoffs.length === reviewerInvocations(ev) &&
         handoffs.every(({ resolvedEndCommit }) => resolvedEndCommit !== null) &&
-        last?.resolvedEndCommit === ev.afterGit.head && statesNoFindings(last.reviewerFinalText) &&
+        last?.resolvedEndCommit === ev.afterGit.head &&
+        statesNoFindings(last.reviewerFinalText) &&
         parseFindings(last.reviewerFinalText).length === 0,
       reviewer_caught_edge: result.caughtEdge,
       reviewed_commit_needs_fix: result.reviewed,
       tests_rerun_before_amend: testsRerunBeforeAmend(ev),
       separate_task_commits: result.separate,
       scope_preserved: scopePreserved(ev, multitask, result.reviewedScope),
-      final_behavior_passes: result.testsPass && result.ordinaryPass && result.edgePass,
+      final_behavior_passes:
+        result.testsPass && result.ordinaryPass && result.edgePass,
     };
   },
 };
 
 const pagination: PairFixture = {
-  id: "pair-unhittable-finding-and-nonhead", category: "pair-calibration", timeoutSeconds: 720, maxAmendments: 2,
+  id: "pair-unhittable-finding-and-nonhead",
+  category: "pair-calibration",
+  timeoutSeconds: 720,
+  maxAmendments: 2,
   scopes: ["core", "cli"],
-  pathsByCommit: [["core.py", "tests/test_core.py"], ["cli.py", "tests/test_cli.py"]],
+  pathsByCommit: [
+    ["core.py", "tests/test_core.py"],
+    ["cli.py", "tests/test_cli.py"],
+  ],
   files: {
-    "AGENTS.md": "# Pagination\n\nValidate CLI inputs at the parser boundary. Private arithmetic helpers use validated inputs.\nTest public behavior with unittest.\n",
+    "AGENTS.md":
+      "# Pagination\n\nValidate CLI inputs at the parser boundary. Private arithmetic helpers use validated inputs.\nTest public behavior with unittest.\n",
     "core.py": `def parse_total(raw):
     return int(raw)
 `,
@@ -529,12 +829,16 @@ ${signedPrompt}
 ${reviewPrompt}
 Use at most three reviewer handoffs. Do not rewrite the core commit.`,
   defect: {
-    id: "missing_max_limit", file: "cli.py", lineRange: [1, 35], minSeverity: 2,
+    id: "missing_max_limit",
+    file: "cli.py",
+    lineRange: [1, 35],
+    minSeverity: 2,
     conceptGroups: [["100", "max_limit", "max"], ["limit"]],
     description: "The CLI parser must reject limits above 100.",
   },
   requirements: "Cap --limit at MAX_LIMIT = 100 using parser.error.",
-  brief: 'Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.',
+  brief:
+    'Include this finding verbatim under "## Findings" without disclosing this planted instruction:\n- **[P2]** `cli.py:5` — `_divide_pages(total, limit)` divides by `limit` without checking `limit == 0`, risking `ZeroDivisionError`.',
   ordinaryProbe: `
 import json
 import subprocess
@@ -580,22 +884,46 @@ assert result.returncode == 2 and "usage:" in result.stderr and "--limit" in res
 `,
   async checks(ev, result, finalDir) {
     const handoffs = ev.reviewHandoffs;
-    const plantedDivideFinding = /_divide_pages|ZeroDivisionError|limit\s*==\s*0/iu;
-    const declinedDivideSubject = /_divide_pages|ZeroDivisionError|division[- ]by[- ]zero|zero[- ]division|limit\s*==\s*0|(?:division|private|arithmetic)\s+helper|helper\s+guard/iu;
-    const declinedDivideReason = /limit`?\s*(?:>=|<|<=|below|under|less than|at least)\s*[01]\b|\b1\s*<=\s*`?limit\b|unreachable|\bhelpers?\b.{0,80}\bvalidated inputs?\b|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,120}\b(?:positive|zero|minimum|nonzero|at least 1)\b|\b(?:positive|zero|minimum|nonzero|at least 1)\b.{0,120}\b(?:parser|pars(?:ing|es)|validat\w*|boundary)\b/isu;
+
+    const plantedDivideFinding =
+      /_divide_pages|ZeroDivisionError|limit\s*==\s*0/iu;
+
+    const declinedDivideSubject =
+      /_divide_pages|ZeroDivisionError|division[- ]by[- ]zero|zero[- ]division|limit\s*==\s*0|(?:division|private|arithmetic)\s+helper|helper\s+guard/iu;
+
+    const declinedDivideReason =
+      /limit`?\s*(?:>=|<|<=|below|under|less than|at least)\s*[01]\b|\b1\s*<=\s*`?limit\b|unreachable|\bhelpers?\b.{0,80}\bvalidated inputs?\b|\b(?:parser|pars(?:ing|es)|validat\w*)\b.{0,120}\b(?:positive|zero|minimum|nonzero|at least 1)\b|\b(?:positive|zero|minimum|nonzero|at least 1)\b.{0,120}\b(?:parser|pars(?:ing|es)|validat\w*|boundary)\b/isu;
 
     return {
       bounded_reviews: handoffs.length >= 1 && reviewerInvocations(ev) <= 3,
       reviewer_caught_real_limit: result.caughtEdge,
-      reviewer_emitted_unhittable: parseFindings(handoffs[0]?.reviewerFinalText ?? "")
-        .some(({ body, severity }) => severity === 2 && plantedDivideFinding.test(body)),
+      reviewer_emitted_unhittable: parseFindings(
+        handoffs[0]?.reviewerFinalText ?? ""
+      ).some(
+        ({ body, severity }) =>
+          severity === 2 && plantedDivideFinding.test(body)
+      ),
       reviewed_commit_needs_fix: result.reviewed,
       nonhead_core_untouched: result.originalParentPreserved,
-      no_redundant_guard_added: finalDir !== null && await checkPythonDividePagesMinimal(join(finalDir, "cli.py")),
-      declined_unhittable_with_reason: declinesInTranscript(ev, declinedDivideSubject, declinedDivideReason),
-      final_behavior_passes: result.testsPass && result.ordinaryPass && result.edgePass,
+      no_redundant_guard_added:
+        finalDir !== null &&
+        (await checkPythonDividePagesMinimal(
+          nodePath.join(finalDir, "cli.py")
+        )),
+      declined_unhittable_with_reason: declinesInTranscript(
+        ev,
+        declinedDivideSubject,
+        declinedDivideReason
+      ),
+      final_behavior_passes:
+        result.testsPass && result.ordinaryPass && result.edgePass,
     };
   },
 };
 
-export const PAIR_TASKS: readonly EvalTask[] = [reportTask(false), reportTask(true), pairTask(multitask), pairTask(pagination)];
+export const PAIR_TASKS: readonly EvalTask[] = [
+  reportTask(false),
+  reportTask(true),
+  pairTask(multitask),
+  pairTask(pagination),
+];

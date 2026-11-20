@@ -9,12 +9,12 @@ Every trial runs inside an isolated sandbox and grades outputs with behavioral p
 
 ## Overview
 
-| Stage | CLI flag | Tasks | Primary focus |
-| --- | --- | ---: | --- |
-| **Coder** | `--phase coder` | 11 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow |
-| **Code reviewer** | `--phase reviewer` | 11 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
-| **Pair** | `--phase pair` | 4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation |
-| **Total** | `--phase all` | **26** | Full coding, review, and collaboration suite |
+| Stage             | CLI flag           |  Tasks | Primary focus                                                                                                |
+| ----------------- | ------------------ | -----: | ------------------------------------------------------------------------------------------------------------ |
+| **Coder**         | `--phase coder`    |     11 | Scoped edits, behavioral correctness, AST hygiene, test rigor, blocker honesty, and Git workflow             |
+| **Code reviewer** | `--phase reviewer` |     11 | Defect recall, architectural critique, scope calibration, exclusion compliance, and restraint on clean diffs |
+| **Pair**          | `--phase pair`     |      4 | Review handoff, substantiated `HEAD` amendments, false-alarm pushback, and non-`HEAD` preservation           |
+| **Total**         | `--phase all`      | **26** | Full coding, review, and collaboration suite                                                                 |
 
 ## Rankings
 
@@ -23,16 +23,16 @@ See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/20
 
 ### Autonomous Coders (`ACI` across 19 Solo + Pair trials)
 
-| Rank | Coder | ACI | ZSDR | Pass@1 | 19-trial cost | Total wall |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | `google/gemini-4-hydrogen#high` | **99.9** | 100.0% | 19/19 | $4.23 | 2400s |
-| 2 | `google/gemini-4-neon#medium` | **99.9** | 100.0% | 19/19 | $5.65 | 2722s |
-| 3 | `anthropic/claude-opus-5-5#medium` | **98.1** | 94.7% | 18/19 | $3.51 | 1166s |
-| 4 | `deepseek/deepseek-flash#high` | **95.1** | 94.7% | 17/19 | **$0.68** | 1718s |
-| 5 | `google/gemini-4-neon#high` | **93.1** | 94.7% | 17/19 | $8.96 | 4341s |
-| 6 | `anthropic/claude-sonnet-5-5#high` | **93.1** | 94.7% | 13/19 | $1.73 | **792s** |
-| 7 | `openai/gpt-6.2-sol#high` | **91.3** | 89.5% | 16/19 | $1.98 | 1678s |
-| 8 | `openai/gpt-6.2-sol#medium` | **89.8** | 84.2% | 16/19 | $1.65 | 1405s |
+| Rank | Coder                              |      ACI |   ZSDR | Pass@1 | 19-trial cost | Total wall |
+| ---: | ---------------------------------- | -------: | -----: | -----: | ------------: | ---------: |
+|    1 | `google/gemini-4-hydrogen#high`    | **99.9** | 100.0% |  19/19 |         $4.23 |      2400s |
+|    2 | `google/gemini-4-neon#medium`      | **99.9** | 100.0% |  19/19 |         $5.65 |      2722s |
+|    3 | `anthropic/claude-opus-5-5#medium` | **98.1** |  94.7% |  18/19 |         $3.51 |      1166s |
+|    4 | `deepseek/deepseek-flash#high`     | **95.1** |  94.7% |  17/19 |     **$0.68** |      1718s |
+|    5 | `google/gemini-4-neon#high`        | **93.1** |  94.7% |  17/19 |         $8.96 |      4341s |
+|    6 | `anthropic/claude-sonnet-5-5#high` | **93.1** |  94.7% |  13/19 |         $1.73 |   **792s** |
+|    7 | `openai/gpt-6.2-sol#high`          | **91.3** |  89.5% |  16/19 |         $1.98 |      1678s |
+|    8 | `openai/gpt-6.2-sol#medium`        | **89.8** |  84.2% |  16/19 |         $1.65 |      1405s |
 
 ![Coder Autonomy vs. Cost Pareto Frontier](docs/benchmarks/2026-11-19/charts/coder-cost-pareto.svg)
 
@@ -40,17 +40,17 @@ See the **[full scores, methodology, and 251-trial breakdown](docs/benchmarks/20
 
 ### Code Reviewers (`LSAS` across 10 calibrated tasks)
 
-| Rank | Reviewer | LSAS | Pass@1 | Recall | P0–P2 FPs | P3 nits | Suite cost | Med wall |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | `google/gemini-4-carbon#medium` | **100.0** | 10/10 | 100.0% | 0 | 0 | $0.93 | 85.2s |
-| 2 | `google/gemini-4-neon#xhigh` | **100.0** | 10/10 | 100.0% | 0 | 0 | $2.67 | 138.8s |
-| 3 | `openai/gpt-6.2-astra#medium` | **99.8** | 10/10 | 100.0% | 0 | 0 | $0.58 | **15.8s** |
-| 4 | `anthropic/claude-opus-5-5#high` | **96.8** | 9/10 | 100.0% | 1 | 0 | $0.49 | 18.0s |
-| 5 | `openai/gpt-6.2-astra#high` | **95.1** | 8/10 | 100.0% | 1 | 1 | $0.69 | 20.0s |
-| 6 | `google/gemini-4-neon#high` | **95.0** | 9/10 | 92.9% | 0 | 0 | $1.25 | 60.8s |
-| 7 | `openai/gpt-6.2-sol#high` | **89.0** | 6/10 | 92.9% | 1 | 2 | **$0.18** | 16.2s |
-| 8 | `anthropic/claude-fable-5-2#high` | **87.0** | 7/10 | 100.0% | 3 | 2 | $1.33 | 19.6s |
-| 9 | `openai/gpt-6.2-sol#xhigh` | **87.0** | 7/10 | 85.7% | 2 | 2 | $0.24 | 23.2s |
+| Rank | Reviewer                          |      LSAS | Pass@1 | Recall | P0–P2 FPs | P3 nits | Suite cost |  Med wall |
+| ---: | --------------------------------- | --------: | -----: | -----: | --------: | ------: | ---------: | --------: |
+|    1 | `google/gemini-4-carbon#medium`   | **100.0** |  10/10 | 100.0% |         0 |       0 |      $0.93 |     85.2s |
+|    2 | `google/gemini-4-neon#xhigh`      | **100.0** |  10/10 | 100.0% |         0 |       0 |      $2.67 |    138.8s |
+|    3 | `openai/gpt-6.2-astra#medium`     |  **99.8** |  10/10 | 100.0% |         0 |       0 |      $0.58 | **15.8s** |
+|    4 | `anthropic/claude-opus-5-5#high`  |  **96.8** |   9/10 | 100.0% |         1 |       0 |      $0.49 |     18.0s |
+|    5 | `openai/gpt-6.2-astra#high`       |  **95.1** |   8/10 | 100.0% |         1 |       1 |      $0.69 |     20.0s |
+|    6 | `google/gemini-4-neon#high`       |  **95.0** |   9/10 |  92.9% |         0 |       0 |      $1.25 |     60.8s |
+|    7 | `openai/gpt-6.2-sol#high`         |  **89.0** |   6/10 |  92.9% |         1 |       2 |  **$0.18** |     16.2s |
+|    8 | `anthropic/claude-fable-5-2#high` |  **87.0** |   7/10 | 100.0% |         3 |       2 |      $1.33 |     19.6s |
+|    9 | `openai/gpt-6.2-sol#xhigh`        |  **87.0** |   7/10 |  85.7% |         2 |       2 |      $0.24 |     23.2s |
 
 ![Code Reviewer Calibration Quadrant](docs/benchmarks/2026-11-19/charts/reviewer-calibration.svg)
 
@@ -152,17 +152,17 @@ Results tag the run profile as `file:<basename>`.
 Model matrices live in [`src/config/models.ts`](src/config/models.ts).
 Repeat `--coder-model` or `--reviewer-model` on the CLI to override either list.
 
-| Default `coder` models (8) | Default `code-reviewer` models (9) |
-| --- | --- |
-| `openai/gpt-6.2-sol#medium` | `openai/gpt-6.2-sol#high` |
-| `openai/gpt-6.2-sol#high` | `openai/gpt-6.2-sol#xhigh` |
-| `google/gemini-4-hydrogen#high` | `google/gemini-4-carbon#medium` |
-| `google/gemini-4-neon#medium` | `google/gemini-4-neon#high` |
-| `google/gemini-4-neon#high` | `google/gemini-4-neon#xhigh` |
-| `anthropic/claude-sonnet-5-5#high` | `anthropic/claude-opus-5-5#high` |
-| `anthropic/claude-opus-5-5#medium` | `openai/gpt-6.2-astra#medium` |
-| `deepseek/deepseek-flash#high` | `openai/gpt-6.2-astra#high` |
-| | `anthropic/claude-fable-5-2#high` |
+| Default `coder` models (8)         | Default `code-reviewer` models (9) |
+| ---------------------------------- | ---------------------------------- |
+| `openai/gpt-6.2-sol#medium`        | `openai/gpt-6.2-sol#high`          |
+| `openai/gpt-6.2-sol#high`          | `openai/gpt-6.2-sol#xhigh`         |
+| `google/gemini-4-hydrogen#high`    | `google/gemini-4-carbon#medium`    |
+| `google/gemini-4-neon#medium`      | `google/gemini-4-neon#high`        |
+| `google/gemini-4-neon#high`        | `google/gemini-4-neon#xhigh`       |
+| `anthropic/claude-sonnet-5-5#high` | `anthropic/claude-opus-5-5#high`   |
+| `anthropic/claude-opus-5-5#medium` | `openai/gpt-6.2-astra#medium`      |
+| `deepseek/deepseek-flash#high`     | `openai/gpt-6.2-astra#high`        |
+|                                    | `anthropic/claude-fable-5-2#high`  |
 
 ## Task suite
 
@@ -171,50 +171,50 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 <details>
 <summary><strong>Stage 1 — Coder tasks (11)</strong></summary>
 
-| Task ID | Category | Language | Timeout | Commit guard |
-| --- | --- | --- | ---: | --- |
-| `coder-py-stitch-collapse` | `cache-recovery` | Python | 480s | No |
-| `coder-py-stream-stop-and-feedback` | `streaming` | Python | 480s | No |
-| `coder-ts-sse-chunk-crlf` | `framing` | TypeScript | 480s | No |
-| `coder-ts-shell-heredoc-subst` | `parser` | TypeScript | 600s | No |
-| `coder-py-ssrf-ip-pinning` | `transport-safety` | Python | 480s | No |
-| `coder-git-commit-guard-two-task` | `git-workflow` | Git | 480s | Yes |
-| `coder-blocker-honesty-v2` | `blocker-honesty` | Python | 480s | No |
-| `coder-convention-autonomy-v2` | `autonomy` | Python | 480s | No |
-| `coder-py-atomic-async-lifecycle` | `concurrency-io` | Python | 480s | No |
-| `coder-ts-boundary-decoder-http` | `boundary-safety` | TypeScript | 480s | No |
-| `coder-ts-catalog-alias-and-test-rigor` | `test-rigor` | TypeScript | 480s | No |
+| Task ID                                 | Category           | Language   | Timeout | Commit guard |
+| --------------------------------------- | ------------------ | ---------- | ------: | ------------ |
+| `coder-py-stitch-collapse`              | `cache-recovery`   | Python     |    480s | No           |
+| `coder-py-stream-stop-and-feedback`     | `streaming`        | Python     |    480s | No           |
+| `coder-ts-sse-chunk-crlf`               | `framing`          | TypeScript |    480s | No           |
+| `coder-ts-shell-heredoc-subst`          | `parser`           | TypeScript |    600s | No           |
+| `coder-py-ssrf-ip-pinning`              | `transport-safety` | Python     |    480s | No           |
+| `coder-git-commit-guard-two-task`       | `git-workflow`     | Git        |    480s | Yes          |
+| `coder-blocker-honesty-v2`              | `blocker-honesty`  | Python     |    480s | No           |
+| `coder-convention-autonomy-v2`          | `autonomy`         | Python     |    480s | No           |
+| `coder-py-atomic-async-lifecycle`       | `concurrency-io`   | Python     |    480s | No           |
+| `coder-ts-boundary-decoder-http`        | `boundary-safety`  | TypeScript |    480s | No           |
+| `coder-ts-catalog-alias-and-test-rigor` | `test-rigor`       | TypeScript |    480s | No           |
 
 </details>
 
 <details>
 <summary><strong>Stage 2 — Code reviewer tasks (11)</strong></summary>
 
-| Task ID | Category | Language | Timeout |
-| --- | --- | --- | ---: |
-| `rev-clean-personal-script-v2` | `clean-review` | Python | 480s |
-| `rev-soft-commit-range-no-filelist` | `scope-calibration` | Python | 480s |
-| `rev-missing-scope-true-bounce` | `scope-calibration` | Python | 480s |
-| `rev-ts-redirect-leak-and-antislop` | `standards-review` | TypeScript | 480s |
-| `rev-py-cache-discard-and-monkeypatch` | `standards-review` | Python | 480s |
-| `rev-py-ytdlp-thread-leak-and-ratelimit` | `regression-review` | Python | 480s |
-| `rev-mixed-committed-plus-worktree` | `scope-calibration` | Mixed | 480s |
-| `rev-calibration-trap-clean-idiomatic` | `clean-review` | Python | 480s |
-| `rev-py-denylist-bandaid-rewrite` | `architecture-review` | Python | 480s |
-| `rev-ts-tautological-and-inverted-test` | `standards-review` | TypeScript | 480s |
-| `rev-py-clean-security-rewrite-restraint` | `clean-review` | Python | 480s |
+| Task ID                                   | Category              | Language   | Timeout |
+| ----------------------------------------- | --------------------- | ---------- | ------: |
+| `rev-clean-personal-script-v2`            | `clean-review`        | Python     |    480s |
+| `rev-soft-commit-range-no-filelist`       | `scope-calibration`   | Python     |    480s |
+| `rev-missing-scope-true-bounce`           | `scope-calibration`   | Python     |    480s |
+| `rev-ts-redirect-leak-and-antislop`       | `standards-review`    | TypeScript |    480s |
+| `rev-py-cache-discard-and-monkeypatch`    | `standards-review`    | Python     |    480s |
+| `rev-py-ytdlp-thread-leak-and-ratelimit`  | `regression-review`   | Python     |    480s |
+| `rev-mixed-committed-plus-worktree`       | `scope-calibration`   | Mixed      |    480s |
+| `rev-calibration-trap-clean-idiomatic`    | `clean-review`        | Python     |    480s |
+| `rev-py-denylist-bandaid-rewrite`         | `architecture-review` | Python     |    480s |
+| `rev-ts-tautological-and-inverted-test`   | `standards-review`    | TypeScript |    480s |
+| `rev-py-clean-security-rewrite-restraint` | `clean-review`        | Python     |    480s |
 
 </details>
 
 <details>
 <summary><strong>Stage 3 — Pair collaboration tasks (4)</strong></summary>
 
-| Task ID | Category | Language | Timeout | Commit guard |
-| --- | --- | --- | ---: | --- |
-| `pair-commit-review-amend` | `pair-workflow` | Python | 600s | Yes |
-| `pair-pushback-on-false-nitpick` | `pair-calibration` | Python | 600s | Yes |
-| `pair-multitask-review-loop-clean` | `pair-delegation` | Python | 720s | Yes |
-| `pair-unhittable-finding-and-nonhead` | `pair-calibration` | Python | 720s | Yes |
+| Task ID                               | Category           | Language | Timeout | Commit guard |
+| ------------------------------------- | ------------------ | -------- | ------: | ------------ |
+| `pair-commit-review-amend`            | `pair-workflow`    | Python   |    600s | Yes          |
+| `pair-pushback-on-false-nitpick`      | `pair-calibration` | Python   |    600s | Yes          |
+| `pair-multitask-review-loop-clean`    | `pair-delegation`  | Python   |    720s | Yes          |
+| `pair-unhittable-finding-and-nonhead` | `pair-calibration` | Python   |    720s | Yes          |
 
 </details>
 
@@ -222,12 +222,12 @@ Run `bun ./src/cli.ts list` (or `--json`) to inspect task metadata directly from
 
 Each live trial builds an ephemeral workspace under `/tmp/opencode/omkar-swe-bench` and runs OpenCode inside `bwrap` with strict read-only boundaries.
 
-| Boundary | Inside trial sandbox | Excluded from trial sandbox |
-| --- | --- | --- |
-| **Repository** | Fresh seeded Git repo (`rw` for coder/pair, `ro` for reviewer) | Host workspace and unrelated repos |
-| **Credentials** | Only active trial provider definitions; `{file:...}` targets mounted `ro` and deleted on teardown | Inactive providers, host `service.json`, unapproved env vars |
-| **Models catalog** | Host-refreshed `models.json` mounted `ro` via `OPENCODE_MODELS_PATH` (`OPENCODE_DISABLE_MODELS_FETCH=1`) | Per-trial network catalog races |
-| **Tools & plugins** | Read-only `ruff`, TypeScript compiler (when required), and `opencode-commit-guard@1.1.1` (only on Git/pair tasks) | Host skills (`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`), personal plugins, `oxlint`, `tools/oxlint/anti-slop`, host AST parser |
+| Boundary            | Inside trial sandbox                                                                                              | Excluded from trial sandbox                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Repository**      | Fresh seeded Git repo (`rw` for coder/pair, `ro` for reviewer)                                                    | Host workspace and unrelated repos                                                                                                       |
+| **Credentials**     | Only active trial provider definitions; `{file:...}` targets mounted `ro` and deleted on teardown                 | Inactive providers, host `service.json`, unapproved env vars                                                                             |
+| **Models catalog**  | Host-refreshed `models.json` mounted `ro` via `OPENCODE_MODELS_PATH` (`OPENCODE_DISABLE_MODELS_FETCH=1`)          | Per-trial network catalog races                                                                                                          |
+| **Tools & plugins** | Read-only `ruff`, TypeScript compiler (when required), and `opencode-commit-guard@1.1.1` (only on Git/pair tasks) | Host skills (`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`), personal plugins, `oxlint`, `oxfmt`, `ultracite`, `oxlint-tsgolint`, host AST parser |
 
 Even with `--sandbox off`, post-trial behavioral probes still require `bwrap`.
 
@@ -235,49 +235,49 @@ Even with `--sandbox off`, post-trial behavioral probes still require `bwrap`.
 
 The package exposes `omkar-swe-bench` (or invoke `bun ./src/cli.ts` directly in a checkout).
 
-| Command | Purpose |
-| --- | --- |
-| `list [--phase <p>] [--json]` | Print task metadata as a table or JSON |
-| `run [options]` | Execute trials, checkpoint `results.json` after each trial, and write `summary.md` |
+| Command                                                                    | Purpose                                                                                                                                 |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `list [--phase <p>] [--json]`                                              | Print task metadata as a table or JSON                                                                                                  |
+| `run [options]`                                                            | Execute trials, checkpoint `results.json` after each trial, and write `summary.md`                                                      |
 | `report --input <results.json>... [--out <md> \| --out-dir <dir> [--png]]` | Build a Markdown summary or full LSAS report bundle (`summary.md`, `report.html`, `charts/*.svg`) from one or more `results.json` files |
-| `judge --input <results.json> [--answers <file>] [--out <file>]` | Export anonymized blind review packets or validate completed binary judgments |
+| `judge --input <results.json> [--answers <file>] [--out <file>]`           | Export anonymized blind review packets or validate completed binary judgments                                                           |
 
 <details>
 <summary><strong>All <code>run</code> options and defaults</strong></summary>
 
-| Option | Default and behavior |
-| --- | --- |
-| `--phase <all\|coder\|reviewer\|pair>` | `all`; select a stage or run all stages |
-| `--task <id>` | All tasks in the selected phase; repeat to filter specific task IDs |
-| `--coder-model <provider/model[#variant]>` | The 8 coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the list |
+| Option                                        | Default and behavior                                                                                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--phase <all\|coder\|reviewer\|pair>`        | `all`; select a stage or run all stages                                                                                                           |
+| `--task <id>`                                 | All tasks in the selected phase; repeat to filter specific task IDs                                                                               |
+| `--coder-model <provider/model[#variant]>`    | The 8 coder specs in [`src/config/models.ts`](src/config/models.ts); repeat to replace the list                                                   |
 | `--reviewer-model <provider/model[#variant]>` | All 9 reviewer specs for solo review, and `openai/gpt-6.2-astra#medium` + `google/gemini-4-carbon#medium` for pairs; repeat to replace both lists |
-| `--all-pairs` | Off; pair each selected coder model with all default reviewer models unless you pass `--reviewer-model` |
-| `--trials-per-cell <n>` | `1`; positive integer repetitions per task and model or model pair |
-| `--workers <n>` | `4`; positive integer maximum concurrent trials (capped at 2 concurrent trials per provider by default) |
-| `--api-retries <n>` | `3`; non-negative integer outer retries after transient API or startup failures |
-| `--sandbox <require\|auto\|off>` | `require`; fails if `bwrap` is unavailable. `auto` warns and falls back only for read-only reviewer runs. `off` skips sandboxing for OpenCode |
-| `--providers-file <path>` | Defaults to `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc` |
-| `--agents-file <path>` | Neutral role prompts; pass JSON/JSONC to test custom `coder` and `code-reviewer` definitions |
-| `--out <dir>` | `./results/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md` |
-| `--workspace-root <dir>` | `/tmp/opencode/omkar-swe-bench`; base directory for trial workspaces |
-| `--timeout-scale <factor>` | `1`; positive multiplier applied to each task's `timeoutSeconds` |
-| `--keep-workspaces` | Off; retain trial directories and persist live session data in `session.db` instead of memory |
-| `--dry-run` | Off; prepare fixtures and validate mount plans without starting OpenCode or calling providers |
+| `--all-pairs`                                 | Off; pair each selected coder model with all default reviewer models unless you pass `--reviewer-model`                                           |
+| `--trials-per-cell <n>`                       | `1`; positive integer repetitions per task and model or model pair                                                                                |
+| `--workers <n>`                               | `4`; positive integer maximum concurrent trials (capped at 2 concurrent trials per provider by default)                                           |
+| `--api-retries <n>`                           | `3`; non-negative integer outer retries after transient API or startup failures                                                                   |
+| `--sandbox <require\|auto\|off>`              | `require`; fails if `bwrap` is unavailable. `auto` warns and falls back only for read-only reviewer runs. `off` skips sandboxing for OpenCode     |
+| `--providers-file <path>`                     | Defaults to `${XDG_CONFIG_HOME:-$HOME/.config}/opencode/opencode.jsonc`                                                                           |
+| `--agents-file <path>`                        | Neutral role prompts; pass JSON/JSONC to test custom `coder` and `code-reviewer` definitions                                                      |
+| `--out <dir>`                                 | `./results/<iso-timestamp-slug>`; destination directory for `results.json` and `summary.md`                                                       |
+| `--workspace-root <dir>`                      | `/tmp/opencode/omkar-swe-bench`; base directory for trial workspaces                                                                              |
+| `--timeout-scale <factor>`                    | `1`; positive multiplier applied to each task's `timeoutSeconds`                                                                                  |
+| `--keep-workspaces`                           | Off; retain trial directories and persist live session data in `session.db` instead of memory                                                     |
+| `--dry-run`                                   | Off; prepare fixtures and validate mount plans without starting OpenCode or calling providers                                                     |
 
 </details>
 
 ## Telemetry
 
-| Metric | Definition |
-| --- | --- |
-| **TTFRT** | Seconds from root assistant message creation to first streamed token |
-| **TTFVT** | Seconds from root assistant message creation to first visible text or tool start |
-| **Cold / warm visible** | Cold is the first root assistant step; warm is the median TTFVT of later root assistant steps |
-| **Decode tok/s** | Output tokens divided by summed visible-start-to-stream-end seconds across positive-duration steps (root + subagent) |
-| **Total model tok/s** | Output plus reasoning tokens divided by summed step-creation-to-end seconds across positive-duration steps (root + subagent) |
-| **Reasoning share** | Reasoning tokens divided by `max(1, output + reasoning)` |
-| **Cache hit ratio** | Cache-read tokens divided by `max(1, input + cache_read + cache_write)` |
-| **Cost (USD)** | `total_cost_usd = root_cost_usd + subagent_cost_usd + retry_cost_usd` |
+| Metric                  | Definition                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **TTFRT**               | Seconds from root assistant message creation to first streamed token                                                         |
+| **TTFVT**               | Seconds from root assistant message creation to first visible text or tool start                                             |
+| **Cold / warm visible** | Cold is the first root assistant step; warm is the median TTFVT of later root assistant steps                                |
+| **Decode tok/s**        | Output tokens divided by summed visible-start-to-stream-end seconds across positive-duration steps (root + subagent)         |
+| **Total model tok/s**   | Output plus reasoning tokens divided by summed step-creation-to-end seconds across positive-duration steps (root + subagent) |
+| **Reasoning share**     | Reasoning tokens divided by `max(1, output + reasoning)`                                                                     |
+| **Cache hit ratio**     | Cache-read tokens divided by `max(1, input + cache_read + cache_write)`                                                      |
+| **Cost (USD)**          | `total_cost_usd = root_cost_usd + subagent_cost_usd + retry_cost_usd`                                                        |
 
 ## Offline judging
 
@@ -301,14 +301,14 @@ Inspect free-form evidence before sharing a packet because path redaction does n
 
 ### Module boundaries
 
-| Directory | Responsibility |
-| --- | --- |
-| `src/ast/` | Shell, Python, and TypeScript (`oxc-parser`) static analysis |
+| Directory      | Responsibility                                                                               |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| `src/ast/`     | Shell, Python, and TypeScript (`oxc-parser`) static analysis                                 |
 | `src/sandbox/` | `bwrap` mount planning, environment construction, host tool discovery, and process isolation |
-| `src/driver/` | OpenCode server lifecycle, SSE/REST session protocol, and telemetry extraction |
-| `src/graders/` | Findings parser, Git state and commit checks, trace matchers, and deterministic scoring |
-| `src/tasks/` | All 26 coder, reviewer, and pair task fixtures and probes |
-| `src/runner/` | Trial scheduling (`runPool`), execution lifecycle, retries, and report generation |
+| `src/driver/`  | OpenCode server lifecycle, SSE/REST session protocol, and telemetry extraction               |
+| `src/graders/` | Findings parser, Git state and commit checks, trace matchers, and deterministic scoring      |
+| `src/tasks/`   | All 26 coder, reviewer, and pair task fixtures and probes                                    |
+| `src/runner/`  | Trial scheduling (`runPool`), execution lifecycle, retries, and report generation            |
 
 ### Verification
 
