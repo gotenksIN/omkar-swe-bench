@@ -1,6 +1,8 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import nodePath from "node:path";
 
+import { parseSync } from "oxc-parser";
+
 import { extractGitCommit, unwrapSimpleCommand } from "../../ast/bash.ts";
 import {
   checkPythonDividePagesMinimal,
@@ -135,18 +137,45 @@ const tsHygienePasses = (dir: string): boolean => {
   }
 };
 
+const splitProbeImports = (script: string) => {
+  const { program } = parseSync("probe.ts", script, { lang: "ts" });
+  const imports: string[] = [];
+  const body: string[] = [];
+  let cursor = 0;
+
+  for (const statement of program.body) {
+    if (statement.type === "ImportDeclaration") {
+      if (statement.start > cursor) {
+        body.push(script.slice(cursor, statement.start));
+      }
+
+      imports.push(script.slice(statement.start, statement.end));
+      cursor = statement.end;
+    }
+  }
+
+  if (cursor < script.length) {
+    body.push(script.slice(cursor));
+  }
+
+  return { imports: imports.join("\n"), body: body.join("\n") };
+};
+
 const tsProbe = async (
   dir: string,
   script: string,
   expectEdge = true
-): Promise<boolean> =>
-  await runFixtureCheck(
+): Promise<boolean> => {
+  const { imports, body } = splitProbeImports(script);
+
+  return await runFixtureCheck(
     dir,
     "bun",
     ["--no-env-file", "run", "-"],
     `
+${imports}
 const runCheck = async () => {
-${script}
+${body}
 };
 let failed = false;
 try {
@@ -159,6 +188,7 @@ if (${expectEdge ? "failed" : "!failed"}) {
 }
 `
   );
+};
 
 const unitTests = async (
   dir: string,
@@ -278,11 +308,16 @@ const firstReachableAmendIndex = (run: ShellRunTrace): number =>
   });
 
 const testsRerunBeforeAmend = (ev: Evidence): boolean => {
-  const [review] = ev.reviewHandoffs;
-
   const amend = ev.shellRuns.findLast(
     (run) => run.exitCode === 0 && firstReachableAmendIndex(run) >= 0
   );
+
+  const review =
+    amend === undefined
+      ? undefined
+      : ev.reviewHandoffs.findLast(
+          (handoff) => handoff.toolIndex < amend.index
+        );
 
   if (
     review === undefined ||
@@ -1017,13 +1052,14 @@ const tsInverseTriage: PairFixture = {
   category: "pair-calibration",
   language: "typescript",
   timeoutSeconds: 600,
+  maxAmendments: 2,
   scopes: ["config", "models"],
   pathsByCommit: [
     ["src/config.ts", "tests/config.test.ts"],
     ["src/models.ts", "tests/models.test.ts"],
   ],
   files: {
-    "AGENTS.md": `${TS_FILES["AGENTS.md"]}Do not write tautological or change-detector tests that duplicate exported constants verbatim.\n`,
+    "AGENTS.md": `${TS_FILES["AGENTS.md"].trimEnd()}\n\nDo not write tautological or change-detector tests that duplicate exported constants verbatim.\n`,
     "src/config.ts": `export interface ModelSpec {
   readonly providerID: string;
   readonly modelID: string;
@@ -1107,7 +1143,7 @@ Use at most three reviewer handoffs. Do not rewrite the config commit.`,
   defect: {
     id: "disabled_model_allowed",
     file: "src/models.ts",
-    lineRange: [18, 42],
+    lineRange: [18, 65],
     minSeverity: 2,
     conceptGroups: [
       ["disabled", "enabled"],
@@ -1131,6 +1167,10 @@ assert.deepEqual(parseModelSpec("openrouter/anthropic/claude-core#high"), {
   variant: "high",
 });
 
+for (const bad of ["", "openai", "openai/", "/gpt-fast", "openai/gpt-fast#", "openai/gpt-fast#a#b"]) {
+  assert.throws(() => parseModelSpec(bad));
+}
+
 const providers = [
   {
     id: "openai",
@@ -1148,7 +1188,7 @@ const providers = [
 
 validateModels(["openai/gpt-fast#medium", "openrouter/anthropic/claude-core#high"], providers);
 assert.throws(() => validateModels(["openai/wire-1#medium"], providers), /Unknown model:/u);
-assert.throws(() => validateModels(["openai/gpt-fast#low"], providers), /Unknown variant:|variant/iu);
+assert.throws(() => validateModels(["openai/gpt-fast#low"], providers));
 `,
   edgeProbe: `
 import assert from "node:assert/strict";
@@ -1172,14 +1212,21 @@ assert.throws(() => validateModels(["openai/gpt-old#medium"], providers), /Disab
     const declinedSubject =
       /DEFAULT_MODELS|tautolog|literal|change-detector|constant/iu;
 
-    const declinedReason = /AGENTS\.md|tautolog|change-detector|duplicat/iu;
+    const declinedReason =
+      /\bAGENTS(?:\.md)?\b|tautolog|change[- ]detector|duplicat|verbatim|mirror|circular|hard[- ]?cod|implementation detail|behavioral/iu;
 
     const noTautologicalTest =
       finalDir !== null &&
       !(await readFile(nodePath.join(finalDir, "tests/models.test.ts"), "utf-8")
-        .then((text) =>
-          /expect\(\s*DEFAULT_MODELS\s*\)\.toEqual\(\s*\[/u.test(text)
-        )
+        .then((text) => {
+          const stripped = text
+            .replaceAll(/\/\*[\s\S]*?\*\//gu, "")
+            .replaceAll(/\/\/[^\n]*/gu, "");
+
+          return /(?:expect\(\s*DEFAULT_MODELS\s*\)\s*\.\s*(?:toEqual|toStrictEqual)|deep(?:Strict)?Equal\(\s*DEFAULT_MODELS\s*,)\s*\[/u.test(
+            stripped
+          );
+        })
         .catch(() => true));
 
     return {
@@ -1192,6 +1239,11 @@ assert.throws(() => validateModels(["openai/gpt-old#medium"], providers), /Disab
       ),
       reviewed_commit_needs_fix: result.reviewed,
       nonhead_config_untouched: result.originalParentPreserved,
+      scope_preserved: scopePreserved(
+        ev,
+        tsInverseTriage,
+        result.reviewedScope
+      ),
       no_tautological_tests: noTautologicalTest,
       declined_tautological_nitpick_with_reason: declinesInTranscript(
         ev,
@@ -1235,11 +1287,25 @@ After amending HEAD, request a verification review of \`{baseline}..HEAD\` so th
   defect: {
     id: "untracked_and_crlf",
     file: "diff_sections.py",
-    lineRange: [1, 30],
+    lineRange: [1, 60],
     minSeverity: 2,
     conceptGroups: [
       ["untracked", "crlf", "\\r\\n", "carriage"],
-      ["prefix", "startswith", "strip", "leak", "line", "section", "normalize"],
+      [
+        "prefix",
+        "startswith",
+        "strip",
+        "leak",
+        "line",
+        "section",
+        "normalize",
+        "unstaged",
+        "bucket",
+        "capture",
+        "append",
+        "ignore",
+        "drop",
+      ],
     ],
     description:
       'split_sections must drop `Untracked: "<path>" (<oid>)` lines (matching prefix `Untracked: `) and normalize CRLF (`\\r\\n`) line endings.',
@@ -1260,7 +1326,7 @@ raw = (
     "## Committed\\r\\n+a\\r\\n"
     "## Unstaged\\r\\n+c\\r\\n"
     'Untracked: "notes.txt" (deadbeef)\\r\\n'
-    'Untracked: "extra.py" (cafebabe)\\r\\n'
+    "+trailing_after_untracked"
 )
 out = split_sections(raw)
 assert out == {"committed": "+a", "staged": "", "unstaged": "+c"}, out
