@@ -500,6 +500,18 @@ export const runFixtureTsc = async (repoDir: string): Promise<boolean> => {
   }
 };
 
+const tscPrefixes: readonly (readonly string[])[] = [
+  ["tsc"],
+  ["bun", "run", "typecheck"],
+  ["bun", "typecheck"],
+  ["bunx", "tsc"],
+  ["bun", "x", "tsc"],
+  ["npx", "tsc"],
+];
+
+const tscExecuted = (ev: Evidence): boolean =>
+  tscPrefixes.some((prefix) => ranCommand(ev, prefix, successfulRun));
+
 export const checksTypeScript = async (
   ev: Evidence,
   allowedSrcFiles: ReadonlySet<string>
@@ -526,6 +538,7 @@ export const checksTypeScript = async (
       ),
     no_commits_created: noCommits(ev),
     tsc_passes: tsc,
+    tsc_executed: tscExecuted(ev),
     ts_ast_hygiene: analyzeTypeScriptRepo(ev.repoDir).passed,
   };
 };

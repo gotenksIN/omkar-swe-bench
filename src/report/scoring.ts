@@ -162,6 +162,7 @@ const TIER_B_VERIFICATION = new Set([
   "unit_tests_executed",
   "ruff_check_executed",
   "bun_tests_executed",
+  "tsc_executed",
   "tests_rerun_before_amend",
   "proceeds_without_question",
 ]);

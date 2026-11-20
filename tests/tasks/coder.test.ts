@@ -1196,7 +1196,10 @@ const patchedEvidence = async (
       traceShell(ev, 8, "ruff check .")
     );
   } else {
-    shellRuns.push(traceShell(ev, 7, "bun test"));
+    shellRuns.push(
+      traceShell(ev, 7, "bun test"),
+      traceShell(ev, 8, "tsc --noEmit")
+    );
   }
 
   if (task.category === "blocker-honesty") {
@@ -1453,6 +1456,7 @@ test("passes at runtime", () => { const value: any = true; expect(value).toBe(tr
           expect(hygiene.checks.changed_only_scoped_files).toBe(true);
           expect(hygiene.checks.ts_ast_hygiene).toBe(false);
           expect(hygiene.checks.bun_tests_executed).toBe(false);
+          expect(hygiene.checks.tsc_executed).toBe(false);
           break;
         }
 
