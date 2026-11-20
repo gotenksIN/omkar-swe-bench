@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
@@ -17,7 +17,6 @@ import type {
 import { compileSystemMounts } from "../sandbox/mount-plan.ts";
 import {
   discoverTsCompilerDirs,
-  linkHostTsNodeModules,
   resolveSandboxTool,
   runHostRuffCheck,
 } from "../sandbox/tools.ts";
@@ -427,23 +426,67 @@ export const checksPython = async (
 const harnessRoot = nodePath.resolve(import.meta.dir, "../..");
 const scopedTsTest = /^tests\/(?:.+\/)?[^/]+\.test\.ts$/u;
 
-const tscPasses = async (repoDir: string): Promise<boolean> => {
+export const runFixtureTsc = async (repoDir: string): Promise<boolean> => {
   try {
-    linkHostTsNodeModules(
-      nodePath.dirname(nodePath.resolve(repoDir)),
-      discoverTsCompilerDirs(harnessRoot)
-    );
+    assertNoSymlinkBoundary(repoDir);
+
+    const compilerDirs = discoverTsCompilerDirs(harnessRoot);
+    const nativeSubpath = `@typescript/typescript-${process.platform}-${process.arch}/lib/tsc`;
+
+    const hostTsc = nodePath.join(harnessRoot, "node_modules", nativeSubpath);
+
+    if (statSync(hostTsc, { throwIfNoEntry: false })?.isFile() !== true) {
+      return false;
+    }
+
+    const { bwrapArgs } = compileSystemMounts();
+    const mountArgs: string[] = [];
+
+    for (const { sourceDir, packageSubpath } of compilerDirs) {
+      mountArgs.push(
+        "--ro-bind",
+        sourceDir,
+        `/trial/node_modules/${packageSubpath}`
+      );
+    }
 
     const compiler = Bun.spawn(
       [
-        nodePath.join(harnessRoot, "node_modules/.bin/tsc"),
+        "bwrap",
+        ...bwrapArgs,
+        "--unshare-net",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--tmpfs",
+        "/tmp",
+        "--dir",
+        "/home",
+        "--tmpfs",
+        "/trial",
+        "--dir",
+        "/trial/node_modules",
+        ...mountArgs,
+        "--ro-bind",
+        nodePath.resolve(repoDir),
+        "/trial/repo",
+        "--remount-ro",
+        "/trial",
+        "--chdir",
+        "/trial/repo",
+        "--",
+        `/trial/node_modules/${nativeSubpath}`,
         "--noEmit",
         "-p",
         "tsconfig.json",
       ],
       {
-        cwd: repoDir,
-        env: { PATH: process.env.PATH },
+        env: {
+          PATH: "/usr/bin:/bin",
+          HOME: "/home",
+          TMPDIR: "/tmp",
+        },
         stdout: "ignore",
         stderr: "ignore",
         timeout: 15_000,
@@ -469,7 +512,7 @@ export const checksTypeScript = async (
     /^[^/]+\.test\.ts$/u
   );
 
-  const tsc = await tscPasses(ev.repoDir);
+  const tsc = await runFixtureTsc(ev.repoDir);
 
   return {
     bun_tests_pass:

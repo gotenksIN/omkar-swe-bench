@@ -26,17 +26,14 @@ import type {
   Evidence,
   ShellRunTrace,
 } from "../../graders/types.ts";
-import {
-  discoverTsCompilerDirs,
-  linkHostTsNodeModules,
-  runHostRuffCheck,
-} from "../../sandbox/tools.ts";
+import { runHostRuffCheck } from "../../sandbox/tools.ts";
 import { isString } from "../../util/json.ts";
 import {
   PY_FILES,
   pytestRun,
   pythonTestFiles,
   runFixtureCheck,
+  runFixtureTsc,
   setupCoderFixture,
   TS_FILES,
   unittestRun,
@@ -127,47 +124,8 @@ const ruffPasses = async (dir: string): Promise<boolean> => {
   }
 };
 
-const harnessRoot = nodePath.resolve(import.meta.dir, "../../..");
-
-const linkPairTsNodeModules = (dir: string): void => {
-  linkHostTsNodeModules(
-    nodePath.dirname(nodePath.resolve(dir)),
-    discoverTsCompilerDirs(harnessRoot)
-  );
-};
-
-const tsUnitTests = async (dir: string): Promise<boolean> => {
-  linkPairTsNodeModules(dir);
-
-  return await runFixtureCheck(dir, "bun", ["test"]);
-};
-
-const tsTypecheckPasses = async (dir: string): Promise<boolean> => {
-  try {
-    linkPairTsNodeModules(dir);
-
-    const compiler = Bun.spawn(
-      [
-        nodePath.join(harnessRoot, "node_modules/.bin/tsc"),
-        "--noEmit",
-        "-p",
-        "tsconfig.json",
-      ],
-      {
-        cwd: dir,
-        env: { PATH: process.env.PATH },
-        stdout: "ignore",
-        stderr: "ignore",
-        timeout: 15_000,
-        killSignal: "SIGKILL",
-      }
-    );
-
-    return (await compiler.exited) === 0;
-  } catch {
-    return false;
-  }
-};
+const tsUnitTests = async (dir: string): Promise<boolean> =>
+  await runFixtureCheck(dir, "bun", ["test"]);
 
 const tsHygienePasses = (dir: string): boolean => {
   try {
@@ -181,10 +139,8 @@ const tsProbe = async (
   dir: string,
   script: string,
   expectEdge = true
-): Promise<boolean> => {
-  linkPairTsNodeModules(dir);
-
-  return await runFixtureCheck(
+): Promise<boolean> =>
+  await runFixtureCheck(
     dir,
     "bun",
     ["--no-env-file", "run", "-"],
@@ -203,7 +159,6 @@ if (${expectEdge ? "failed" : "!failed"}) {
 }
 `
   );
-};
 
 const unitTests = async (
   dir: string,
@@ -579,7 +534,7 @@ const pairTask = (fixture: PairFixture): EvalTask => {
           const staticChecks: CheckOutcomes =
             language === "typescript"
               ? {
-                  tsc_passes: dir !== null && (await tsTypecheckPasses(dir)),
+                  tsc_passes: dir !== null && (await runFixtureTsc(dir)),
                   ts_ast_hygiene: dir !== null && tsHygienePasses(dir),
                 }
               : {

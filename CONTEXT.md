@@ -75,6 +75,6 @@ It excludes SSH and GPG agent variables, common Git and cloud tokens, and inacti
 It injects `GIT_CONFIG_COUNT` overrides (`core.hooksPath=/dev/null`, `core.fsmonitor=false`, `log.showSignature=false`, `gpg.ssh.program=ssh-keygen`) so trial-controlled Git settings cannot execute hooks or verifiers.
 It forwards allowed credential environment variables and mounts credential files only when active provider definitions reference them.
 
-After the trial, Python and Bun behavioral probes run in a separate `bwrap` sandbox with `--unshare-net` and a read-only repository mount.
-The harness does not run those probes without isolation if `bwrap` fails.
-Host-side static analysis, type checking, and Ruff linting are separate from these behavioral probes.
+After the trial, Python and Bun behavioral probes and TypeScript `tsc` grading run in separate `bwrap` sandboxes with `--unshare-net` and read-only repository and compiler mounts.
+The harness does not run those probes or typechecks without isolation if `bwrap` fails.
+Host-side AST analysis and Ruff linting are separate from these sandboxed checks.

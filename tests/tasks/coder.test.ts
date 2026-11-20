@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
@@ -12,6 +13,7 @@ import type {
 import {
   commitTaskFiles,
   runFixtureCheck,
+  runFixtureTsc,
   runTaskGit,
 } from "../../src/tasks/base.ts";
 import type {
@@ -1256,6 +1258,38 @@ else:
 `
       )
     ).toBe(true);
+  } finally {
+    await rm(trialDir, { recursive: true, force: true });
+  }
+});
+
+test("runs tsc grading inside bwrap and blocks incremental writes outside the repo", async () => {
+  const trialDir = await mkdtemp(nodePath.join(workspace, "tsc-isolation-"));
+  const repoDir = nodePath.join(trialDir, "repo");
+  const escapeFile = nodePath.join(trialDir, "escape.tsbuildinfo");
+
+  try {
+    await mkdir(nodePath.join(repoDir, "src"), { recursive: true });
+    await writeFile(
+      nodePath.join(repoDir, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          incremental: true,
+          tsBuildInfoFile: "../escape.tsbuildinfo",
+          types: ["bun"],
+        },
+        include: ["src/**/*.ts"],
+      })
+    );
+    await writeFile(
+      nodePath.join(repoDir, "src/index.ts"),
+      "export const answer = 42;\n"
+    );
+
+    expect(await runFixtureTsc(repoDir)).toBe(false);
+    expect(existsSync(escapeFile)).toBe(false);
   } finally {
     await rm(trialDir, { recursive: true, force: true });
   }
